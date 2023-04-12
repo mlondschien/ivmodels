@@ -1,0 +1,39 @@
+repos:
+-   repo: https://github.com/codespell-project/codespell
+    rev: v2.2.2
+    hooks:
+    -   id: codespell
+        types_or: [python, rst, markdown]
+        additional_dependencies: [tomli]
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+    -   id: debug-statements
+    -   id: trailing-whitespace
+-   repo: https://github.com/Quantco/pre-commit-mirrors-black
+    rev: 22.12.0
+    hooks:
+    - id: black-conda
+      args:
+        - --safe
+        - --target-version=py38
+- repo: https://github.com/Quantco/pre-commit-mirrors-isort
+  rev: 5.7.0
+  hooks:
+  - id: isort-conda
+    additional_dependencies: [toml]
+- repo: https://github.com/Quantco/pre-commit-mirrors-flake8
+  rev: 5.0.4
+  hooks:
+  - id: flake8-conda
+    additional_dependencies: [-c, conda-forge, flake8-docstrings=1.5.0, flake8-rst-docstrings=0.0.14]
+- repo: https://github.com/Quantco/pre-commit-mirrors-mypy
+  rev: "0.982"
+  hooks:
+  - id: mypy-conda
+- repo: https://github.com/Quantco/pre-commit-mirrors-pyupgrade
+  rev: 3.1.0
+  hooks:
+  - id: pyupgrade-conda
+    args:
+      - --py38-plus
