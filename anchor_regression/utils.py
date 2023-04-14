@@ -23,10 +23,18 @@ def proj(anchor, f):
     return np.dot(anchor, np.linalg.lstsq(anchor, f, rcond=None)[0])
 
 
-def anderson_rubin_test(anchor, residuals):
-    """Perform the Anderson-Rubin test."""
+def pulse_test(anchor, residuals):
+    """
+    Test proposed in [1]_ with H0: anchor and residuals are uncorrelated.
+
+    See [1]_ Section 3.2 for details.
+
+    References
+    ----------
+    .. [1] https://arxiv.org/abs/2005.03353
+    """
     proj_residuals = proj(anchor, residuals)
-    chi_squared = np.square(proj_residuals).sum() / np.square(residuals).sum()
-    chi_squared = chi_squared * (residuals.shape[0] - anchor.shape[1])
-    p_value = 1 - scipy.stats.chi2.cdf(chi_squared, df=anchor.shape[1])
-    return chi_squared, p_value
+    statistic = np.square(proj_residuals).sum() / np.square(residuals).sum()
+    statistic *= anchor.shape[0]
+    p_value = 1 - scipy.stats.chi2.cdf(statistic, df=anchor.shape[1])
+    return statistic, p_value

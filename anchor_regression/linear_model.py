@@ -3,7 +3,7 @@ import logging
 import numpy as np
 from sklearn.linear_model import LinearRegression
 
-from anchor_regression.utils import anderson_rubin_test, proj
+from anchor_regression.utils import proj, pulse_test
 
 try:
     import pandas as pd
@@ -256,7 +256,7 @@ class PULSE(LinearAnchorRegression):
         # This is equivalent to p_value(1) < self.p_value < p_value(gamma_max).
         self.gamma = self.gamma_max
         super().fit(X, y, a)
-        p_value = anderson_rubin_test(a_, y - self.predict(X))[1]
+        p_value = pulse_test(a_, y - self.predict(X))[1]
         if p_value < self.p_value:
             raise ValueError(
                 f"The Anderson Rubin test is significant at significance level "
@@ -266,7 +266,7 @@ class PULSE(LinearAnchorRegression):
 
         self.gamma = 1
         super().fit(X, y, a)
-        p_value = anderson_rubin_test(a_, y - self.predict(X))[1]
+        p_value = pulse_test(a_, y - self.predict(X))[1]
         if p_value > self.p_value:
             raise ValueError(
                 f"The Anderson Rubin test is not significant at significance level "
@@ -280,7 +280,7 @@ class PULSE(LinearAnchorRegression):
             mid = (high + low) / 2
             self.gamma = mid
             super().fit(X, y, a)
-            p_value = anderson_rubin_test(a_, y - self.predict(X))[1]
+            p_value = pulse_test(a_, y - self.predict(X))[1]
             logger.debug(
                 f"Anderson-Rubin test with gamma={mid} yields p_value={p_value}."
             )

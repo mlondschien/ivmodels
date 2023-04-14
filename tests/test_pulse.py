@@ -2,7 +2,7 @@ import pytest
 
 from anchor_regression.linear_model import PULSE, LinearAnchorRegression
 from anchor_regression.testing import simulate_iv
-from anchor_regression.utils import anderson_rubin_test
+from anchor_regression.utils import pulse_test
 
 
 @pytest.mark.parametrize("seed", [0, 1, 2])
@@ -14,7 +14,7 @@ def test_pulse(seed, p_value, rtol):
 
     # The PULSE selects the "smallest" gamma s.t. p_value(gamma) > p_value, where
     # "smallest" is defined up to rtol. I.e., p_value(gamma * (1 - rtol)) < p_value.
-    test_p_value = anderson_rubin_test(A, Y - pulse.predict(X))[1]
+    test_p_value = pulse_test(A, Y - pulse.predict(X))[1]
     assert test_p_value >= p_value
     next_ar = LinearAnchorRegression(gamma=pulse.gamma * (1 - rtol)).fit(X, Y, A)
-    assert anderson_rubin_test(A, Y - next_ar.predict(X))[1] < p_value
+    assert pulse_test(A, Y - next_ar.predict(X))[1] < p_value
