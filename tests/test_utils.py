@@ -16,7 +16,6 @@ def test_anderson_rubin_test_tsls(discrete, p, dim_y):
     tsls = LinearRegression(fit_intercept=True).fit(Xhat, Y)
     residuals = Y - tsls.predict(X)
     p_value, _ = anderson_rubin_test(A, residuals)
-
     assert p_value < 1e-3
 
 
