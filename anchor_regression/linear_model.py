@@ -1,7 +1,7 @@
 import logging
 
 import numpy as np
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import ElasticNet, LinearRegression, Ridge
 
 from anchor_regression.utils import proj, pulse_test
 
@@ -15,33 +15,13 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-class LinearAnchorRegression(LinearRegression):
-    """
-    Linear regression with anchor regularization.
+class AnchorMixin:
+    """Mixin class for anchor regression models."""
 
-    This is based on OLS after a data transformation. First standardizes `X` and `y`,
-    as proposed in [1]_.
+    def __init__(self, gamma, anchor_names=None, anchor_regex=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-    Parameters
-    ----------
-    gamma: float
-        The anchor regularization parameter. Gamma=1 corresponds to standard OLS.
-    anchor_names: str or list of str, optional
-        The names of the columns in `X` that should be used as anchors. Requires `X` to
-        be a pandas DataFrame.
-    anchor_regex: str, optional
-        A regex that is used to select columns in `X` that should be used as anchors.
-        Requires `X` to be a pandas DataFrame. If both `anchor_names` and
-        `anchor_regex` are specified, the union of the two is used.
-
-    References
-    ----------
-    .. [1] https://arxiv.org/abs/1801.06229
-    """
-
-    def __init__(self, gamma, anchor_names=None, anchor_regex=None):
         self.gamma = gamma
-        super().__init__(fit_intercept=False)
 
         if anchor_names is not None or anchor_regex is not None:
             if not _PANDAS_INSTALLED:
@@ -135,7 +115,7 @@ class LinearAnchorRegression(LinearRegression):
 
     def fit(self, X, y, a=None):
         """
-        Fit a linear anchor regression model [1]_.
+        Fit an anchor regression model [1]_.
 
         If `anchor_names` or `anchor_regex` are specified, `X` must be a
         pandas DataFrame containing columns `anchor_names` and `a` must be
@@ -174,8 +154,134 @@ class LinearAnchorRegression(LinearRegression):
 
     def predict(self, X):  # noqa D
         X, _ = self._X_a(X, a=None, check=False)
-
         return super().predict(X)
+
+
+class LinearAnchorRegression(AnchorMixin, LinearRegression):
+    """
+    Linear regression with anchor regularization.
+
+    This is based on OLS after a data transformation. First standardizes `X` and `y`
+    by subtracting the column means as proposed in [1]_. Consequently, no anchor
+    regularization is applied to the intercept.
+
+    Parameters
+    ----------
+    gamma: float
+        The anchor regularization parameter. Gamma=1 corresponds to standard OLS.
+    anchor_names: str or list of str, optional
+        The names of the columns in `X` that should be used as anchors. Requires `X` to
+        be a pandas DataFrame.
+    anchor_regex: str, optional
+        A regex that is used to select columns in `X` that should be used as anchors.
+        Requires `X` to be a pandas DataFrame. If both `anchor_names` and
+        `anchor_regex` are specified, the union of the two is used.
+
+    References
+    ----------
+    .. [1] https://arxiv.org/abs/1801.06229
+    """
+
+    def __init__(self, gamma, anchor_names=None, anchor_regex=None):
+        super().__init__(
+            gamma=gamma,
+            anchor_names=anchor_names,
+            anchor_regex=anchor_regex,
+            fit_intercept=False,
+        )
+
+
+class AnchorRidge(AnchorMixin, Ridge):
+    """
+    Linear regression with l2 and anchor regularization.
+
+    This is based on Ridge regression after a data transformation. First standardizes
+    `X` and `y` by subtracting the column means as proposed in [1]_. Consequently, no
+    anchor regularization is applied to the intercept. It is recommended to normalize
+    the data to have unit variance before using ridge regression.
+
+    Parameters
+    ----------
+    gamma: float
+        The anchor regularization parameter. Gamma=1 corresponds to standard OLS.
+    anchor_names: str or list of str, optional, default = None
+        The names of the columns in `X` that should be used as anchors. Requires `X` to
+        be a pandas DataFrame.
+    anchor_regex: str, optional, default = None
+        A regex that is used to select columns in `X` that should be used as anchors.
+        Requires `X` to be a pandas DataFrame. If both `anchor_names` and
+        `anchor_regex` are specified, the union of the two is used.
+    alpha: float, optional, default=1.0
+        The ridge regularization parameter. Higher values correspond to stronger
+        regularization.
+
+    References
+    ----------
+    .. [1] https://arxiv.org/abs/1801.06229
+    """
+
+    def __init__(self, gamma, anchor_names=None, anchor_regex=None, alpha=1.0):
+        super().__init__(
+            gamma=gamma,
+            anchor_names=anchor_names,
+            anchor_regex=anchor_regex,
+            alpha=alpha,
+            fit_intercept=False,
+        )
+
+
+class AnchorElasticNet(AnchorMixin, ElasticNet):
+    """
+    Linear regression with l1, l2, and anchor regularization.
+
+    This is based on Ridge regression after a data transformation. First standardizes
+    `X` and `y` by subtracting the column means as proposed in [1]_. Consequently, no
+    anchor regularization is applied to the intercept. It is recommended to normalize
+    the data to have unit variance before using ridge regression.
+
+    Parameters
+    ----------
+    gamma: float
+        The anchor regularization parameter. Gamma=1 corresponds to standard OLS.
+    anchor_names: str or list of str, optional, default = None
+        The names of the columns in `X` that should be used as anchors. Requires `X` to
+        be a pandas DataFrame.
+    anchor_regex: str, optional, default = None
+        A regex that is used to select columns in `X` that should be used as anchors.
+        Requires `X` to be a pandas DataFrame. If both `anchor_names` and
+        `anchor_regex` are specified, the union of the two is used.
+    alpha: float, optional, default=1.0
+        Constant that multiplies the l1 and l2 penalty terms.
+    l1_ratio: float, optional, default=0.5
+        The ElasticNet mixing parameter, with `0 <= l1_ratio <= 1`. For `l1_ratio = 0`
+        the penalty is an L2 penalty. For `l1_ratio = 1` it is an L1 penalty. For
+        `0 < l1_ratio < 1`, the penalty is a combination of L1 and L2.
+
+    References
+    ----------
+    .. [1] https://arxiv.org/abs/1801.06229
+    """
+
+    def __init__(
+        self, gamma, anchor_names=None, anchor_regex=None, alpha=1.0, l1_ratio=0.5
+    ):
+        super().__init__(
+            gamma=gamma,
+            anchor_names=anchor_names,
+            anchor_regex=anchor_regex,
+            fit_intercept=False,
+            alpha=alpha,
+            l1_ratio=l1_ratio,
+        )
+
+    def predict(self, *args, **kwargs):  # noqa D
+        # Make output shape consistent with LinearAnchorRegression and AnchorRidge, as
+        # sklearn is inconsistent:
+        # https://github.com/scikit-learn/scikit-learn/issues/5058
+        output = super().predict(*args, **kwargs)
+        if len(output.shape) == 1:
+            output = output.reshape(-1, 1)
+        return output
 
 
 class PULSE(LinearAnchorRegression):
