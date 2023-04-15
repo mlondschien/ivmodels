@@ -15,31 +15,37 @@ from anchor_regression.testing import simulate_iv
 @pytest.mark.filterwarnings("ignore:Objective did not converge")
 @pytest.mark.filterwarnings("ignore:With alpha=0, this algorithm does not converge")
 @pytest.mark.filterwarnings("ignore:Coordinate descent with no regularization may lead")
-@pytest.mark.parametrize("seed", [0, 1])
+@pytest.mark.parametrize("gamma", [1, 5])
+@pytest.mark.parametrize("alpha", [0, 1])
 @pytest.mark.parametrize("p", [1, 5])
 @pytest.mark.parametrize("dim_y", [1, 2])
-def test_linear_anchor_regression_equal_to_ols(seed, p, dim_y):
-    X, Y, A = simulate_iv(discrete=False, p=p, seed=seed, shift=0, dim_y=dim_y)
+def test_linear_anchor_regression_equal_to_ols(gamma, alpha, p, dim_y):
+    n = 100
+
+    X, Y, A = simulate_iv(n=n, discrete=False, p=p, seed=0, shift=0, dim_y=dim_y)
     df = pd.DataFrame(
         np.hstack([X, A]), columns=[f"X{k}" for k in range(p)] + ["anchor"]
     )
-    lar = LinearAnchorRegression(gamma=1, anchor_names=["anchor"]).fit(df, Y)
-    aridge = AnchorRidge(gamma=1, anchor_names=["anchor"], alpha=0).fit(df, Y)
-    aelastic = AnchorElasticNet(gamma=1, anchor_names=["anchor"], alpha=0).fit(df, Y)
-    aelastic = AnchorElasticNet(gamma=1, anchor_names=["anchor"], alpha=0).fit(df, Y)
+
+    lar = LinearAnchorRegression(gamma=gamma, anchor_names=["anchor"]).fit(df, Y)
+    aridge = AnchorRidge(gamma=gamma, alpha=alpha, anchor_names=["anchor"]).fit(df, Y)
+    aelastic = AnchorElasticNet(
+        gamma=gamma, alpha=alpha / n, l1_ratio=0, anchor_names=["anchor"]
+    ).fit(df, Y)
     ols = LinearRegression(fit_intercept=True).fit(X, Y)
 
-    assert np.allclose(lar.predict(df), ols.predict(X))
-    assert np.allclose(aridge.predict(df), ols.predict(X))
-    assert np.allclose(aelastic.predict(df), ols.predict(X))
+    if gamma == 1 and alpha == 0:
+        assert np.allclose(aelastic.predict(df), ols.predict(X))
+        assert np.allclose(aelastic.coef_, ols.coef_)
+        assert np.allclose(aelastic.intercept_, ols.intercept_)
+    if alpha == 0:
+        assert np.allclose(aelastic.predict(df), lar.predict(df))
+        assert np.allclose(aelastic.coef_, lar.coef_)
+        assert np.allclose(aelastic.intercept_, lar.intercept_)
 
-    assert np.allclose(lar.coef_, ols.coef_)
-    assert np.allclose(aridge.coef_, ols.coef_)
-    assert np.allclose(aelastic.coef_, ols.coef_)
-
-    assert np.allclose(lar.intercept_, ols.intercept_)
-    assert np.allclose(aridge.intercept_, ols.intercept_)
-    assert np.allclose(aelastic.intercept_, ols.intercept_)
+    assert np.allclose(aelastic.predict(df), aridge.predict(df))
+    assert np.allclose(aelastic.coef_, aridge.coef_)
+    assert np.allclose(aelastic.intercept_, aridge.intercept_)
 
 
 # @pytest.mark.parametrize("shift", [0, 1, 2, 5])
