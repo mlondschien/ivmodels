@@ -1,6 +1,7 @@
 import pytest
 
-from anchor_regression.linear_model import PULSE, LinearAnchorRegression
+from anchor_regression.linear_model import LinearAnchorRegression
+from anchor_regression.pulse import PULSE
 from anchor_regression.testing import simulate_iv
 from anchor_regression.utils import pulse_test
 
