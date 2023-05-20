@@ -76,12 +76,19 @@ class AnchorMixin:
             else:
                 return X, a
         else:
-            if self.anchor_names is None and self.anchor_regex is None and check:
-                raise ValueError(
-                    "If `anchor_names` and `anchor_regex` are None, "
-                    "then `a` must be specified."
-                )
-            elif not isinstance(X, pd.DataFrame):
+            if self.anchor_names is None and self.anchor_regex is None:
+                if check:
+                    raise ValueError(
+                        "If `anchor_names` and `anchor_regex` are None, "
+                        "then `a` must be specified."
+                    )
+                else:
+                    return X, np.zeros(shape=(X.shape[0], 0))
+
+            if not _PANDAS_INSTALLED:
+                raise ImportError("pandas is required to use anchor_columns or regex.")
+
+            if not isinstance(X, pd.DataFrame):
                 if check:
                     raise ValueError(
                         "If `anchor_names` or `anchor_regex` is specified, "
