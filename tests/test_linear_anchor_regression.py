@@ -27,10 +27,12 @@ def test_linear_anchor_regression_equal_to_ols(gamma, alpha, p, dim_y):
         np.hstack([X, A]), columns=[f"X{k}" for k in range(p)] + ["anchor"]
     )
 
-    lar = LinearAnchorRegression(gamma=gamma, anchor_names=["anchor"]).fit(df, Y)
-    aridge = AnchorRidge(gamma=gamma, alpha=alpha, anchor_names=["anchor"]).fit(df, Y)
+    lar = LinearAnchorRegression(gamma=gamma, exogenous_names=["anchor"]).fit(df, Y)
+    aridge = AnchorRidge(gamma=gamma, alpha=alpha, exogenous_names=["anchor"]).fit(
+        df, Y
+    )
     aelastic = AnchorElasticNet(
-        gamma=gamma, alpha=alpha / n, l1_ratio=0, anchor_names=["anchor"]
+        gamma=gamma, alpha=alpha / n, l1_ratio=0, exogenous_names=["anchor"]
     ).fit(df, Y)
     ols = LinearRegression(fit_intercept=True).fit(X, Y)
 
@@ -76,8 +78,8 @@ def test_linear_anchor_regression_different_inputs(model, p, dim_y, gamma):
 
     df = pd.DataFrame(np.hstack([X, A]), columns=[f"X{k}" for k in range(p)] + ["A1"])
 
-    ar_1 = model(gamma=gamma, anchor_names=["A1"]).fit(df, Y)
-    ar_2 = model(gamma=gamma, anchor_regex="A").fit(df, Y)
+    ar_1 = model(gamma=gamma, exogenous_names=["A1"]).fit(df, Y)
+    ar_2 = model(gamma=gamma, exogenous_regex="A").fit(df, Y)
     ar_3 = model(gamma=gamma).fit(X, Y, A)
 
     assert np.allclose(ar_1.coef_, ar_2.coef_)
@@ -96,7 +98,7 @@ def test_linear_anchor_regression_raises():
         np.hstack([X, A, A]), columns=[f"X{k}" for k in range(5)] + ["A1", "A2"]
     )
 
-    ar_1 = LinearAnchorRegression(gamma=1, anchor_names=["A1", "A2"])
+    ar_1 = LinearAnchorRegression(gamma=1, exogenous_names=["A1", "A2"])
     with pytest.raises(ValueError, match="must be None"):
         ar_1.fit(df, Y, A)
 
@@ -111,7 +113,7 @@ def test_linear_anchor_regression_raises():
     _ = ar_1.predict(X)
     _ = ar_1.predict(df.drop(columns=["A1", "A2"]))
 
-    ar_2 = LinearAnchorRegression(gamma=1, anchor_regex="A")
+    ar_2 = LinearAnchorRegression(gamma=1, exogenous_regex="A")
     with pytest.raises(ValueError, match="must be None"):
         ar_2.fit(df, Y, A)
 

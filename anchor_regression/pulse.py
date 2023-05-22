@@ -24,23 +24,23 @@ class PULSEMixin:
     def fit(self, X, y, a=None):
         """Fit a p-uncorrelated least squares estimator (PULSE) [1]_.
 
-        If `anchor_names` or `anchor_regex` are specified, `X` must be a
-        pandas DataFrame containing columns `anchor_names` and `a` must be
-        `None`. At least one one of `a`, `anchor_names`, and `anchor_regex`
+        If `exogenous_names` or `exogenous_regex` are specified, `X` must be a
+        pandas DataFrame containing columns `exogenous_names` and `a` must be
+        `None`. At least one one of `a`, `exogenous_names`, and `exogenous_regex`
         must be specified.
 
         Parameters
         ----------
         X: array-like, shape (n_samples, n_features)
-            The training input samples. If `anchor_names` or `anchor_regex`
+            The training input samples. If `exogenous_names` or `exogenous_regex`
             are specified, `X` must be a pandas DataFrame containing columns
-            `anchor_names`.
+            `exogenous_names`.
         y: array-like, shape (n_samples,) or (n_samples, n_targets)
             The target values.
         a: array-like, shape (n_samples, n_anchors), optional
-            The anchor values. If `anchor_names` or `anchor_regex` are
-            specified, `a` must be `None`. If `a` is specified, `anchor_names` and
-            `anchor_regex` must be `None`.
+            The anchor values. If `exogenous_names` or `exogenous_regex` are
+            specified, `a` must be `None`. If `a` is specified, `exogenous_names` and
+            `exogenous_regex` must be `None`.
         """
         _, a_ = self._X_a(X, a, check=False)
 
@@ -102,13 +102,13 @@ class PULSE(PULSEMixin, LinearAnchorRegression):
 
     Parameters
     ----------
-    anchor_names: str or list of str, optional
+    exogenous_names: str or list of str, optional
         The names of the columns in `X` that should be used as anchors. Requires `X` to
         be a pandas DataFrame.
-    anchor_regex: str, optional
+    exogenous_regex: str, optional
         A regex that is used to select columns in `X` that should be used as anchors.
-        Requires `X` to be a pandas DataFrame. If both `anchor_names` and
-        `anchor_regex` are specified, the union of the two is used.
+        Requires `X` to be a pandas DataFrame. If both `exogenous_names` and
+        `exogenous_regex` are specified, the union of the two is used.
     p_value: float, optional, default = 0.05
         The p-value of the Anderson-Rubin test that is used to determine the regularization
         parameter `gamma`. The PULSE will search for the smallest `gamma` that makes the
@@ -127,14 +127,14 @@ class PULSE(PULSEMixin, LinearAnchorRegression):
 
     def __init__(
         self,
-        anchor_names=None,
-        anchor_regex=None,
+        exogenous_names=None,
+        exogenous_regex=None,
         p_value=0.05,
         gamma_max=1e4,
         rtol=0.1,
     ):
         super().__init__(
-            gamma=None, anchor_names=anchor_names, anchor_regex=anchor_regex
+            gamma=None, exogenous_names=exogenous_names, exogenous_regex=exogenous_regex
         )
         self.p_value = p_value
         self.gamma_max = gamma_max
