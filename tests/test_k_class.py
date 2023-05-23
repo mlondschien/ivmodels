@@ -9,8 +9,8 @@ from anchor_regression.linear_model import KClassMixin
         (0.0, 0.0),
         (0.5, 0.5),
         ("fuller(1)", 1),
-        ("fuller(0.2)", 2),
-        ("FULLER(4)", 3),
+        ("fuller(0.2)", 0.2),
+        ("FULLER(4)", 4),
         ("fuller", 1),
         ("FulLeR", 1),
         ("liml", 0),
@@ -18,4 +18,4 @@ from anchor_regression.linear_model import KClassMixin
     ],
 )
 def test__fuller_alpha(kappa, expected):
-    assert KClassMixin._fuller_alpha(kappa) == expected
+    assert KClassMixin()._fuller_alpha(kappa) == expected

@@ -152,7 +152,7 @@ class KClassMixin:
             'fuller', then alpha = 1. If kappa is 'liml', then alpha = 0.
         """
         if not isinstance(kappa, str):
-            return 0
+            return float(kappa)
 
         fuller_match = re.match(r"fuller(\(\d+\.?\d*\))?", kappa, re.IGNORECASE)
         liml_match = re.match("liml", kappa, re.IGNORECASE)
@@ -172,9 +172,9 @@ class KClassMixin:
                     f"some float or integer a or 'liml'."
                 )
         elif fuller_match is not None:
-            return 1
+            return 1.0
         else:
-            return 0
+            return 0.0
 
     def _lambda_liml(self, X, y, Z=None, X_proj=None, y_proj=None):
         """Compute the lambda parameter of the LIML estimator.
@@ -184,7 +184,7 @@ class KClassMixin:
         Parameters
         ----------
         X: np.ndarray of dimension (n, k).
-            Possibly exogenous regressors.
+            Possibly endogenous regressors.
         y: np.ndarray of dimension (n,).
             Outcome.
         Z: np.ndarray of dimension (n, l), optional, default=None.
@@ -254,7 +254,7 @@ class KClassMixin:
         y_proj = proj(Z, y)
 
         if isinstance(self.kappa, str):
-            self.fuller_alpha_ = self._fuller_alpha()
+            self.fuller_alpha_ = self._fuller_alpha(self.kappa)
             self.lambda_liml_ = self._lambda_liml(X, y, X_proj=X_proj, y_proj=y_proj)
             self.kappa_ = 1 / (1 - self.lambda_liml_) - self.fuller_alpha_ / (n - q)
         else:
@@ -299,7 +299,32 @@ class KClass(KClassMixin, LinearRegression):
         )
 
 
-class LinearAnchorRegression(KClassMixin, LinearRegression):
+class AnchorMixin(KClassMixin):
+    """Mixin class for anchor regression."""
+
+    def __init__(
+        self, gamma=1, instrument_names=None, instrument_regex=None, *args, **kwargs
+    ):
+        self.gamma_ = gamma
+        super().__init__(
+            kappa=(gamma - 1) / gamma,
+            instrument_names=instrument_names,
+            instrument_regex=instrument_regex,
+            *args,
+            **kwargs,
+        )
+
+    @property
+    def gamma(self):  # noqa D
+        return self.gamma_
+
+    @gamma.setter
+    def gamma(self, value):
+        self.gamma_ = value
+        self.kappa_ = (value - 1) / value
+
+
+class LinearAnchorRegression(AnchorMixin, LinearRegression):
     """
     Linear regression with anchor regularization.
 
@@ -325,15 +350,10 @@ class LinearAnchorRegression(KClassMixin, LinearRegression):
     """
 
     def __init__(self, gamma=1, instrument_names=None, instrument_regex=None):
-        super().__init__(
-            kappa=(gamma - 1) / gamma,
-            instrument_names=instrument_names,
-            instrument_regex=instrument_regex,
-            fit_intercept=False,
-        )
+        super().__init__(gamma, instrument_names, instrument_regex)
 
 
-class AnchorRidge(KClassMixin, Ridge):
+class AnchorRidge(AnchorMixin, Ridge):
     """
     Linear regression with l2 and anchor regularization.
 
@@ -364,7 +384,7 @@ class AnchorRidge(KClassMixin, Ridge):
 
     def __init__(self, gamma=1, instrument_names=None, instrument_regex=None, alpha=0):
         super().__init__(
-            kappa=(gamma - 1) / gamma,
+            gamma=gamma,
             instrument_names=instrument_names,
             instrument_regex=instrument_regex,
             fit_intercept=False,
@@ -372,7 +392,7 @@ class AnchorRidge(KClassMixin, Ridge):
         )
 
 
-class AnchorElasticNet(KClassMixin, ElasticNet):
+class AnchorElasticNet(AnchorMixin, ElasticNet):
     """
     Linear regression with l1, l2, and anchor regularization.
 
@@ -412,9 +432,8 @@ class AnchorElasticNet(KClassMixin, ElasticNet):
         alpha=1.0,
         l1_ratio=0.5,
     ):
-        self.gamma = gamma
         super().__init__(
-            kappa=(gamma - 1) / gamma,
+            gamma=gamma,
             instrument_names=instrument_names,
             instrument_regex=instrument_regex,
             fit_intercept=False,

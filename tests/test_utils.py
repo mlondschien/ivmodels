@@ -24,7 +24,7 @@ def test_pulse_test_tsls(discrete, p, dim_y):
 @pytest.mark.parametrize("dim_y", [1, 2])
 def test_pulse_anchor(discrete, p, dim_y):
     X, Y, A = simulate_iv(discrete=discrete, p=p, seed=0, shift=0, dim_y=dim_y)
-    gammas = [0, 1, 2, 4, 8, 16, 32, 64]
+    gammas = [0.1, 1, 2, 4, 8, 16, 32, 64]
     ars = [LinearAnchorRegression(gamma=gamma).fit(X, Y, A) for gamma in gammas]
 
     statistics = [pulse_test(A, Y - ar.predict(X))[0] for ar in ars]
