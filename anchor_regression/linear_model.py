@@ -321,7 +321,7 @@ class AnchorMixin(KClassMixin):
     @gamma.setter
     def gamma(self, value):
         self.gamma_ = value
-        self.kappa_ = (value - 1) / value
+        self.kappa = (value - 1) / value
 
 
 class LinearAnchorRegression(AnchorMixin, LinearRegression):

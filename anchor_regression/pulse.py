@@ -54,7 +54,7 @@ class PULSEMixin:
         p_value = pulse_test(Z_, y - self.predict(X))[1]
         if p_value < self.p_value:
             raise ValueError(
-                f"The Anderson Rubin test is significant at significance level "
+                f"The Anderson Rubin test is rejected at significance level "
                 f"{p_value} < {self.p_value} with maximal gamma={self.gamma_max}. "
                 "Consider increasing `gamma_max`."
             )
