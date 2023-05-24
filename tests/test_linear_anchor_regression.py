@@ -129,7 +129,7 @@ def test_linear_anchor_regression_raises():
     _ = ar_2.predict(df.drop(columns=["A1", "A2"]))
 
     ar_3 = LinearAnchorRegression(gamma=1)
-    with pytest.raises(ValueError, match="`a` must be specified"):
+    with pytest.raises(ValueError, match="`Z` must be specified"):
         ar_3.fit(X, Y)
 
     ar_3.fit(X, Y, A)

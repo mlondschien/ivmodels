@@ -213,10 +213,11 @@ class KClassMixin:
     def _solve_normal_equations(self, X, y, X_proj, y_proj, alpha=0):
         if alpha != 0:
             raise NotImplementedError("alpha != 0 not yet implemented.")
+
         return np.linalg.solve(
-            X.T @ (self.kappa * X_proj - (1 - self.kappa) * X),
-            X.T @ (self.kappa * y_proj - (1 - self.kappa) * y),
-        )
+            X.T @ (self.kappa_ * X_proj + (1 - self.kappa_) * X),
+            X.T @ (self.kappa_ * y_proj + (1 - self.kappa_) * y),
+        ).T
 
     def fit(self, X, y, Z=None):
         """
@@ -263,19 +264,19 @@ class KClassMixin:
         # If kappa <=1, the k-class estimator is an anchor regression estimator, i.e.,
         # sqrt( (1-kappa) * Id + kappa * P_Z) ) exists and we apply linear regression
         # to the transformed data.
-        if self.kappa <= 1:
+        if self.kappa_ <= 1:
             X_tilde = (
-                np.sqrt(1 - self.kappa) * X + (1 - np.sqrt(1 - self.kappa)) * X_proj
+                np.sqrt(1 - self.kappa_) * X + (1 - np.sqrt(1 - self.kappa_)) * X_proj
             )
             y_tilde = (
-                np.sqrt(1 - self.kappa) * y + (1 - np.sqrt(1 - self.kappa)) * y_proj
+                np.sqrt(1 - self.kappa_) * y + (1 - np.sqrt(1 - self.kappa_)) * y_proj
             )
 
             super().fit(X_tilde, y_tilde)
 
         else:
-            self._solve_normal_equations(
-                X, y, X_proj, y_proj, alpha=getattr(self, "alpha", 0)
+            self.coef_ = self._solve_normal_equations(
+                X, y, X_proj=X_proj, y_proj=y_proj, alpha=getattr(self, "alpha", 0)
             )
 
         self.intercept_ = -np.matmul(self.coef_, x_mean) + y_mean
