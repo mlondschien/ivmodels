@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 import scipy
+from sklearn.linear_model import LinearRegression
 
 from anchor_regression.linear_model import KClass, KClassMixin
 from anchor_regression.utils import anderson_rubin_test, proj
@@ -105,3 +106,17 @@ def test_k_class_normal_equations(kappa, n, p, q, u):
     assert np.allclose(
         k_class.coef_, k_class._solve_normal_equations(X, y, X_proj, y_proj)
     )
+
+
+@pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 4, 4, 2)])
+def test_liml_equal_to_tsls_in_just_identified_setting(n, p, q, u):
+    Z, X, y = data(n, p, q, u)
+
+    liml = KClass(kappa="liml")
+    liml.fit(X, y, Z)
+
+    Xhat = LinearRegression().fit(Z, X).predict(Z)
+    tsls = LinearRegression().fit(Xhat, y)
+
+    assert np.allclose(liml.coef_, tsls.coef_)
+    assert np.allclose(liml.intercept_, tsls.intercept_)
