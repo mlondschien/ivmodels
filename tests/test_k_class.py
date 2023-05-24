@@ -120,3 +120,16 @@ def test_liml_equal_to_tsls_in_just_identified_setting(n, p, q, u):
 
     assert np.allclose(liml.coef_, tsls.coef_)
     assert np.allclose(liml.intercept_, tsls.intercept_)
+
+
+@pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 4, 4, 2)])
+def test_anderson_rubin_at_liml_is_equal_to_lambda_liml(n, p, q, u):
+    Z, X, y = data(n, p, q, u)
+
+    liml = KClass(kappa="liml")
+    liml.fit(X, y, Z)
+
+    assert np.allclose(
+        anderson_rubin_test(Z, y - X @ liml.coef_.reshape(-1, 1))[0],
+        (n - q) / q * liml.lambda_liml_ / (1 - liml.lambda_liml_),
+    )
