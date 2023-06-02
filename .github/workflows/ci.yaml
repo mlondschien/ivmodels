@@ -33,7 +33,7 @@ jobs:
     name: "Pre-commit checks - Python 3.8"
     runs-on: ubuntu-latest
     container:
-      image: mambaorg/micromamba:latest
+      image: condaforge/mambaforge:latest
     steps:
      - name: Checkout branch
        uses: actions/checkout@v3
@@ -53,4 +53,4 @@ jobs:
          pre-commit run -a
        shell: bash -exo pipefail {0}
        env:
-         PRE_COMMIT_USE_MICROMAMBA: 1
+         PRE_COMMIT_USE_MAMBA: 1
