@@ -32,12 +32,25 @@ jobs:
   pre-commit-checks:
     name: "Pre-commit checks - Python 3.8"
     runs-on: ubuntu-latest
+    container:
+      image: condaforge/mambaforge:latest
     steps:
-      - name: Checkout branch
-        uses: actions/checkout@v2.1.0
-      - name: Install Python 3.8
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.8
-      - name: Run pre-commit checks
-        uses: pre-commit/action@v2.0.0
+     - name: Checkout branch
+       uses: actions/checkout@v3
+       with:
+         ref: ${{ github.head_ref }}
+     - name: Run pre-commit hooks
+       run: |
+         CONDA_BASE=$(conda info --base)
+         source ${CONDA_BASE}/etc/profile.d/conda.sh
+
+         # https://github.com/actions/checkout/issues/766
+         git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+         mamba install -y pre-commit
+
+         pre-commit install
+         pre-commit run -a
+       shell: bash -exo pipefail {0}
+       env:
+         PRE_COMMIT_USE_MAMBA: 1
