@@ -132,6 +132,7 @@ def test_anderson_rubin_at_liml_is_equal_to_lambda_liml(n, p, q, u):
     assert np.allclose(
         anderson_rubin_test(Z, y - X @ liml.coef_.reshape(-1, 1))[0],
         (n - q) / q * liml.lambda_liml_ / (1 - liml.lambda_liml_),
+        atol=1e-8,
     )
 
 

@@ -2,7 +2,7 @@ import logging
 import re
 
 import numpy as np
-from sklearn.linear_model import ElasticNet, LinearRegression, Ridge
+from glum import GeneralizedLinearRegressor
 
 from anchor_regression.utils import proj
 
@@ -271,7 +271,6 @@ class KClassMixin:
             y_tilde = (
                 np.sqrt(1 - self.kappa_) * y + (1 - np.sqrt(1 - self.kappa_)) * y_proj
             )
-
             super().fit(X_tilde, y_tilde)
 
         else:
@@ -288,14 +287,19 @@ class KClassMixin:
         return super().predict(X)
 
 
-class KClass(KClassMixin, LinearRegression):
+class KClass(KClassMixin, GeneralizedLinearRegressor):
     """K-Class estimator for linear regression."""
 
-    def __init__(self, kappa=1, instrument_names=None, instrument_regex=None):
+    def __init__(
+        self, kappa=1, instrument_names=None, instrument_regex=None, alpha=0, l1_ratio=1
+    ):
         super().__init__(
             kappa=kappa,
             instrument_names=instrument_names,
             instrument_regex=instrument_regex,
+            family="gaussian",
+            alpha=alpha,
+            l1_ratio=l1_ratio,
             fit_intercept=False,
         )
 
@@ -325,7 +329,7 @@ class AnchorMixin(KClassMixin):
         self.kappa = (value - 1) / value
 
 
-class LinearAnchorRegression(AnchorMixin, LinearRegression):
+class AnchorRegression(AnchorMixin, GeneralizedLinearRegressor):
     """
     Linear regression with anchor regularization.
 
@@ -350,103 +354,15 @@ class LinearAnchorRegression(AnchorMixin, LinearRegression):
     .. [1] https://arxiv.org/abs/1801.06229
     """
 
-    def __init__(self, gamma=1, instrument_names=None, instrument_regex=None):
-        super().__init__(gamma, instrument_names, instrument_regex)
-
-
-class AnchorRidge(AnchorMixin, Ridge):
-    """
-    Linear regression with l2 and anchor regularization.
-
-    This is based on Ridge regression after a data transformation. First standardizes
-    `X` and `y` by subtracting the column means as proposed in [1]_. Consequently, no
-    anchor regularization is applied to the intercept. It is recommended to normalize
-    the data to have unit variance before using ridge regression.
-
-    Parameters
-    ----------
-    gamma: float
-        The anchor regularization parameter. Gamma=1 corresponds to standard OLS.
-    instrument_names: str or list of str, optional, default = None
-        The names of the columns in `X` that should be used as instruments (anchors).
-        Requires `X` to be a pandas DataFrame.
-    instrument_regex: str, optional, default = None
-        A regex that is used to select columns in `X` that should be used as instruments
-        (anchors). Requires `X` to be a pandas DataFrame. If both `instrument_names` and
-        `instrument_regex` are specified, the union of the two is used.
-    alpha: float, optional, default=1.0
-        The ridge regularization parameter. Higher values correspond to stronger
-        regularization.
-
-    References
-    ----------
-    .. [1] https://arxiv.org/abs/1801.06229
-    """
-
-    def __init__(self, gamma=1, instrument_names=None, instrument_regex=None, alpha=0):
-        super().__init__(
-            gamma=gamma,
-            instrument_names=instrument_names,
-            instrument_regex=instrument_regex,
-            fit_intercept=False,
-            alpha=alpha,
-        )
-
-
-class AnchorElasticNet(AnchorMixin, ElasticNet):
-    """
-    Linear regression with l1, l2, and anchor regularization.
-
-    This is based on Ridge regression after a data transformation. First standardizes
-    `X` and `y` by subtracting the column means as proposed in [1]_. Consequently, no
-    anchor regularization is applied to the intercept. It is recommended to normalize
-    the data to have unit variance before using ridge regression.
-
-    Parameters
-    ----------
-    gamma: float
-        The anchor regularization parameter. Gamma=1 corresponds to standard OLS.
-    instrument_names: str or list of str, optional, default = None
-        The names of the columns in `X` that should be used as instruments (anchors).
-        Requires `X` to be a pandas DataFrame.
-    instrument_regex: str, optional, default = None
-        A regex that is used to select columns in `X` that should be used as instruments
-        (anchors). Requires `X` to be a pandas DataFrame. If both `instrument_names` and
-        `instrument_regex` are specified, the union of the two is used.
-    alpha: float, optional, default=1.0
-        Constant that multiplies the l1 and l2 penalty terms.
-    l1_ratio: float, optional, default=0.5
-        The ElasticNet mixing parameter, with `0 <= l1_ratio <= 1`. For `l1_ratio = 0`
-        the penalty is an L2 penalty. For `l1_ratio = 1` it is an L1 penalty. For
-        `0 < l1_ratio < 1`, the penalty is a combination of L1 and L2.
-
-    References
-    ----------
-    .. [1] https://arxiv.org/abs/1801.06229
-    """
-
     def __init__(
-        self,
-        gamma,
-        instrument_names=None,
-        instrument_regex=None,
-        alpha=1.0,
-        l1_ratio=0.5,
+        self, gamma=1, instrument_names=None, instrument_regex=None, alpha=0, l1_ratio=0
     ):
         super().__init__(
             gamma=gamma,
             instrument_names=instrument_names,
             instrument_regex=instrument_regex,
-            fit_intercept=False,
             alpha=alpha,
             l1_ratio=l1_ratio,
+            family="gaussian",
+            fit_intercept=False,
         )
-
-    def predict(self, *args, **kwargs):  # noqa D
-        # Make output shape consistent with LinearAnchorRegression and AnchorRidge, as
-        # sklearn is inconsistent:
-        # https://github.com/scikit-learn/scikit-learn/issues/5058
-        output = super().predict(*args, **kwargs)
-        if len(output.shape) == 1:
-            output = output.reshape(-1, 1)
-        return output

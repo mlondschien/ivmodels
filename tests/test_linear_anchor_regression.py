@@ -1,53 +1,32 @@
 import numpy as np
 import pandas as pd
 import pytest
-from sklearn.linear_model import LinearRegression
+from glum import GeneralizedLinearRegressor
 
-from anchor_regression.linear_model import (
-    AnchorElasticNet,
-    AnchorRidge,
-    LinearAnchorRegression,
-)
+from anchor_regression.linear_model import AnchorRegression
 from anchor_regression.testing import simulate_iv
 
 
-# You are not supposed to use Ridge and ElasticNet with alpha=0
-@pytest.mark.filterwarnings("ignore:Objective did not converge")
-@pytest.mark.filterwarnings("ignore:With alpha=0, this algorithm does not converge")
-@pytest.mark.filterwarnings("ignore:Coordinate descent with no regularization may lead")
-@pytest.mark.parametrize("gamma", [1, 5])
-@pytest.mark.parametrize("alpha", [0, 1])
+@pytest.mark.parametrize("alpha, l1_ratio", [(0, 0), (1, 0), (1, 0.5), (1, 1)])
 @pytest.mark.parametrize("p", [1, 5])
-@pytest.mark.parametrize("dim_y", [1, 2])
-def test_linear_anchor_regression_equal_to_ols(gamma, alpha, p, dim_y):
+def test_linear_anchor_regression_equal_to_ols(alpha, l1_ratio, p):
     n = 100
 
-    X, Y, A = simulate_iv(n=n, discrete=False, p=p, seed=0, shift=0, dim_y=dim_y)
+    X, Y, A = simulate_iv(n=n, discrete=False, p=p, seed=0, shift=0)
     df = pd.DataFrame(
         np.hstack([X, A]), columns=[f"X{k}" for k in range(p)] + ["anchor"]
     )
 
-    lar = LinearAnchorRegression(gamma=gamma, instrument_names=["anchor"]).fit(df, Y)
-    aridge = AnchorRidge(gamma=gamma, alpha=alpha, instrument_names=["anchor"]).fit(
-        df, Y
-    )
-    aelastic = AnchorElasticNet(
-        gamma=gamma, alpha=alpha / n, l1_ratio=0, instrument_names=["anchor"]
+    lar = AnchorRegression(
+        gamma=1, alpha=alpha, l1_ratio=l1_ratio, instrument_names=["anchor"]
     ).fit(df, Y)
-    ols = LinearRegression(fit_intercept=True).fit(X, Y)
+    ols = GeneralizedLinearRegressor(
+        family="gaussian", alpha=alpha, l1_ratio=l1_ratio, fit_intercept=True
+    ).fit(X, Y)
 
-    if gamma == 1 and alpha == 0:
-        assert np.allclose(aelastic.predict(df), ols.predict(X))
-        assert np.allclose(aelastic.coef_, ols.coef_)
-        assert np.allclose(aelastic.intercept_, ols.intercept_)
-    if alpha == 0:
-        assert np.allclose(aelastic.predict(df), lar.predict(df))
-        assert np.allclose(aelastic.coef_, lar.coef_)
-        assert np.allclose(aelastic.intercept_, lar.intercept_)
-
-    assert np.allclose(aelastic.predict(df), aridge.predict(df))
-    assert np.allclose(aelastic.coef_, aridge.coef_)
-    assert np.allclose(aelastic.intercept_, aridge.intercept_)
+    assert np.allclose(lar.predict(df), ols.predict(X))
+    assert np.allclose(lar.coef_, ols.coef_)
+    assert np.allclose(lar.intercept_, ols.intercept_)
 
 
 # @pytest.mark.parametrize("shift", [0, 1, 2, 5])
@@ -67,20 +46,16 @@ def test_linear_anchor_regression_equal_to_ols(gamma, alpha, p, dim_y):
 #     breakpoint()
 
 
-@pytest.mark.parametrize(
-    "model", [LinearAnchorRegression, AnchorRidge, AnchorElasticNet]
-)
 @pytest.mark.parametrize("p", [1, 5])
-@pytest.mark.parametrize("dim_y", [1, 2])
 @pytest.mark.parametrize("gamma", [0.01, 1, 5])
-def test_linear_anchor_regression_different_inputs(model, p, dim_y, gamma):
-    X, Y, A = simulate_iv(discrete=False, p=p, seed=0, shift=0, dim_y=dim_y)
+def test_linear_anchor_regression_different_inputs(p, gamma):
+    X, Y, A = simulate_iv(discrete=False, p=p, seed=0, shift=0)
 
     df = pd.DataFrame(np.hstack([X, A]), columns=[f"X{k}" for k in range(p)] + ["A1"])
 
-    ar_1 = model(gamma=gamma, instrument_names=["A1"]).fit(df, Y)
-    ar_2 = model(gamma=gamma, instrument_regex="A").fit(df, Y)
-    ar_3 = model(gamma=gamma).fit(X, Y, A)
+    ar_1 = AnchorRegression(gamma=gamma, instrument_names=["A1"]).fit(df, Y)
+    ar_2 = AnchorRegression(gamma=gamma, instrument_regex="A").fit(df, Y)
+    ar_3 = AnchorRegression(gamma=gamma).fit(X, Y, A)
 
     assert np.allclose(ar_1.coef_, ar_2.coef_)
     assert np.allclose(ar_1.coef_, ar_3.coef_)
@@ -90,15 +65,15 @@ def test_linear_anchor_regression_different_inputs(model, p, dim_y, gamma):
 
 
 # We fit on df with feature names, but predict on X without feature names
-@pytest.mark.filterwarnings("ignore:X does not have valid feature names, but LinearAnc")
+# @pytest.mark.filterwarnings("ignore:X does not have valid feature names, but LinearAnc")
 def test_linear_anchor_regression_raises():
-    X, Y, A = simulate_iv(discrete=False, p=5, seed=0, shift=0, dim_y=1)
+    X, Y, A = simulate_iv(discrete=False, p=5, seed=0, shift=0)
 
     df = pd.DataFrame(
         np.hstack([X, A, A]), columns=[f"X{k}" for k in range(5)] + ["A1", "A2"]
     )
 
-    ar_1 = LinearAnchorRegression(gamma=1, instrument_names=["A1", "A2"])
+    ar_1 = AnchorRegression(gamma=1, instrument_names=["A1", "A2"])
     with pytest.raises(ValueError, match="must be None"):
         ar_1.fit(df, Y, A)
 
@@ -113,7 +88,7 @@ def test_linear_anchor_regression_raises():
     _ = ar_1.predict(X)
     _ = ar_1.predict(df.drop(columns=["A1", "A2"]))
 
-    ar_2 = LinearAnchorRegression(gamma=1, instrument_regex="A")
+    ar_2 = AnchorRegression(gamma=1, instrument_regex="A")
     with pytest.raises(ValueError, match="must be None"):
         ar_2.fit(df, Y, A)
 
@@ -128,7 +103,7 @@ def test_linear_anchor_regression_raises():
     _ = ar_2.predict(X)
     _ = ar_2.predict(df.drop(columns=["A1", "A2"]))
 
-    ar_3 = LinearAnchorRegression(gamma=1)
+    ar_3 = AnchorRegression(gamma=1)
     with pytest.raises(ValueError, match="`Z` must be specified"):
         ar_3.fit(X, Y)
 

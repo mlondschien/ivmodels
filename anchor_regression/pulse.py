@@ -1,6 +1,6 @@
 import logging
 
-from anchor_regression.linear_model import LinearAnchorRegression
+from anchor_regression.linear_model import AnchorRegression
 from anchor_regression.utils import pulse_test
 
 logger = logging.getLogger(__name__)
@@ -92,7 +92,7 @@ class PULSEMixin:
         return self
 
 
-class PULSE(PULSEMixin, LinearAnchorRegression):
+class PULSE(PULSEMixin, AnchorRegression):
     """
     p-uncorrelated least squares estimator (PULSE) [1]_.
 

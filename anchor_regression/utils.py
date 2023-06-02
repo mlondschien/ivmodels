@@ -18,7 +18,7 @@ def proj(Z, f):
         Projection of f onto the subspace spanned by Z. Same dimension as f.
     """
     Z = Z - Z.mean(axis=0)
-    f = f - f.mean(axis=0)
+    # f = f - f.mean(axis=0)
 
     return np.dot(Z, np.linalg.lstsq(Z, f, rcond=None)[0])
 
@@ -43,6 +43,11 @@ def pulse_test(Z, residuals):
 def anderson_rubin_test(Z, residuals):
     """
     Perform the Anderson Rubin test.
+
+    Test the null hypothesis that the residuals are uncorrelated with the instruments.
+    Under the null, the test statistic is distributed as `F_{q, n - q}`, where `q` is
+    the number of instruments and `n` is the number of observations. Requires normally
+    distributed errors for exactness.
 
     Parameters
     ----------

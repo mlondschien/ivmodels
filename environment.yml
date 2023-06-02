@@ -7,4 +7,5 @@ dependencies:
   - numpy
   - pytest  # tests only
   - scikit-learn
+  - glum
   - pandas  # optional
