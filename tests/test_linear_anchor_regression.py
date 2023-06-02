@@ -109,3 +109,9 @@ def test_linear_anchor_regression_raises():
 
     ar_3.fit(X, Y, A)
     _ = ar_3.predict(X)
+
+
+def test_score():
+    X, Y, A = simulate_iv(discrete=False, p=5, seed=0, shift=0)
+    model = AnchorRegression(gamma=1).fit(X, Y, A)
+    assert model.score(X, Y) > 0.5

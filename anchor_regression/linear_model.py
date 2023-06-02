@@ -219,7 +219,7 @@ class KClassMixin:
             X.T @ (self.kappa_ * y_proj + (1 - self.kappa_) * y),
         ).T
 
-    def fit(self, X, y, Z=None):
+    def fit(self, X, y, Z=None, *args, **kwargs):
         """
         Fit a k-class estimator.
 
@@ -271,9 +271,13 @@ class KClassMixin:
             y_tilde = (
                 np.sqrt(1 - self.kappa_) * y + (1 - np.sqrt(1 - self.kappa_)) * y_proj
             )
-            super().fit(X_tilde, y_tilde)
+            super().fit(X_tilde, y_tilde, *args, **kwargs)
 
         else:
+            if args or kwargs:
+                raise ValueError(
+                    f"Arguments {args} and {kwargs} are not supported for kappa > 1."
+                )
             self.coef_ = self._solve_normal_equations(
                 X, y, X_proj=X_proj, y_proj=y_proj, alpha=getattr(self, "alpha", 0)
             )
@@ -282,9 +286,9 @@ class KClassMixin:
 
         return self
 
-    def predict(self, X):  # noqa D
+    def predict(self, X, *args, **kwargs):  # noqa D
         X, _ = self._X_Z(X, Z=None, check=False)
-        return super().predict(X)
+        return super().predict(X, *args, **kwargs)
 
 
 class KClass(KClassMixin, GeneralizedLinearRegressor):
