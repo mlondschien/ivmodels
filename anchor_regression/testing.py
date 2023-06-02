@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def simulate_iv(n=100, discrete=False, p=1, dim_y=1, seed=0, shift=0):
+def simulate_iv(n=100, discrete=False, p=1, seed=0, shift=0):
     """Simulate an IV dataset."""
     rng = np.random.RandomState(seed)
 
@@ -14,6 +14,6 @@ def simulate_iv(n=100, discrete=False, p=1, dim_y=1, seed=0, shift=0):
 
     H = rng.normal(size=(n, 1))
     X = rng.normal(size=(n, p)) + H + A
-    Y = X[:, 0:dim_y] + 2 * H
+    Y = X[:, 0] + 2 * H[:, 0]
 
     return X, Y, A
