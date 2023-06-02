@@ -21,7 +21,7 @@ class PULSEMixin:
         self.gamma_max = gamma_max
         self.rtol = rtol
 
-    def fit(self, X, y, Z=None):
+    def fit(self, X, y, Z=None, *args, **kwargs):
         """Fit a p-uncorrelated least squares estimator (PULSE) [1]_.
 
         If `instrument_names` or `instrument_regex` are specified, `X` must be a
@@ -50,7 +50,7 @@ class PULSEMixin:
         # We first check that the "gamma_hat" lies somewhere between 1 and gamma_max.
         # This is equivalent to p_value(1) < self.p_value < p_value(gamma_max).
         self.gamma = self.gamma_max
-        super().fit(X, y, Z)
+        super().fit(X, y, Z, *args, **kwargs)
         p_value = pulse_test(Z_, y - self.predict(X))[1]
         if p_value < self.p_value:
             raise ValueError(
@@ -60,7 +60,7 @@ class PULSEMixin:
             )
 
         self.gamma = 1
-        super().fit(X, y, Z)
+        super().fit(X, y, Z, *args, **kwargs)
         p_value = pulse_test(Z_, y - self.predict(X))[1]
         if p_value > self.p_value:
             raise ValueError(
@@ -74,7 +74,7 @@ class PULSEMixin:
         while high - low > self.rtol * high:
             mid = (high + low) / 2
             self.gamma = mid
-            super().fit(X, y, Z)
+            super().fit(X, y, Z, *args, **kwargs)
             p_value = pulse_test(Z_, y - self.predict(X))[1]
             logger.debug(
                 f"Anderson-Rubin test with gamma={mid} yields p_value={p_value}."
@@ -87,7 +87,7 @@ class PULSEMixin:
 
         if low == mid:
             self.gamma = high
-            super().fit(X, y, Z)
+            super().fit(X, y, Z, *args, **kwargs)
 
         return self
 
