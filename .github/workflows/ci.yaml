@@ -29,28 +29,22 @@ jobs:
       - name: Pytest
         run: pytest tests
 
-  pre-commit-checks:
-    name: "Pre-commit checks - Python 3.8"
+pre-commit-checks:
+    name: "Linux - pre-commit checks - Python 3.10"
+    timeout-minutes: 30
     runs-on: ubuntu-latest
-    container:
-      image: condaforge/mambaforge:latest
+    env:
+      PRE_COMMIT_USE_MICROMAMBA: 1
     steps:
-     - name: Checkout branch
-       uses: actions/checkout@v3
-       with:
-         ref: ${{ github.head_ref }}
-     - name: Run pre-commit hooks
-       run: |
-         CONDA_BASE=$(conda info --base)
-         source ${CONDA_BASE}/etc/profile.d/conda.sh
-
-         # https://github.com/actions/checkout/issues/766
-         git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
-         mamba install -y pre-commit
-
-         pre-commit install
-         pre-commit run -a
-       shell: bash -exo pipefail {0}
-       env:
-         PRE_COMMIT_USE_MAMBA: 1
+      - name: Checkout branch
+        uses: actions/checkout@v3.5.2
+      - name: Set up micromamba
+        uses: mamba-org/setup-micromamba@d05808540d968a55ca33c798e0661fb98f533c73
+      - name: Add micromamba to GITHUB_PATH
+        run: echo "${HOME}/micromamba-bin" >> "$GITHUB_PATH"
+      - name: Install Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Run pre-commit checks
+        uses: pre-commit/action@v3.0.0
