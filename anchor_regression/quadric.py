@@ -1,5 +1,6 @@
 # In part adapted from https://gitlab.com/Loicvh/quadproj/-/blob/master/src/quadproj/quadrics.py
 import numpy as np
+import scipy
 
 
 class Quadric:
@@ -7,7 +8,7 @@ class Quadric:
     A class to represent a quadric x^T A x + b^T x + c <= 0.
 
     Internally, works with a standardized form of the quadric. If `V^T D V = A` with
-    D diagonal and V orthogonal, define `center=-A^{-1}b / 2` and
+    D diagonal and V orthonormal, define `center=-A^{-1}b / 2` and
     `x_tilde=V^T (x - center)`. Then the standardized form is given by
     `x_tilde^T D x_tilde + c_standardized <= 0`.
 
@@ -102,3 +103,19 @@ class Quadric:
                 points_tilde = ellipsoid / np.sqrt(np.abs(self.D / self.c_standardized))
                 points = self.forward_map(points_tilde)
                 return points
+
+    def volume(self):
+        """Return the volume of the quadric."""
+        if any(self.D <= 0):
+            return np.inf
+        elif self.c_standardized >= 0:
+            return 0
+        else:
+            d = len(self.D)
+            return (
+                2
+                / d
+                * np.pi ** (d / 2)
+                / scipy.special.gamma(d / 2)
+                * np.sqrt(np.prod(-self.c_standardized / self.D))
+            )

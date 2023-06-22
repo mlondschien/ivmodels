@@ -47,3 +47,18 @@ def test_quadric_boundary(D, c_standardized):
     quadric = Quadric(np.diag(D), np.zeros(2), c_standardized)
     zeros = quadric._boundary()
     assert np.allclose(quadric(zeros), 0)
+
+
+@pytest.mark.parametrize(
+    "D, c, expected",
+    [
+        ([1], -1, 2),
+        ([1, 1], -1, np.pi),
+        ([1, 4], -1, np.pi / 2),
+        ([1], 1, 0),
+        ([-1], 1, np.inf),
+    ],
+)
+def test_quadric_volume(D, c, expected):
+    quadric = Quadric(np.diag(D), np.zeros_like(D), c)
+    assert quadric.volume() == expected
