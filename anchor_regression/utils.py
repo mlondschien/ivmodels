@@ -1,6 +1,8 @@
 import numpy as np
 import scipy
 
+from anchor_regression.quadric import Quadric
+
 
 def proj(Z, f):
     """Project f onto the subspace spanned by Z.
@@ -77,3 +79,44 @@ def anderson_rubin_test(Z, residuals):
     statistic *= (n - q) / q
     p_value = 1 - scipy.stats.f.cdf(statistic, dfn=n - q, dfd=q)
     return statistic, p_value
+
+
+def inverse_anderson_rubin(Z, X, y, alpha=0.05):
+    """Return the quadric for to the inverse Anderson-Rubin test's acceptance region."""
+    assert Z.shape[0] == X.shape[0] == y.shape[0]
+
+    n, q = Z.shape
+
+    quantile = scipy.stats.f.ppf(1 - alpha, dfn=n - q, dfd=q)
+
+    Z = Z - Z.mean(axis=0)
+    X = X - X.mean(axis=0)
+    y = y - y.mean()
+
+    X_proj = proj(Z, X)
+    X_orth = X - X_proj
+    y_proj = proj(Z, y)
+    y_orth = y - y_proj
+
+    A = X.T @ ((n - q) / q * X_proj - quantile * X_orth)
+    b = -2 * y.T @ ((n - q) / q * X_proj - quantile * X_orth)
+    c = y @ ((n - q) / q * y_proj - quantile * y_orth)
+
+    return Quadric(A, b, c)
+
+
+def asymptotic_confidence_interval(Z, X, y, beta, alpha=0.05):
+    """Return the quadric for the acceptance region based on asymptotic normality."""
+    z_alpha = scipy.stats.norm.ppf(1 - alpha)
+
+    Z = Z - Z.mean(axis=0)
+    X = X - X.mean(axis=0)
+    y = y - y.mean()
+
+    X_proj = proj(Z, X)
+
+    hat_sigma_sq = np.mean(np.power((y - X @ beta), 2))
+    A = hat_sigma_sq * np.linalg.inv(X_proj.T @ X_proj)
+    b = -2 * A @ beta
+    c = beta.T @ A @ beta - z_alpha
+    return Quadric(A, b, c)
