@@ -4,7 +4,8 @@ import scipy
 from sklearn.linear_model import LinearRegression
 
 from anchor_regression.linear_model import KClass, KClassMixin
-from anchor_regression.utils import anderson_rubin_test, proj
+from anchor_regression.testing import anderson_rubin_test
+from anchor_regression.utils import proj
 
 
 def data(n, p, q, u):

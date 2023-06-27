@@ -4,12 +4,11 @@ import pytest
 from glum import GeneralizedLinearRegressor
 
 from anchor_regression.linear_model import AnchorRegression
-from anchor_regression.testing import simulate_iv
 
 
 @pytest.mark.parametrize("alpha, l1_ratio", [(0, 0), (1, 0), (1, 0.5), (1, 1)])
 @pytest.mark.parametrize("p", [1, 5])
-def test_linear_anchor_regression_equal_to_ols(alpha, l1_ratio, p):
+def test_linear_anchor_regression_equal_to_ols(alpha, l1_ratio, p, simulate_iv):
     n = 100
 
     X, Y, A = simulate_iv(n=n, discrete=False, p=p, seed=0, shift=0)
@@ -48,7 +47,7 @@ def test_linear_anchor_regression_equal_to_ols(alpha, l1_ratio, p):
 
 @pytest.mark.parametrize("p", [1, 5])
 @pytest.mark.parametrize("gamma", [0.01, 1, 5])
-def test_linear_anchor_regression_different_inputs(p, gamma):
+def test_linear_anchor_regression_different_inputs(p, gamma, simulate_iv):
     X, Y, A = simulate_iv(discrete=False, p=p, seed=0, shift=0)
 
     df = pd.DataFrame(np.hstack([X, A]), columns=[f"X{k}" for k in range(p)] + ["A1"])
@@ -66,7 +65,7 @@ def test_linear_anchor_regression_different_inputs(p, gamma):
 
 # We fit on df with feature names, but predict on X without feature names
 # @pytest.mark.filterwarnings("ignore:X does not have valid feature names, but LinearAnc")
-def test_linear_anchor_regression_raises():
+def test_linear_anchor_regression_raises(simulate_iv):
     X, Y, A = simulate_iv(discrete=False, p=5, seed=0, shift=0)
 
     df = pd.DataFrame(
@@ -111,7 +110,7 @@ def test_linear_anchor_regression_raises():
     _ = ar_3.predict(X)
 
 
-def test_score():
+def test_score(simulate_iv):
     X, Y, A = simulate_iv(discrete=False, p=5, seed=0, shift=0)
     model = AnchorRegression(gamma=1).fit(X, Y, A)
     assert model.score(X, Y) > 0.5
