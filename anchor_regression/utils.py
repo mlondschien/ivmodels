@@ -107,6 +107,7 @@ def inverse_anderson_rubin(Z, X, y, alpha=0.05):
 
 def asymptotic_confidence_interval(Z, X, y, beta, alpha=0.05):
     """Return the quadric for the acceptance region based on asymptotic normality."""
+    n = Z.shape[0]
     z_alpha = scipy.stats.norm.ppf(1 - alpha)
 
     Z = Z - Z.mean(axis=0)
@@ -116,7 +117,7 @@ def asymptotic_confidence_interval(Z, X, y, beta, alpha=0.05):
     X_proj = proj(Z, X)
 
     hat_sigma_sq = np.mean(np.power((y - X @ beta), 2))
-    A = hat_sigma_sq * np.linalg.inv(X_proj.T @ X_proj)
+    A = 1 / n * (X_proj.T @ X_proj) / hat_sigma_sq
     b = -2 * A @ beta
     c = beta.T @ A @ beta - z_alpha
     return Quadric(A, b, c)
