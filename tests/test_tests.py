@@ -29,9 +29,10 @@ def test_pulse_anchor(test, n, p, q, u):
     gammas = [0.1, 1, 2, 4, 8, 16, 32, 64]
     ars = [AnchorRegression(gamma=gamma).fit(X, Y, A) for gamma in gammas]
     statistics = [test(A, Y - ar.predict(X))[0] for ar in ars]
-    assert np.all(statistics[:-1] >= statistics[1:])  # AR test should be monotonic
     p_values = [test(A, Y - ar.predict(X))[1] for ar in ars]
-    assert np.all(p_values[:-1] <= p_values[1:])
+
+    assert np.all(statistics[:-1] <= statistics[1:])  # AR test should be monotonic
+    assert np.all(p_values[:-1] >= p_values[1:])
 
 
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
