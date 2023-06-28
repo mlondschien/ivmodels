@@ -57,6 +57,7 @@ def anderson_rubin_test(Z, residuals):
         np.square(proj_residuals).sum() / np.square(residuals - proj_residuals).sum()
     )
     statistic *= (n - q) / q
+
     p_value = 1 - scipy.stats.f.cdf(statistic, dfn=n - q, dfd=q)
     return statistic, p_value
 
@@ -84,6 +85,9 @@ def inverse_anderson_rubin(Z, X, y, alpha=0.05):
     A = X.T @ (X_proj - q / (n - q) * quantile * X_orth)
     b = -2 * (X_proj - q / (n - q) * quantile * X_orth).T @ y
     c = y.T @ (y_proj - q / (n - q) * quantile * y_orth)
+
+    if isinstance(c, np.ndarray):
+        c = c.item()
 
     return Quadric(A, b, c)
 

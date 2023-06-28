@@ -36,7 +36,7 @@ def test_pulse_anchor(test, n, p, q, u):
 
 
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
-def test_inverse_anderson_rubin(n, p, q, u):
+def test_inverse_anderson_rubin_sorted(n, p, q, u):
     Z, X, y = simulate_gaussian_iv(n, p, q, u, seed=0)
 
     p_values = [0.5, 0.2, 0.1, 0.05]
@@ -45,6 +45,22 @@ def test_inverse_anderson_rubin(n, p, q, u):
 
     # Use <= instead of < as volumes can be infinite
     assert volumes[0] <= volumes[1] <= volumes[2] <= volumes[3]
+
+
+@pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
+@pytest.mark.parametrize("p_value", [0.5, 0.2, 0.1, 0.05])
+def test_inverse_anderson_rubin(n, p, q, u, p_value):
+    Z, X, y = simulate_gaussian_iv(n, p, q, u, seed=0)
+
+    Z = Z - Z.mean(axis=0)
+    X = X - X.mean(axis=0)
+    y = y - y.mean(axis=0)
+
+    quadric = inverse_anderson_rubin(Z, X, y, p_value)
+    boundary = quadric._boundary()
+    for row in boundary:
+        residuals = y - X @ row
+        assert anderson_rubin_test(Z, residuals)[1] == p_value
 
 
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2), (100, 2, 1, 2)])
