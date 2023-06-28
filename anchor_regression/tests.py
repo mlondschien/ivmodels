@@ -59,6 +59,7 @@ def anderson_rubin_test(Z, residuals):
     statistic *= (n - q) / q
 
     p_value = 1 - scipy.stats.f.cdf(statistic, dfn=n - q, dfd=q)
+
     return statistic, p_value
 
 
