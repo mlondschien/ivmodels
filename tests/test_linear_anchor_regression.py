@@ -4,21 +4,22 @@ import pytest
 from glum import GeneralizedLinearRegressor
 
 from anchor_regression.linear_model import AnchorRegression
-from anchor_regression.testing import simulate_iv
+from anchor_regression.simulate import simulate_gaussian_iv
 
 
 @pytest.mark.parametrize("alpha, l1_ratio", [(0, 0), (1, 0), (1, 0.5), (1, 1)])
-@pytest.mark.parametrize("p", [1, 5])
-def test_linear_anchor_regression_equal_to_ols(alpha, l1_ratio, p):
+@pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
+def test_linear_anchor_regression_equal_to_ols(alpha, l1_ratio, n, p, q, u):
     n = 100
 
-    X, Y, A = simulate_iv(n=n, discrete=False, p=p, seed=0, shift=0)
+    A, X, Y = simulate_gaussian_iv(n, p, q, u)
     df = pd.DataFrame(
-        np.hstack([X, A]), columns=[f"X{k}" for k in range(p)] + ["anchor"]
+        np.hstack([X, A]),
+        columns=[f"X{k}" for k in range(p)] + [f"anchor{k}" for k in range(q)],
     )
 
     lar = AnchorRegression(
-        gamma=1, alpha=alpha, l1_ratio=l1_ratio, instrument_names=["anchor"]
+        gamma=1, alpha=alpha, l1_ratio=l1_ratio, instrument_regex="anchor"
     ).fit(df, Y)
     ols = GeneralizedLinearRegressor(
         family="gaussian", alpha=alpha, l1_ratio=l1_ratio, fit_intercept=True
@@ -34,8 +35,8 @@ def test_linear_anchor_regression_equal_to_ols(alpha, l1_ratio, p):
 # @pytest.mark.parametrize("discrete", [False])
 # def test_linear_anchor_regression_extrapolation(shift, p, discrete):
 
-#     X, Y, A = simulate_iv(discrete=discrete, p=p, shift=0, seed=0)
-#     X_test, Y_test, _ = simulate_iv(discrete=discrete, p=p, shift=shift, seed=1)
+#     X, Y, A = simulate_gaussian_iv(discrete=discrete, p=p, shift=0, seed=0)
+#     X_test, Y_test, _ = simulate_gaussian_iv(discrete=discrete, p=p, shift=shift, seed=1)
 
 #     gammas = [0, 0.5,  1, 2, 3, 5, 9, 16, 32, 64]
 #     losses = {}
@@ -46,14 +47,15 @@ def test_linear_anchor_regression_equal_to_ols(alpha, l1_ratio, p):
 #     breakpoint()
 
 
-@pytest.mark.parametrize("p", [1, 5])
+@pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
 @pytest.mark.parametrize("gamma", [0.01, 1, 5])
-def test_linear_anchor_regression_different_inputs(p, gamma):
-    X, Y, A = simulate_iv(discrete=False, p=p, seed=0, shift=0)
+def test_linear_anchor_regression_different_inputs(gamma, n, p, q, u):
+    A, X, Y = simulate_gaussian_iv(n, p, q, u)
 
-    df = pd.DataFrame(np.hstack([X, A]), columns=[f"X{k}" for k in range(p)] + ["A1"])
+    anchors = [f"A{k}" for k in range(q)]
+    df = pd.DataFrame(np.hstack([X, A]), columns=[f"X{k}" for k in range(p)] + anchors)
 
-    ar_1 = AnchorRegression(gamma=gamma, instrument_names=["A1"]).fit(df, Y)
+    ar_1 = AnchorRegression(gamma=gamma, instrument_names=anchors).fit(df, Y)
     ar_2 = AnchorRegression(gamma=gamma, instrument_regex="A").fit(df, Y)
     ar_3 = AnchorRegression(gamma=gamma).fit(X, Y, A)
 
@@ -66,12 +68,10 @@ def test_linear_anchor_regression_different_inputs(p, gamma):
 
 # We fit on df with feature names, but predict on X without feature names
 # @pytest.mark.filterwarnings("ignore:X does not have valid feature names, but LinearAnc")
-def test_linear_anchor_regression_raises():
-    X, Y, A = simulate_iv(discrete=False, p=5, seed=0, shift=0)
+def test_linear_anchor_regression_raise():
+    A, X, Y = simulate_gaussian_iv(10, 3, 2, 1)
 
-    df = pd.DataFrame(
-        np.hstack([X, A, A]), columns=[f"X{k}" for k in range(5)] + ["A1", "A2"]
-    )
+    df = pd.DataFrame(np.hstack([X, A]), columns=["X1", "X2", "X3", "A1", "A2"])
 
     ar_1 = AnchorRegression(gamma=1, instrument_names=["A1", "A2"])
     with pytest.raises(ValueError, match="must be None"):
@@ -112,6 +112,6 @@ def test_linear_anchor_regression_raises():
 
 
 def test_score():
-    X, Y, A = simulate_iv(discrete=False, p=5, seed=0, shift=0)
+    A, X, Y = simulate_gaussian_iv(100, 2, 2, 1)
     model = AnchorRegression(gamma=1).fit(X, Y, A)
-    assert model.score(X, Y) > 0.5
+    assert model.score(X, Y.flatten()) > 0.5

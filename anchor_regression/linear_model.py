@@ -205,8 +205,8 @@ class KClassMixin:
         if y_proj is None:
             y_proj = proj(Z, y)
 
-        Xy = np.concatenate([X, y], axis=1)
-        Xy_proj = np.concatenate([X_proj, y_proj], axis=1)
+        Xy = np.concatenate([X, y.reshape(-1, 1)], axis=1)
+        Xy_proj = np.concatenate([X_proj, y_proj.reshape(-1, 1)], axis=1)
         W = np.linalg.solve(Xy.T @ Xy, Xy.T @ Xy_proj)
         return min(np.linalg.eigvals(W))
 

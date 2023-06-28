@@ -44,15 +44,15 @@ class Quadric:
 
     def __call__(self, x):
         """Evaluate the quadric at x."""
-        return (x @ self.A * x).sum(axis=1) + self.b @ x.T + self.c
+        return (x @ self.A * x).sum(axis=1) + self.b.T @ x.T + self.c
 
     def forward_map(self, x_tilde):
         """Map from the standardized space to the original space."""
-        return x_tilde @ self.V.T + self.center
+        return x_tilde @ self.V.T + self.center.T
 
     def inverse_map(self, x):
         """Map from the original space to the standardized space."""
-        return (x - self.center) @ self.V
+        return (x - self.center.T) @ self.V
 
     def _boundary(self, num=200, error=True):
         assert len(self.D) == 2

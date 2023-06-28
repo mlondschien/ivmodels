@@ -3,9 +3,10 @@ import numpy as np
 import scipy
 
 from anchor_regression import KClass
-from anchor_regression.utils import (
+from anchor_regression.tests import (
     anderson_rubin_test,
     asymptotic_confidence_interval,
+    bounded_inverse_anderson_rubin,
     inverse_anderson_rubin,
 )
 
@@ -14,7 +15,7 @@ seed = 0
 
 n = 1000
 p = 2
-q = 3
+q = 10
 u = 1
 
 rng = np.random.RandomState(0)
@@ -54,11 +55,7 @@ TSLS:  {tsls.coef_.flatten()} with AR(beta) = {ar_tsls[0]}, p-value = {ar_tsls[1
 
 # Verify that the LIML minimizes the AR test statistic by
 # 1. approximating d_beta AR(beta) at beta = b_liml
-
-
-def ar(beta):  # noqa D
-    return anderson_rubin_test(Z, y - X @ beta.reshape(-1, 1))[0]
-
+ar = lambda beta: anderson_rubin_test(Z, y - X @ beta)[0]  # noqa: E731
 
 grad = scipy.optimize.approx_fprime(liml.coef_.flatten(), ar, 1e-8)
 print(f"Gradient of AR statistic at the LIML estimate: {grad}")
@@ -81,6 +78,15 @@ boundary_01 = quadric_01._boundary(error=False)
 asymp_quadric_05 = asymptotic_confidence_interval(Z, X, y.flatten(), liml.coef_, 0.05)
 asymp_boundary_05 = asymp_quadric_05._boundary(error=False)
 
+asymp_quadric_01 = asymptotic_confidence_interval(Z, X, y.flatten(), liml.coef_, 0.01)
+asymp_boundary_01 = asymp_quadric_01._boundary(error=False)
+
+
+p = bounded_inverse_anderson_rubin(Z, X)
+
+print(
+    f"Volumes: AR(0.05): {quadric_05.volume()}, AR(0.01): {quadric_01.volume()}, AS(0.05): {asymp_quadric_05.volume()}, AS(0.01): {asymp_quadric_01.volume()}"
+)
 fig, ax = plt.subplots(figsize=(10, 4.5), ncols=2)
 
 for idx, delta in enumerate([1, 6]):
@@ -121,6 +127,13 @@ for idx, delta in enumerate([1, 6]):
         color="black",
         label="AS = 0.05",
         linestyle="dotted",
+    )
+    ax[idx].plot(
+        asymp_boundary_01[:, 0],
+        asymp_boundary_01[:, 1],
+        color="black",
+        label="AS = 0.01",
+        linestyle="dashdot",
     )
 
     ax[idx].set_xlabel("x1")

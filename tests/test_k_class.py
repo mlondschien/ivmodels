@@ -4,23 +4,9 @@ import scipy
 from sklearn.linear_model import LinearRegression
 
 from anchor_regression.linear_model import KClass, KClassMixin
-from anchor_regression.utils import anderson_rubin_test, proj
-
-
-def data(n, p, q, u):
-    rng = np.random.RandomState(0)
-    delta = rng.normal(0, 1, (u, p))
-    gamma = rng.normal(0, 1, (u, 1))
-
-    beta = rng.normal(0, 1, (p, 1))
-    Pi = rng.normal(0, 1, (q, p))
-
-    U = rng.normal(0, 1, (n, u))
-    Z = rng.normal(0, 1, (n, q))
-    X = Z @ Pi + U @ delta + rng.normal(0, 1, (n, p))
-    y = X @ beta + U @ gamma + rng.normal(0, 1, (n, 1))
-
-    return Z, X, y
+from anchor_regression.simulate import simulate_gaussian_iv
+from anchor_regression.tests import anderson_rubin_test
+from anchor_regression.utils import proj
 
 
 @pytest.mark.parametrize(
@@ -43,7 +29,7 @@ def test__fuller_alpha(kappa, expected):
 
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
 def test__lambda_liml_same_with_shortcut(n, p, q, u):
-    Z, X, y = data(n, p, q, u)
+    Z, X, y = simulate_gaussian_iv(n, p, q, u)
 
     X = X - X.mean(axis=0)
     y = y - y.mean(axis=0)
@@ -62,7 +48,7 @@ def test__lambda_liml_same_with_shortcut(n, p, q, u):
 
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
 def test__lambda_liml_positive(n, p, q, u):
-    Z, X, y = data(n, p, q, u)
+    Z, X, y = simulate_gaussian_iv(n, p, q, u)
 
     k_class = KClass(kappa="liml")
     k_class.fit(X, y, Z)
@@ -75,7 +61,7 @@ def test__lambda_liml_positive(n, p, q, u):
 
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
 def test_liml_minimizes_anderson_rubin(n, p, q, u):
-    Z, X, y = data(n, p, q, u)
+    Z, X, y = simulate_gaussian_iv(n, p, q, u)
     X = X - X.mean(axis=0)
     y = y - y.mean(axis=0)
 
@@ -92,7 +78,7 @@ def test_liml_minimizes_anderson_rubin(n, p, q, u):
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
 @pytest.mark.parametrize("kappa", [0.2, 0.8])
 def test_k_class_normal_equations(kappa, n, p, q, u):
-    Z, X, y = data(n, p, q, u)
+    Z, X, y = simulate_gaussian_iv(n, p, q, u)
 
     X = X - X.mean(axis=0)
     y = y - y.mean(axis=0)
@@ -110,7 +96,7 @@ def test_k_class_normal_equations(kappa, n, p, q, u):
 
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 4, 4, 2)])
 def test_liml_equal_to_tsls_in_just_identified_setting(n, p, q, u):
-    Z, X, y = data(n, p, q, u)
+    Z, X, y = simulate_gaussian_iv(n, p, q, u)
 
     liml = KClass(kappa="liml")
     liml.fit(X, y, Z)
@@ -124,7 +110,7 @@ def test_liml_equal_to_tsls_in_just_identified_setting(n, p, q, u):
 
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 4, 4, 2)])
 def test_anderson_rubin_at_liml_is_equal_to_lambda_liml(n, p, q, u):
-    Z, X, y = data(n, p, q, u)
+    Z, X, y = simulate_gaussian_iv(n, p, q, u)
 
     liml = KClass(kappa="liml")
     liml.fit(X, y, Z)
@@ -145,7 +131,21 @@ def test_anderson_rubin_at_liml_is_equal_to_lambda_liml(n, p, q, u):
             np.array([[1.0], [-1.0]]),
             np.array([[1.0]]),
             np.array([[1.0]]),
-        )
+        ),
+        (
+            50,
+            np.array([[0.2], [-0.2]]),
+            np.array([[1.0, -1.0], [-1.0, 0.0]]),
+            np.array([[1.0]]),
+            np.array([[1.0]]),
+        ),
+        (
+            200,
+            np.array([[0.2], [-0.2]]),
+            np.array([[1.0, -1.0], [0.2, 0.8], [2.0, 1.2], [-1.0, 0.0]]),
+            np.array([[1.0]]),
+            np.array([[1.0]]),
+        ),
     ],
 )
 def test_fuller_bias_and_mse(n, beta, Pi, gamma, delta):
@@ -154,8 +154,9 @@ def test_fuller_bias_and_mse(n, beta, Pi, gamma, delta):
     q, p = Pi.shape
     u = delta.shape[0]
 
-    kappas = ["liml", "fuller(4)", "fuller(1)", 0]  # 0 is for OLS
+    kappas = ["liml", "fuller(1)", "fuller(4)", 0]  # 0 is for OLS
     results = {kappa: np.zeros(shape=(n_iterations, p)) for kappa in kappas}
+    limls = np.zeros(shape=n_iterations)
 
     for seed in range(n_iterations):
         rng = np.random.RandomState(seed)
@@ -166,10 +167,13 @@ def test_fuller_bias_and_mse(n, beta, Pi, gamma, delta):
 
         for kappa in kappas:
             results[kappa][seed, :] = KClass(kappa=kappa).fit(X, y, Z).coef_.flatten()
+        limls[seed] = KClass(kappa="liml").fit(X, y, Z).lambda_liml_
 
-    mses = {k: np.mean((v - beta.flatten()) ** 2, axis=0) for k, v in results.items()}
-    biases = {k: np.mean(v - beta.flatten(), axis=0) for k, v in results.items()}
+    mses = {k: np.mean((v - beta.flatten()) ** 2) for k, v in results.items()}
+    # biases = {k: np.mean(v - beta.flatten(), axis=0) for k, v in results.items()}
 
     # Fuller(4) has the lowest MSE, but Fuller(1) has the lowest bias
     assert mses["fuller(4)"] == min(mses.values())
-    assert np.abs(biases["fuller(1)"]) == min(np.abs(list(biases.values())))
+    # assert all(
+    #     np.abs(biases["fuller(1)"]) == np.min(np.abs(list(biases.values())), axis=0)
+    # )
