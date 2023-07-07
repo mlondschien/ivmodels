@@ -352,6 +352,12 @@ class AnchorRegression(AnchorMixin, GeneralizedLinearRegressor):
         A regex that is used to select columns in `X` that should be used as instruments
         (anchors). Requires `X` to be a pandas DataFrame. If both `instrument_names` and
         `instrument_regex` are specified, the union of the two is used.
+    alpha: float, optional, default=0
+        Regularization parameter for elastic net regularization.
+    l1_ratio: float, optional, default=0
+        Ratio of L1 to L2 regularization for elastic net regularization. For
+        l1_ratio=0 the penalty is an L2 penalty. For l1_ratio=1 it is an L1 penalty.
+
 
     References
     ----------
