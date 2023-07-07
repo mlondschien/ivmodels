@@ -9,3 +9,5 @@ dependencies:
   - scikit-learn
   - glum
   - pandas  # optional
+  - pylops
+  - pyproximal
