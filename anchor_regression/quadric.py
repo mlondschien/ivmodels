@@ -43,7 +43,19 @@ class Quadric:
         self.V = eigenvectors
 
     def __call__(self, x):
-        """Evaluate the quadric at x."""
+        """Evaluate the quadric at x.
+
+        Parameters
+        ----------
+        x: np.ndarray of dimension (p,) or (n, p).
+            The point(s) at which to evaluate the quadric.
+        """
+        if (
+            (x.ndim == 1 and len(x) != self.A.shape[0])
+            or (x.ndim == 2 and x.shape[1] != self.A.shape[0])
+            or x.ndim > 2
+        ):
+            raise ValueError("x has the wrong dimension.")
         return (x @ self.A * x).sum(axis=1) + self.b.T @ x.T + self.c
 
     def forward_map(self, x_tilde):

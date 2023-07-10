@@ -69,6 +69,34 @@ def test_inverse_anderson_rubin_round_trip(n, p, q, u, p_value):
     assert np.allclose(p_values, p_value, atol=1e-8)
 
 
+@pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
+@pytest.mark.parametrize("seed", [0, 1, 2, 3, 4])
+def test_inverse_anderson_rubin_below_above(n, p, q, u, seed):
+    rng = np.random.RandomState(seed)
+
+    delta = rng.normal(0, 1, (u, p))
+    gamma = rng.normal(0, 1, (u, 1))
+
+    beta = rng.normal(0, 0.1, (p, 1))
+    Pi = rng.normal(0, 1, (q, p))
+
+    U = rng.normal(0, 1, (n, u))
+
+    Z = rng.normal(0, 1, (n, q))
+    X = Z @ Pi + U @ delta + rng.normal(0, 1, (n, p))
+    y = X @ beta + U @ gamma + rng.normal(0, 1, (n, 1))
+
+    X = X - X.mean(axis=0)
+    y = y - y.mean()
+
+    beta_hat = rng.normal(0, 0.1, (p, 1))
+    _, p_value = anderson_rubin_test(Z, y - X @ beta_hat)
+    below = inverse_anderson_rubin(Z, X, y, p_value * 0.999)
+    above = inverse_anderson_rubin(Z, X, y, p_value + (1 - p_value) * 0.001)
+    assert below(beta_hat.reshape(1, -1)) < 0
+    assert above(beta_hat.reshape(1, -1)) > 0
+
+
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2), (100, 2, 1, 2)])
 def test_bounded_inverse_anderson_rubin_p_value(n, p, q, u):
     Z, X, Y = simulate_gaussian_iv(n, p, q, u, seed=0)
