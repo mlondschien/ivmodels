@@ -74,7 +74,7 @@ class Quadric:
                 raise ValueError("Quadric is empty.")
             else:
                 return np.zeros(shape=(0, 2))
-        if np.all(self.D < 0) and (self.c_standardized < 0):
+        if np.all(self.D < 0) and (self.c_standardized <= 0):
             if error:
                 raise ValueError("The quadric is the whole space.")
             else:
