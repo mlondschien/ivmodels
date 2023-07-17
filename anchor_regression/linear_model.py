@@ -295,7 +295,7 @@ class KClass(KClassMixin, GeneralizedLinearRegressor):
     """K-Class estimator for linear regression."""
 
     def __init__(
-        self, kappa=1, instrument_names=None, instrument_regex=None, alpha=0, l1_ratio=1
+        self, kappa=1, instrument_names=None, instrument_regex=None, alpha=0, l1_ratio=0
     ):
         super().__init__(
             kappa=kappa,
