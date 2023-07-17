@@ -2,8 +2,8 @@ import itertools
 
 import numpy as np
 
-from anchor_regression.linear_model import KClass
-from anchor_regression.tests import anderson_rubin_test
+from ivmodels.linear_model import KClass
+from ivmodels.tests import anderson_rubin_test
 
 
 class SpaceIV:

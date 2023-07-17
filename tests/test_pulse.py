@@ -1,9 +1,9 @@
 import pytest
 
-from anchor_regression.linear_model import AnchorRegression
-from anchor_regression.pulse import PULSE
-from anchor_regression.simulate import simulate_gaussian_iv
-from anchor_regression.tests import pulse_test
+from ivmodels.linear_model import AnchorRegression
+from ivmodels.pulse import PULSE
+from ivmodels.simulate import simulate_gaussian_iv
+from ivmodels.tests import pulse_test
 
 
 @pytest.mark.skip()

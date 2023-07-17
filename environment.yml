@@ -1,4 +1,4 @@
-name: anchor_regression
+name: ivmodels
 channels:
   - conda-forge
   - nodefaults

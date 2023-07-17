@@ -2,7 +2,7 @@
 requires = ['setuptools', 'setuptools-scm', 'wheel']
 
 [project]
-name = "anchor_regression"
+name = "ivmodels"
 description = "Anchor Regression"
 readme = "README.md"
 version = "0.0.1"
@@ -10,7 +10,7 @@ requires-python = ">=3.7"
 authors = [
     { name = "Malte Londschien", email = "malte@londschien.ch" },
 ]
-urls = {homepage = "https://github.com/mlondschien/anchor_regression/"}
+urls = {homepage = "https://github.com/mlondschien/ivmodels/"}
 classifiers = [
     "License :: OSI Approved :: BSD License",
     "Programming Language :: Python"
@@ -24,9 +24,9 @@ multi_line_output = 3
 include_trailing_comma = true
 ensure_newline_before_comments = true
 line_length = 88
-known_first_party = "anchor_regression"
+known_first_party = "ivmodels"
 skip_glob = '\.eggs/*,\.git/*,\.venv/*,build/*,dist/*'
 default_section = 'THIRDPARTY'
 
 [tool.setuptools]
-py-modules = ["anchor_regression"]
+py-modules = ["ivmodels"]

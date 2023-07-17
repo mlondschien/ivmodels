@@ -4,7 +4,7 @@ import re
 import numpy as np
 from glum import GeneralizedLinearRegressor
 
-from anchor_regression.utils import proj
+from ivmodels.utils import proj
 
 try:
     import pandas as pd

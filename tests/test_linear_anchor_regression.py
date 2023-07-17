@@ -3,8 +3,8 @@ import pandas as pd
 import pytest
 from glum import GeneralizedLinearRegressor
 
-from anchor_regression.linear_model import AnchorRegression
-from anchor_regression.simulate import simulate_gaussian_iv
+from ivmodels.linear_model import AnchorRegression
+from ivmodels.simulate import simulate_gaussian_iv
 
 
 @pytest.mark.parametrize("alpha, l1_ratio", [(0, 0), (1, 0), (1, 0.5), (1, 1)])
