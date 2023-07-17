@@ -3,10 +3,10 @@ import pytest
 import scipy
 from sklearn.linear_model import LinearRegression
 
-from anchor_regression.linear_model import KClass, KClassMixin
-from anchor_regression.simulate import simulate_gaussian_iv
-from anchor_regression.tests import anderson_rubin_test
-from anchor_regression.utils import proj
+from ivmodels.linear_model import KClass, KClassMixin
+from ivmodels.simulate import simulate_gaussian_iv
+from ivmodels.tests import anderson_rubin_test
+from ivmodels.utils import proj
 
 
 @pytest.mark.parametrize(

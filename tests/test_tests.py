@@ -2,10 +2,10 @@ import numpy as np
 import pytest
 from sklearn.linear_model import LinearRegression
 
-from anchor_regression import AnchorRegression
-from anchor_regression.linear_model import KClass
-from anchor_regression.simulate import simulate_gaussian_iv
-from anchor_regression.tests import (
+from ivmodels import AnchorRegression
+from ivmodels.linear_model import KClass
+from ivmodels.simulate import simulate_gaussian_iv
+from ivmodels.tests import (
     anderson_rubin_test,
     asymptotic_confidence_interval,
     bounded_inverse_anderson_rubin,

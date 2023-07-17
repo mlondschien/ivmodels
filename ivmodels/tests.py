@@ -1,8 +1,8 @@
 import numpy as np
 import scipy
 
-from anchor_regression.quadric import Quadric
-from anchor_regression.utils import proj
+from ivmodels.quadric import Quadric
+from ivmodels.utils import proj
 
 
 def pulse_test(Z, residuals):

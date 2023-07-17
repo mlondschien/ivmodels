@@ -1,7 +1,7 @@
 import logging
 
-from anchor_regression.linear_model import AnchorRegression
-from anchor_regression.tests import pulse_test
+from ivmodels.linear_model import AnchorRegression
+from ivmodels.tests import pulse_test
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,7 @@
 import numpy as np
 
-from anchor_regression.anderson_rubin_basis_pursuit import anderson_rubin_basis_pursuit
-from anchor_regression.tests import anderson_rubin_test, inverse_anderson_rubin
+from ivmodels.anderson_rubin_basis_pursuit import anderson_rubin_basis_pursuit
+from ivmodels.tests import anderson_rubin_test, inverse_anderson_rubin
 
 
 def test_anderson_rubin_basis_pursuit():

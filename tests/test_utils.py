@@ -1,6 +1,6 @@
 import numpy as np
 
-from anchor_regression.utils import proj
+from ivmodels.utils import proj
 
 
 def test_proj():

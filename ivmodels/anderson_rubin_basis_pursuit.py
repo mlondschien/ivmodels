@@ -3,7 +3,7 @@ import pylops
 import pyproximal
 import scipy
 
-from anchor_regression.utils import proj
+from ivmodels.utils import proj
 
 
 def anderson_rubin_basis_pursuit(Z, X, y, alpha=0.05):

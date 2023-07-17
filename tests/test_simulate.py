@@ -1,6 +1,6 @@
 import pytest
 
-from anchor_regression.simulate import simulate_gaussian_iv
+from ivmodels.simulate import simulate_gaussian_iv
 
 
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])

@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from anchor_regression.quadric import Quadric
+from ivmodels.quadric import Quadric
 
 
 @pytest.mark.parametrize("p", [2, 5])
