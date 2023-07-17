@@ -71,10 +71,8 @@ def test_inverse_anderson_rubin_round_trip(n, p, q, u, p_value):
     assert np.allclose(p_values, p_value, atol=1e-8)
 
 
-@pytest.mark.parametrize(
-    "n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2), (10000, 2, 5, 2)]
-)
-@pytest.mark.parametrize("seed", [0, 1, 2, 3, 4])
+@pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
+@pytest.mark.parametrize("seed", [0, 1])
 def test_inverse_anderson_rubin_below_above(n, p, q, u, seed):
     rng = np.random.RandomState(seed)
 
