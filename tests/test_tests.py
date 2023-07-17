@@ -3,9 +3,11 @@ import pytest
 from sklearn.linear_model import LinearRegression
 
 from anchor_regression import AnchorRegression
+from anchor_regression.linear_model import KClass
 from anchor_regression.simulate import simulate_gaussian_iv
 from anchor_regression.tests import (
     anderson_rubin_test,
+    asymptotic_confidence_interval,
     bounded_inverse_anderson_rubin,
     inverse_anderson_rubin,
     pulse_test,
@@ -28,11 +30,11 @@ def test_pulse_anchor(test, n, p, q, u):
     A, X, Y = simulate_gaussian_iv(n, p, q, u)
     gammas = [0.1, 1, 2, 4, 8, 16, 32, 64]
     ars = [AnchorRegression(gamma=gamma).fit(X, Y, A) for gamma in gammas]
-    statistics = [test(A, Y - ar.predict(X))[0] for ar in ars]
-    p_values = [test(A, Y - ar.predict(X))[1] for ar in ars]
+    statistics = [test(A, Y.flatten() - ar.predict(X))[0] for ar in ars]
+    p_values = [test(A, Y.flatten() - ar.predict(X))[1] for ar in ars]
 
-    assert np.all(statistics[:-1] <= statistics[1:])  # AR test should be monotonic
-    assert np.all(p_values[:-1] >= p_values[1:])
+    assert np.all(statistics[:-1] >= statistics[1:])  # AR test should be monotonic
+    assert np.all(p_values[:-1] <= p_values[1:])
 
 
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
@@ -117,3 +119,36 @@ def test_bounded_inverse_anderson_rubin_p_value(n, p, q, u):
 
         assert np.isinf(quad_below.volume())
         assert np.isfinite(quad_above.volume())
+
+
+@pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 1, 1, 1)])
+@pytest.mark.parametrize("alpha", [0.8, 0.95])
+def test_asymptotic_confidence_set(alpha, n, p, q, u, seed=0):
+    rng = np.random.RandomState(seed)
+
+    delta = rng.normal(0, 1, (u, p))
+    gamma = rng.normal(0, 1, (u, 1))
+    beta = rng.normal(0, 0.1, (p, 1))
+    Pi = rng.normal(0, 1, (q, p))
+
+    n_seeds = 200
+    vals = np.zeros(n_seeds)
+
+    for s in range(n_seeds):
+        rng = np.random.RandomState(s)
+        U = rng.normal(0, 1, (n, u))
+        Z = rng.normal(0, 1, (n, q))
+        X = Z @ Pi + U @ delta + rng.normal(0, 1, (n, p))
+        y = X @ beta + U @ gamma + rng.normal(0, 1, (n, 1))
+
+        Z = Z - Z.mean(axis=0)
+        X = X - X.mean(axis=0)
+        y = y - y.mean()
+
+        beta_liml = KClass(kappa="liml").fit(X, y, Z).coef_.reshape(-1, 1)
+
+        vals[s] = asymptotic_confidence_interval(Z, X, y, beta_liml, alpha)(
+            beta.flatten()
+        )
+
+    assert np.abs(np.mean(vals < 0) - alpha) < 0.5 * (1 - alpha)
