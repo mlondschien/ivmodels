@@ -62,3 +62,26 @@ def test_quadric_boundary(D, c_standardized):
 def test_quadric_volume(D, c, expected):
     quadric = Quadric(np.diag(D), np.zeros_like(D), c)
     assert quadric.volume() == expected
+
+
+def test_quadric_from_constraints():
+    rng = np.random.RandomState(0)
+
+    n = 100
+    p = 2
+
+    X = rng.normal(0, 1, (n, p))
+    beta = rng.normal(0, 1, p)
+
+    A = X.T @ X
+    b = 2 * -A @ beta
+    c = beta.T @ A @ beta
+
+    quadric = Quadric(A, b, c)
+
+    assert np.allclose(quadric.center, beta)
+
+    beta_hat = rng.normal(0, 1, p)
+    assert np.allclose(
+        quadric(beta_hat.reshape(1, -1)), (beta_hat - beta).T @ A @ (beta_hat - beta)
+    )
