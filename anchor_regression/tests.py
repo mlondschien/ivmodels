@@ -51,6 +51,9 @@ def anderson_rubin_test(Z, residuals):
            equation in a complete system of stochastic equations, Annals of Mathematical
            Statistics, 20, 46-63.
     """
+    if residuals.ndim != 1 and residuals.shape[1] != 1:
+        raise ValueError(f"residuals must be a vector. Got shape {residuals.shape}.")
+
     n, q = Z.shape
     proj_residuals = proj(Z, residuals)
     statistic = (
@@ -93,14 +96,12 @@ def inverse_anderson_rubin(Z, X, y, alpha=0.05):
     return Quadric(A, b, c)
 
 
-def asymptotic_confidence_interval(Z, X, y, beta, alpha=0.05):
+def asymptotic_confidence_interval(Z, X, y, beta, alpha=0.95):
     """Return the quadric for the acceptance region based on asymptotic normality."""
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1).")
 
-    n = Z.shape[0]
-
-    z_alpha = scipy.stats.norm.ppf(1 - alpha)
+    z_alpha = scipy.stats.chi2.ppf(alpha, df=X.shape[1])
 
     Z = Z - Z.mean(axis=0)
     X = X - X.mean(axis=0)
@@ -108,10 +109,10 @@ def asymptotic_confidence_interval(Z, X, y, beta, alpha=0.05):
 
     X_proj = proj(Z, X)
 
-    hat_sigma_sq = np.mean(np.power((y - X @ beta), 2))
-    A = 1 / n * (X_proj.T @ X_proj) / hat_sigma_sq
+    hat_sigma_sq = np.mean(np.square(y - X @ beta))
+    A = X.T @ X_proj
     b = -2 * A @ beta
-    c = beta.T @ A @ beta - z_alpha
+    c = beta.T @ A @ beta - hat_sigma_sq * z_alpha
     return Quadric(A, b, c)
 
 

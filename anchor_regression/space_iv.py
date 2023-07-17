@@ -43,7 +43,7 @@ class SpaceIV:
                     liml.fit(X[:, S], y, Z=Z)
                     p_val = anderson_rubin_test(Z, y - liml.predict(X[:, S]))[1]
 
-                if p_val > best_p_value:
+                if p_val >= best_p_value:
                     best_p_value = p_val
                     best_S = S
                     best_coef_ = liml.coef_

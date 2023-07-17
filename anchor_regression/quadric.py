@@ -56,7 +56,7 @@ class Quadric:
             or x.ndim > 2
         ):
             raise ValueError("x has the wrong dimension.")
-        return (x @ self.A * x).sum(axis=1) + self.b.T @ x.T + self.c
+        return (x @ self.A * x).sum(axis=x.ndim - 1) + self.b.T @ x.T + self.c
 
     def forward_map(self, x_tilde):
         """Map from the standardized space to the original space."""
