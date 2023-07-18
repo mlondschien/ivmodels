@@ -127,6 +127,11 @@ def test_inverse_anderson_rubin_below_above(n, p, q, u, seed):
 
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2), (100, 2, 1, 2)])
 def test_bounded_inverse_anderson_rubin_p_value(n, p, q, u):
+    """
+    `bounded_inverse_anderson_rubin` should return the largest p-value s.t. the
+    corresponding confidence set is bounded. Test that this is the case by computing
+    the volume of the confidence sets after increasing / decreasing the p-value by 0.1%.
+    """
     Z, X, Y = simulate_gaussian_iv(n, p, q, u, seed=0)
 
     Z = Z - Z.mean(axis=0)
@@ -146,7 +151,7 @@ def test_bounded_inverse_anderson_rubin_p_value(n, p, q, u):
 
 
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 1, 1, 1)])
-@pytest.mark.parametrize("alpha", [0.8, 0.95])
+@pytest.mark.parametrize("alpha", [0.2, 0.05])
 def test_asymptotic_confidence_set(alpha, n, p, q, u, seed=0):
     rng = np.random.RandomState(seed)
 
@@ -175,4 +180,5 @@ def test_asymptotic_confidence_set(alpha, n, p, q, u, seed=0):
             beta.flatten()
         )
 
-    assert np.abs(np.mean(vals < 0) - alpha) < 0.5 * (1 - alpha)
+    
+    assert np.abs(np.mean(vals > 0) - alpha) < 0.5 * alpha

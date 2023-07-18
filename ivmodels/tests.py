@@ -95,12 +95,12 @@ def inverse_anderson_rubin(Z, X, y, alpha=0.05):
     return Quadric(A, b, c)
 
 
-def asymptotic_confidence_interval(Z, X, y, beta, alpha=0.95):
+def asymptotic_confidence_interval(Z, X, y, beta, alpha=0.05):
     """Return the quadric for the acceptance region based on asymptotic normality."""
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1).")
 
-    z_alpha = scipy.stats.chi2.ppf(alpha, df=X.shape[1])
+    z_alpha = scipy.stats.chi2.ppf(1 - alpha, df=X.shape[1])
 
     Z = Z - Z.mean(axis=0)
     X = X - X.mean(axis=0)
