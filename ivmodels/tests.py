@@ -61,8 +61,7 @@ def anderson_rubin_test(Z, residuals):
     )
     statistic *= (n - q) / q
 
-    p_value = 1 - scipy.stats.f.cdf(statistic, dfn=n - q, dfd=q)
-
+    p_value = 1 - scipy.stats.f.cdf(statistic, dfn=q, dfd=n - q)
     return statistic, p_value
 
 
@@ -75,7 +74,7 @@ def inverse_anderson_rubin(Z, X, y, alpha=0.05):
 
     n, q = Z.shape
 
-    quantile = scipy.stats.f.ppf(1 - alpha, dfn=n - q, dfd=q)
+    quantile = scipy.stats.f.ppf(1 - alpha, dfn=q, dfd=n - q)
 
     Z = Z - Z.mean(axis=0)
     X = X - X.mean(axis=0)
@@ -96,12 +95,12 @@ def inverse_anderson_rubin(Z, X, y, alpha=0.05):
     return Quadric(A, b, c)
 
 
-def asymptotic_confidence_interval(Z, X, y, beta, alpha=0.95):
+def asymptotic_confidence_interval(Z, X, y, beta, alpha=0.05):
     """Return the quadric for the acceptance region based on asymptotic normality."""
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1).")
 
-    z_alpha = scipy.stats.chi2.ppf(alpha, df=X.shape[1])
+    z_alpha = scipy.stats.chi2.ppf(1 - alpha, df=X.shape[1])
 
     Z = Z - Z.mean(axis=0)
     X = X - X.mean(axis=0)
@@ -138,5 +137,5 @@ def bounded_inverse_anderson_rubin(Z, X):
     W = np.linalg.solve(X.T @ X, X.T @ X_proj)
     eta_min = min(np.real(np.linalg.eigvals(W)))
 
-    cdf = scipy.stats.f.cdf((n - q) / q * eta_min / (1 - eta_min), dfn=n - q, dfd=q)
+    cdf = scipy.stats.f.cdf((n - q) / q * eta_min / (1 - eta_min), dfn=q, dfd=n - q)
     return 1 - cdf

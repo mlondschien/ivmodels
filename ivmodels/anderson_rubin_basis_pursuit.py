@@ -13,7 +13,7 @@ def anderson_rubin_basis_pursuit(Z, X, y, alpha=0.05):
     Returns `argmin ||beta||_1` subject to `AR(beta) <= alpha-quantile`.
     """
     n, q = Z.shape
-    quantile = scipy.stats.f.ppf(1 - alpha, dfn=n - q, dfd=q)
+    quantile = scipy.stats.f.ppf(1 - alpha, dfn=q, dfd=n - q)
 
     Z = Z - Z.mean(axis=0)
     X = X - X.mean(axis=0)
