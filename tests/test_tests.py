@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+import scipy
 from sklearn.linear_model import LinearRegression
 
 from ivmodels import AnchorRegression
@@ -12,7 +13,7 @@ from ivmodels.tests import (
     inverse_anderson_rubin,
     pulse_test,
 )
-import scipy
+
 
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
 def test_pulse_test_tsls(n, p, q, u):
@@ -35,6 +36,7 @@ def test_pulse_anchor(test, n, p, q, u):
 
     assert np.all(statistics[:-1] >= statistics[1:])  # AR test should be monotonic
     assert np.all(p_values[:-1] <= p_values[1:])
+
 
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
 def test_anderson_rubin_test(n, p, q, u, seed=0):
@@ -62,6 +64,7 @@ def test_anderson_rubin_test(n, p, q, u, seed=0):
         vals[s] = anderson_rubin_test(Z, y - X @ beta)[1]
 
     assert scipy.stats.kstest(vals, scipy.stats.uniform(loc=0.0, scale=1).cdf)[1] > 0.05
+
 
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
 def test_inverse_anderson_rubin_sorted(n, p, q, u):
@@ -128,6 +131,8 @@ def test_inverse_anderson_rubin_below_above(n, p, q, u, seed):
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2), (100, 2, 1, 2)])
 def test_bounded_inverse_anderson_rubin_p_value(n, p, q, u):
     """
+    Test `bounded_inverse_anderson_rubin` against `anderson_rubin_test`.
+
     `bounded_inverse_anderson_rubin` should return the largest p-value s.t. the
     corresponding confidence set is bounded. Test that this is the case by computing
     the volume of the confidence sets after increasing / decreasing the p-value by 0.1%.
@@ -180,5 +185,4 @@ def test_asymptotic_confidence_set(alpha, n, p, q, u, seed=0):
             beta.flatten()
         )
 
-    
     assert np.abs(np.mean(vals > 0) - alpha) < 0.5 * alpha
