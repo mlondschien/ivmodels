@@ -12,7 +12,7 @@ from ivmodels.tests import (
     inverse_anderson_rubin,
     pulse_test,
 )
-
+import scipy
 
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
 def test_pulse_test_tsls(n, p, q, u):
@@ -36,6 +36,32 @@ def test_pulse_anchor(test, n, p, q, u):
     assert np.all(statistics[:-1] >= statistics[1:])  # AR test should be monotonic
     assert np.all(p_values[:-1] <= p_values[1:])
 
+@pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
+def test_anderson_rubin_test(n, p, q, u, seed=0):
+    rng = np.random.RandomState(0)
+
+    delta = rng.normal(0, 1, (u, p))
+    gamma = rng.normal(0, 1, (u, 1))
+    beta = rng.normal(0, 0.1, (p, 1))
+    Pi = rng.normal(0, 1, (q, p))
+
+    n_seeds = 200
+    vals = np.zeros(n_seeds)
+
+    for s in range(n_seeds):
+        rng = np.random.RandomState(s)
+        U = rng.normal(0, 1, (n, u))
+        Z = rng.normal(0, 1, (n, q))
+        X = Z @ Pi + U @ delta + rng.normal(0, 1, (n, p))
+        y = X @ beta + U @ gamma + rng.normal(0, 1, (n, 1))
+
+        Z = Z - Z.mean(axis=0)
+        X = X - X.mean(axis=0)
+        y = y - y.mean()
+
+        vals[s] = anderson_rubin_test(Z, y - X @ beta)[1]
+
+    assert scipy.stats.kstest(vals, scipy.stats.uniform(loc=0.0, scale=1).cdf)[1] > 0.05
 
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
 def test_inverse_anderson_rubin_sorted(n, p, q, u):
