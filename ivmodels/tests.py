@@ -18,6 +18,7 @@ def pulse_test(Z, residuals):
     proj_residuals = proj(Z, residuals)
     statistic = np.square(proj_residuals).sum() / np.square(residuals).sum()
     statistic *= Z.shape[0]
+
     p_value = 1 - scipy.stats.chi2.cdf(statistic, df=Z.shape[1])
     return statistic, p_value
 
