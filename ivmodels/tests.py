@@ -108,7 +108,12 @@ def asymptotic_confidence_interval(Z, X, y, beta, alpha=0.05):
 
     X_proj = proj(Z, X)
 
-    hat_sigma_sq = np.mean(np.square(y - X @ beta))
+    # Avoid setting where (X @ beta).shape = (n, 1) and y.shape = (n,), resulting in
+    # predictions.shape = (n, n) and residuals.shape = (n, n).
+    predictions = X @ beta
+    residuals = y.reshape(predictions.shape) - predictions
+    hat_sigma_sq = np.mean(np.square(residuals))
+
     A = X.T @ X_proj
     b = -2 * A @ beta
     c = beta.T @ A @ beta - hat_sigma_sq * z_alpha

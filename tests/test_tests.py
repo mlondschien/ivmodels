@@ -18,6 +18,7 @@ from ivmodels.tests import (
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
 def test_pulse_test_tsls(n, p, q, u):
     A, X, Y = simulate_gaussian_iv(n, p, q, u)
+    Y = Y.flatten()
     Xhat = LinearRegression(fit_intercept=True).fit(A, X).predict(A)
     tsls = LinearRegression(fit_intercept=True).fit(Xhat, Y)
     residuals = Y - tsls.predict(X)
@@ -29,6 +30,7 @@ def test_pulse_test_tsls(n, p, q, u):
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
 def test_pulse_anchor(test, n, p, q, u):
     A, X, Y = simulate_gaussian_iv(n, p, q, u)
+    Y = Y.flatten()
     gammas = [0.1, 1, 2, 4, 8, 16, 32, 64]
     ars = [AnchorRegression(gamma=gamma).fit(X, Y, A) for gamma in gammas]
     statistics = [test(A, Y.flatten() - ar.predict(X))[0] for ar in ars]
@@ -177,12 +179,11 @@ def test_asymptotic_confidence_set(alpha, n, p, q, u, seed=0):
 
         Z = Z - Z.mean(axis=0)
         X = X - X.mean(axis=0)
-        y = y - y.mean()
+        y = y.flatten() - y.mean()
 
         beta_liml = KClass(kappa="liml").fit(X, y, Z).coef_.reshape(-1, 1)
 
-        vals[s] = asymptotic_confidence_interval(Z, X, y, beta_liml, alpha)(
-            beta.flatten()
-        )
+        quadric = asymptotic_confidence_interval(Z, X, y, beta_liml, alpha)
+        vals[s] = quadric(beta.flatten())
 
     assert np.abs(np.mean(vals > 0) - alpha) < 0.5 * alpha
