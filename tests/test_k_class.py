@@ -32,7 +32,7 @@ def test__lambda_liml_same_with_shortcut(n, p, q, u):
     Z, X, y = simulate_gaussian_iv(n, p, q, u)
 
     X = X - X.mean(axis=0)
-    y = y - y.mean(axis=0)
+    y = y.flatten() - y.mean(axis=0)
 
     X_proj = proj(Z, X)
     y_proj = proj(Z, y)
@@ -51,7 +51,7 @@ def test__lambda_liml_positive(n, p, q, u):
     Z, X, y = simulate_gaussian_iv(n, p, q, u)
 
     k_class = KClass(kappa="liml")
-    k_class.fit(X, y, Z)
+    k_class.fit(X, y.flatten(), Z)
 
     if Z.shape[1] > X.shape[1]:
         assert k_class.lambda_liml_ > 0
@@ -63,13 +63,13 @@ def test__lambda_liml_positive(n, p, q, u):
 def test_liml_minimizes_anderson_rubin(n, p, q, u):
     Z, X, y = simulate_gaussian_iv(n, p, q, u)
     X = X - X.mean(axis=0)
-    y = y - y.mean(axis=0)
+    y = y.flatten() - y.mean(axis=0)
 
     k_class = KClass(kappa="liml")
     k_class.fit(X, y, Z)
 
     def ar(beta):
-        return anderson_rubin_test(Z, y - X @ beta.reshape(-1, 1))[0]
+        return anderson_rubin_test(Z, y - X @ beta)[0]
 
     grad = scipy.optimize.approx_fprime(k_class.coef_.flatten(), ar, 1e-8)
     np.testing.assert_allclose(grad, 0, atol=1e-4)
@@ -81,7 +81,7 @@ def test_k_class_normal_equations(kappa, n, p, q, u):
     Z, X, y = simulate_gaussian_iv(n, p, q, u)
 
     X = X - X.mean(axis=0)
-    y = y - y.mean(axis=0)
+    y = y.flatten() - y.mean(axis=0)
 
     X_proj = proj(Z, X)
     y_proj = proj(Z, y)
@@ -97,6 +97,7 @@ def test_k_class_normal_equations(kappa, n, p, q, u):
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 4, 4, 2)])
 def test_liml_equal_to_tsls_in_just_identified_setting(n, p, q, u):
     Z, X, y = simulate_gaussian_iv(n, p, q, u)
+    y = y.flatten()
 
     liml = KClass(kappa="liml")
     liml.fit(X, y, Z)
@@ -111,12 +112,13 @@ def test_liml_equal_to_tsls_in_just_identified_setting(n, p, q, u):
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 4, 4, 2)])
 def test_anderson_rubin_at_liml_is_equal_to_lambda_liml(n, p, q, u):
     Z, X, y = simulate_gaussian_iv(n, p, q, u)
+    y = y.flatten()
 
     liml = KClass(kappa="liml")
     liml.fit(X, y, Z)
 
     assert np.allclose(
-        anderson_rubin_test(Z, y - X @ liml.coef_.reshape(-1, 1))[0],
+        anderson_rubin_test(Z, y - X @ liml.coef_)[0],
         (n - q) / q * liml.lambda_liml_ / (1 - liml.lambda_liml_),
         atol=1e-8,
     )
@@ -127,23 +129,23 @@ def test_anderson_rubin_at_liml_is_equal_to_lambda_liml(n, p, q, u):
     [
         (
             50,
-            np.array([[0.2]]),
+            np.array([0.2]),
             np.array([[1.0], [-1.0]]),
-            np.array([[1.0]]),
+            np.array([1.0]),
             np.array([[1.0]]),
         ),
         (
             50,
-            np.array([[0.2], [-0.2]]),
+            np.array([0.2, -0.2]),
             np.array([[1.0, -1.0], [-1.0, 0.0]]),
-            np.array([[1.0]]),
+            np.array([1.0]),
             np.array([[1.0]]),
         ),
         (
             200,
-            np.array([[0.2], [-0.2]]),
+            np.array([0.2,-0.2]),
             np.array([[1.0, -1.0], [0.2, 0.8], [2.0, 1.2], [-1.0, 0.0]]),
-            np.array([[1.0]]),
+            np.array([1.0]),
             np.array([[1.0]]),
         ),
     ],
@@ -163,10 +165,10 @@ def test_fuller_bias_and_mse(n, beta, Pi, gamma, delta):
         U = rng.normal(0, 1, (n, u))
         Z = rng.normal(0, 1, (n, q))
         X = Z @ Pi + U @ delta + rng.normal(0, 1, (n, p))
-        y = X @ beta + U @ gamma + rng.normal(0, 1, (n, 1))
+        y = X @ beta + U @ gamma + rng.normal(0, 1, (n,))
 
         for kappa in kappas:
-            results[kappa][seed, :] = KClass(kappa=kappa).fit(X, y, Z).coef_.flatten()
+            results[kappa][seed, :] = KClass(kappa=kappa).fit(X, y, Z).coef_
         limls[seed] = KClass(kappa="liml").fit(X, y, Z).lambda_liml_
 
     mses = {k: np.mean((v - beta.flatten()) ** 2) for k, v in results.items()}

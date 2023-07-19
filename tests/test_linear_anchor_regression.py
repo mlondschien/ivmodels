@@ -12,7 +12,7 @@ from ivmodels.simulate import simulate_gaussian_iv
 def test_linear_anchor_regression_equal_to_ols(alpha, l1_ratio, n, p, q, u):
     n = 100
 
-    A, X, Y = simulate_gaussian_iv(n, p, q, u)
+    A, X, y = simulate_gaussian_iv(n, p, q, u)
     df = pd.DataFrame(
         np.hstack([X, A]),
         columns=[f"X{k}" for k in range(p)] + [f"anchor{k}" for k in range(q)],
@@ -20,10 +20,10 @@ def test_linear_anchor_regression_equal_to_ols(alpha, l1_ratio, n, p, q, u):
 
     lar = AnchorRegression(
         gamma=1, alpha=alpha, l1_ratio=l1_ratio, instrument_regex="anchor"
-    ).fit(df, Y)
+    ).fit(df, y.flatten())
     ols = GeneralizedLinearRegressor(
         family="gaussian", alpha=alpha, l1_ratio=l1_ratio, fit_intercept=True
-    ).fit(X, Y)
+    ).fit(X, y.flatten())
 
     assert np.allclose(lar.predict(df), ols.predict(X))
     assert np.allclose(lar.coef_, ols.coef_)
@@ -55,9 +55,9 @@ def test_linear_anchor_regression_different_inputs(gamma, n, p, q, u):
     anchors = [f"A{k}" for k in range(q)]
     df = pd.DataFrame(np.hstack([X, A]), columns=[f"X{k}" for k in range(p)] + anchors)
 
-    ar_1 = AnchorRegression(gamma=gamma, instrument_names=anchors).fit(df, Y)
-    ar_2 = AnchorRegression(gamma=gamma, instrument_regex="A").fit(df, Y)
-    ar_3 = AnchorRegression(gamma=gamma).fit(X, Y, A)
+    ar_1 = AnchorRegression(gamma=gamma, instrument_names=anchors).fit(df, Y.flatten())
+    ar_2 = AnchorRegression(gamma=gamma, instrument_regex="A").fit(df, Y.flatten())
+    ar_3 = AnchorRegression(gamma=gamma).fit(X, Y.flatten(), A)
 
     assert np.allclose(ar_1.coef_, ar_2.coef_)
     assert np.allclose(ar_1.coef_, ar_3.coef_)
@@ -70,6 +70,7 @@ def test_linear_anchor_regression_different_inputs(gamma, n, p, q, u):
 # @pytest.mark.filterwarnings("ignore:X does not have valid feature names, but LinearAnc")
 def test_linear_anchor_regression_raise():
     A, X, Y = simulate_gaussian_iv(10, 3, 2, 1)
+    Y = Y.flatten()
 
     df = pd.DataFrame(np.hstack([X, A]), columns=["X1", "X2", "X3", "A1", "A2"])
 
@@ -113,5 +114,5 @@ def test_linear_anchor_regression_raise():
 
 def test_score():
     A, X, Y = simulate_gaussian_iv(100, 2, 2, 1)
-    model = AnchorRegression(gamma=1).fit(X, Y, A)
+    model = AnchorRegression(gamma=1).fit(X, Y.flatten(), A)
     assert model.score(X, Y.flatten()) > 0.5

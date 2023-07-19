@@ -49,6 +49,12 @@ class Quadric:
         ----------
         x: np.ndarray of dimension (p,) or (n, p).
             The point(s) at which to evaluate the quadric.
+        
+        Returns
+        -------
+        np.ndarray of dimension (n,) or float
+            The value(s) of the quadric at x. If x is a matrix, returns a vector of
+            values. If x is a vector, returns a scalar.
         """
         if (
             (x.ndim == 1 and len(x) != self.A.shape[0])
@@ -56,6 +62,12 @@ class Quadric:
             or x.ndim > 2
         ):
             raise ValueError("x has the wrong dimension.")
+
+        out = (x @ self.A * x).sum(axis=x.ndim - 1) + self.b.T @ x.T + self.c
+
+        if x.ndim == 1:
+            return out.item()
+
         return (x @ self.A * x).sum(axis=x.ndim - 1) + self.b.T @ x.T + self.c
 
     def forward_map(self, x_tilde):
