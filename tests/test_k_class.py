@@ -143,7 +143,7 @@ def test_anderson_rubin_at_liml_is_equal_to_lambda_liml(n, p, q, u):
         ),
         (
             200,
-            np.array([0.2,-0.2]),
+            np.array([0.2, -0.2]),
             np.array([[1.0, -1.0], [0.2, 0.8], [2.0, 1.2], [-1.0, 0.0]]),
             np.array([1.0]),
             np.array([[1.0]]),

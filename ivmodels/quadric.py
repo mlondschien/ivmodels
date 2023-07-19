@@ -49,7 +49,7 @@ class Quadric:
         ----------
         x: np.ndarray of dimension (p,) or (n, p).
             The point(s) at which to evaluate the quadric.
-        
+
         Returns
         -------
         np.ndarray of dimension (n,) or float
