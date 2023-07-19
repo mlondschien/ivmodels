@@ -5,7 +5,7 @@ import scipy
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 
-from ivmodels import KClass
+from ivmodels import PULSE, KClass
 from ivmodels.tests import (
     anderson_rubin_test,
     asymptotic_confidence_interval,
@@ -40,7 +40,7 @@ def main(n, p, q, u, seed):  # noqa D
     X = X - X.mean(axis=0)
     y = y - y.mean()
 
-    # Compute LIML, TSLS, and OLS estimators
+    # Compute LIML, TSLS, OLS, and PULSE estimates
     liml = KClass(kappa="liml").fit(X, y, Z=Z)
     ar_liml = anderson_rubin_test(Z, y - liml.predict(X))
 
@@ -50,6 +50,9 @@ def main(n, p, q, u, seed):  # noqa D
     tsls = KClass(kappa=1).fit(X, y, Z=Z)
     ar_tsls = anderson_rubin_test(Z, y - tsls.predict(X))
 
+    pulse = PULSE(rtol=0.01).fit(X, y, Z=Z)
+    ar_pulse = anderson_rubin_test(Z, y - pulse.predict(X))
+
     ar_truth = anderson_rubin_test(Z, y.reshape(-1, 1) - X @ beta)
 
     print(
@@ -58,8 +61,16 @@ def main(n, p, q, u, seed):  # noqa D
     LIML:  {liml.coef_.flatten()} with AR(beta) = {ar_liml[0]}, p-value = {ar_liml[1]}
     OLS:   {ols.coef_.flatten()} with AR(beta) = {ar_ols[0]}, p-value = {ar_ols[1]}
     TSLS:  {tsls.coef_.flatten()} with AR(beta) = {ar_tsls[0]}, p-value = {ar_tsls[1]}
+    Pulse: {pulse.coef_.flatten()} with AR(beta) = {ar_pulse[0]}, p-value = {ar_pulse[1]}
     """
     )
+
+    n_kclass = 20
+    kclass_coefs = np.zeros(shape=(n_kclass, p))
+
+    kappa_kclasses = np.linspace(0, liml.kappa_, n_kclass)
+    for it in range(n_kclass):
+        kclass_coefs[it, :] = KClass(kappa=kappa_kclasses[it]).fit(X, y, Z=Z).coef_
 
     # Verify that the LIML minimizes the AR test statistic by
     # 1. approximating d_beta AR(beta) at beta = b_liml
@@ -102,7 +113,7 @@ def main(n, p, q, u, seed):  # noqa D
     print(
         f"Volumes: AR(0.05): {quadric_05.volume()}, AR(0.01): {quadric_01.volume()}, AS(0.05): {asymp_quadric_05.volume()}, AS(0.01): {asymp_quadric_01.volume()}"
     )
-    fig, ax = plt.subplots(figsize=(10, 4.5), ncols=2)
+    fig, ax = plt.subplots(figsize=(3 * 10, 3 * 4.5), ncols=2)
 
     for idx, delta in enumerate([1, 6]):
         x_ = np.linspace(beta[0] - delta, beta[0] + delta, 100)
@@ -122,6 +133,7 @@ def main(n, p, q, u, seed):  # noqa D
         im = ax[idx].contourf(xx, yy, zz)
 
         ax[idx].scatter(beta[0], beta[1], color="black", label="Truth", marker="x")
+        ax[idx].scatter(pulse.coef_[0], pulse.coef_[1], color="orange", label="PULSE")
         ax[idx].scatter(
             liml.coef_[0], liml.coef_[1], color="red", label="LIML", marker="o"
         )
@@ -132,6 +144,13 @@ def main(n, p, q, u, seed):  # noqa D
             tsls.coef_[0], tsls.coef_[1], color="green", label="TSLS", marker="x"
         )
 
+        ax[idx].plot(
+            kclass_coefs[:, 0],
+            kclass_coefs[:, 1],
+            color="black",
+            label="KClass",
+            linestyle="dotted",
+        )
         ax[idx].plot(
             boundary_05[:, 0], boundary_05[:, 1], color="black", label="AR = 0.05"
         )
