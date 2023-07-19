@@ -11,14 +11,12 @@ class PULSEMixin:
 
     def __init__(
         self,
-        p_value=0.05,
-        gamma_max=1e4,
-        rtol=0.1,
+        p_min=0.05,
+        rtol=0.01,
         **kwargs,
     ):
         super().__init__(**kwargs)
-        self.p_value = p_value
-        self.gamma_max = gamma_max
+        self.p_min = p_min
         self.rtol = rtol
 
     def fit(self, X, y, Z=None, *args, **kwargs):
@@ -44,49 +42,52 @@ class PULSEMixin:
         """
         _, Z_ = self._X_Z(X, Z, check=False)
 
-        high = self.gamma_max
-        low = 1
+        high = 1
+        low = 0
 
-        # We first check that the "gamma_hat" lies somewhere between 1 and gamma_max.
-        # This is equivalent to p_value(1) < self.p_value < p_value(gamma_max).
-        self.gamma = self.gamma_max
+        # We first check that the PULSE test is not rejected with significance level
+        # self.p_min for two-stage-least-squares (kappa = 1).
+        # TODO: Evaluate which estimator minimizes the pulse_test statistic, use that.
+        self.kappa = 1
         super().fit(X, y, Z, *args, **kwargs)
-        p_value = pulse_test(Z_, y - self.predict(X))[1]
-        if p_value < self.p_value:
+        p_value = pulse_test(Z_, y.flatten() - self.predict(X))[1]
+
+        if p_value < self.p_min:
             raise ValueError(
-                f"The Anderson Rubin test is rejected at significance level "
-                f"{p_value} < {self.p_value} with maximal gamma={self.gamma_max}. "
-                "Consider increasing `gamma_max`."
+                f"The PULSE test is rejected at significance level {p_value} < "
+                f"{self.p_min} at the two-stage-least-squares estimate."
             )
 
-        self.gamma = 1
+        self.kappa = 0
         super().fit(X, y, Z, *args, **kwargs)
-        p_value = pulse_test(Z_, y - self.predict(X))[1]
-        if p_value > self.p_value:
+        p_value = pulse_test(Z_, y.flatten() - self.predict(X))[1]
+
+        if p_value > self.p_min:
             raise ValueError(
-                f"The Anderson Rubin test is not significant at significance level "
-                f"{p_value} > {self.p_value} with gamma=1."
+                f"The PULSE test is significant at significance level {p_value} < "
+                f"{self.p_min} only at the ordinary least squares estimate."
             )
 
-        # We then perform a binary search to find the smallest gamma that satisfies
-        # p_value(gamma) >= self.p_value. Throughout, we enforce that
-        # p_value(low) < self.p_value < p_value(high).
+        # We then perform a binary search to find the smallest kappa that satisfies
+        # p_value(kappa) >= self.p_min. Throughout, we enforce that
+        # p_value(low) <= self.p_min <= p_value(high).
         while high - low > self.rtol * high:
             mid = (high + low) / 2
-            self.gamma = mid
+            self.kappa = mid
             super().fit(X, y, Z, *args, **kwargs)
             p_value = pulse_test(Z_, y - self.predict(X))[1]
             logger.debug(
-                f"Anderson-Rubin test with gamma={mid} yields p_value={p_value}."
+                f"The PULSE test with kappa={mid} yields p_value={p_value}."
             )
-
-            if p_value < self.p_value:
+            if p_value < self.p_min:
                 low = mid
             else:
                 high = mid
 
+        # If, in the last search step of binary search, we had p_value < self.p_min at
+        # mid (and thus set low <- mid), we set kappa to high, where p_value >= self.p_min.
         if low == mid:
-            self.gamma = high
+            self.kappa = high
             super().fit(X, y, Z, *args, **kwargs)
 
         return self
@@ -96,9 +97,9 @@ class PULSE(PULSEMixin, AnchorRegression):
     """
     p-uncorrelated least squares estimator (PULSE) [1]_.
 
-    Perform (linear) anchor regression with regularization parameter `gamma` chosen s.t.
-    the Anderson-Rubin test of correlation between the anchor and the residual is not
-    significant at level `p_value`.
+    Perform (linear) k-class estimation parameter `kappa` chosen s.t. the PULSE test of
+    correlation between the anchor and the residual is not significant at level
+    `p_value`.
 
     Parameters
     ----------
@@ -109,14 +110,10 @@ class PULSE(PULSEMixin, AnchorRegression):
         A regex that is used to select columns in `X` that should be used as anchors.
         Requires `X` to be a pandas DataFrame. If both `instrument_names` and
         `instrument_regex` are specified, the union of the two is used.
-    p_value: float, optional, default = 0.05
+    p_min: float, optional, default = 0.05
         The p-value of the Anderson-Rubin test that is used to determine the regularization
         parameter `gamma`. The PULSE will search for the smallest `gamma` that makes the
-        test not significant at level `p_value` with binary search.
-    gamma_max: float, optional, default = 1e4
-        The maximum value of `gamma` that is used in the binary search. If anchor
-        regression with gamma = `gamma_max` is still significant at level `p_value`, an
-        error is raised.
+        test not significant at level `p_min` with binary search.
     rtol: float, optional, default = 0.1
         The relative tolerance of the binary search.
 
@@ -129,8 +126,7 @@ class PULSE(PULSEMixin, AnchorRegression):
         self,
         instrument_names=None,
         instrument_regex=None,
-        p_value=0.05,
-        gamma_max=1e4,
+        p_min=0.05,
         rtol=0.1,
     ):
         super().__init__(
@@ -138,6 +134,5 @@ class PULSE(PULSEMixin, AnchorRegression):
             instrument_names=instrument_names,
             instrument_regex=instrument_regex,
         )
-        self.p_value = p_value
-        self.gamma_max = gamma_max
+        self.p_min = p_min
         self.rtol = rtol
