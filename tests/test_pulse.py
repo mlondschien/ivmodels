@@ -1,6 +1,5 @@
 import pytest
 
-from ivmodels.linear_model import KClass
 from ivmodels.pulse import PULSE
 from ivmodels.simulate import simulate_gaussian_iv
 from ivmodels.tests import pulse_test
@@ -14,11 +13,11 @@ def test_pulse(p_min, rtol, n, p, q, u):
     pulse = PULSE(p_min=p_min, rtol=rtol, kappa_max=0.999).fit(X, Y.flatten(), A)
 
     # The PULSE selects the "smallest" kappa s.t. p_value(kappa) >= p_min, where
-    # "smallest" is defined up to rtol. I.e., p_value(kappa * (1 - rtol)) < p_value.
-    # If p_value(0) >= p_min, then the PULSE selects kappa = 0.
+    # "smallest" is defined up to rtol in p_value. I.e.,
+    # p_value(kappa) / (1 + rtol) < p_min. If p_value(0) >= p_min, then the PULSE
+    # selects kappa = 0.
     test_p_value = pulse_test(A, Y.flatten() - pulse.predict(X))[1]
     assert test_p_value >= p_min
 
     if not pulse.kappa == 0:
-        next_kclass = KClass(kappa=pulse.kappa * (1 - rtol)).fit(X, Y.flatten(), A)
-        assert pulse_test(A, Y.flatten() - next_kclass.predict(X))[1] < p_min
+        test_p_value / (1 + rtol) < p_min

@@ -70,27 +70,31 @@ class PULSEMixin:
 
         self.kappa = 0
         super().fit(X, y, Z, *args, **kwargs)
-        p_value = pulse_test(Z_, y.flatten() - self.predict(X))[1]
+        p_value_low = pulse_test(Z_, y.flatten() - self.predict(X))[1]
 
-        if p_value > self.p_min:
+        if p_value_low > self.p_min:
             return self
 
         # We then perform a binary search to find the smallest kappa that satisfies
         # p_value(kappa) >= self.p_min. Throughout, we enforce that
         # p_value(low) <= self.p_min <= p_value(high).
-        while high - low > self.rtol * high:
+        while p_value_high - p_value_low > self.rtol * self.p_min:
             mid = (high + low) / 2
             self.kappa = mid
             super().fit(X, y, Z, *args, **kwargs)
-            p_value = pulse_test(Z_, y - self.predict(X))[1]
-            logger.debug(f"The PULSE test with kappa={mid} yields p_value={p_value}.")
-            if p_value < self.p_min:
+            p_value_mid = pulse_test(Z_, y - self.predict(X))[1]
+            logger.debug(
+                f"The PULSE test with kappa={mid} yields p_value={p_value_mid}."
+            )
+            if p_value_mid < self.p_min:
                 low = mid
+                p_value_low = p_value_mid
             else:
                 high = mid
+                p_value_high = p_value_mid
 
-        # If, in the last search step of binary search, we had p_value < self.p_min at
-        # mid (and thus set low <- mid), we set kappa to high, where p_value >= self.p_min.
+        # If, in the last search step of binary search, we had p_value_mid < self.p_min
+        # (and thus set low <- mid), we set kappa to high, where p_value >= self.p_min.
         if low == mid:
             self.kappa = high
             super().fit(X, y, Z, *args, **kwargs)
@@ -103,7 +107,7 @@ class PULSE(PULSEMixin, KClass):
     p-uncorrelated least squares estimator (PULSE) [1]_.
 
     Perform (linear) k-class estimation parameter with `kappa` in [0, 1] chosen
-    minimally (up to rtol) such that the PULSE test of correlation between the
+    minimally such that the PULSE test of correlation between the
     instruments and the residuals is not significant at level `p_value`.
 
     Parameters
@@ -120,7 +124,9 @@ class PULSE(PULSEMixin, KClass):
         parameter `gamma`. The PULSE will search for the smallest `gamma` that makes the
         test not significant at level `p_min` with binary search.
     rtol: float, optional, default = 0.01
-        The relative tolerance of the binary search.
+        The relative tolerance of the binary search. The PULSE will search for a kappa
+        such that the PULSE test is not significant at level `p_min` with binary search
+        but is significant at level `p_min * (1 + rtol)`.
     kappa_max: float, optional, default = 1
         The maximum value of `kappa` to consider. The PULSE will search for the smallest
         `kappa` that makes the test not significant at level `p_min` with binary search.
