@@ -148,7 +148,7 @@ def main(n, p, q, u, seed):  # noqa D
             kclass_coefs[:, 0],
             kclass_coefs[:, 1],
             color="black",
-            label="KClass",
+            label="k-class path",
             linestyle="dotted",
         )
         ax[idx].plot(
@@ -166,7 +166,7 @@ def main(n, p, q, u, seed):  # noqa D
             asymp_boundary_05[:, 1],
             color="black",
             label="AS = 0.05",
-            linestyle="dotted",
+            linestyle=(0, (3, 4, 1, 4, 1, 4)),
         )
 
         ax[idx].set_xlabel("x1")
