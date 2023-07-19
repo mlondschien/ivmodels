@@ -83,9 +83,7 @@ class PULSEMixin:
             self.kappa = mid
             super().fit(X, y, Z, *args, **kwargs)
             p_value = pulse_test(Z_, y - self.predict(X))[1]
-            logger.debug(
-                f"The PULSE test with kappa={mid} yields p_value={p_value}."
-            )
+            logger.debug(f"The PULSE test with kappa={mid} yields p_value={p_value}.")
             if p_value < self.p_min:
                 low = mid
             else:
@@ -126,7 +124,7 @@ class PULSE(PULSEMixin, KClass):
     kappa_max: float, optional, default = 1
         The maximum value of `kappa` to consider. The PULSE will search for the smallest
         `kappa` that makes the test not significant at level `p_min` with binary search.
-        If kappa_max = 1, the PULSE will run a regression equivalant to
+        If kappa_max = 1, the PULSE will run a regression equivalent to
         two-stage-least-squares. If `alpha` = 0 and `Z.shape[1]` < `X.shape[1]`, this is
         not well-defined and the PULSE will raise an exception.
     alpha: float, optional, default = 0
