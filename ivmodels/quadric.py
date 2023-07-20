@@ -144,7 +144,7 @@ class Quadric:
                 * np.sqrt(np.prod(-self.c_standardized / self.D))
             )
 
-    def projection(self, coordinate):
+    def _projection(self, coordinate):
         """
         Return the projection of the quadric onto the coordinate.
 

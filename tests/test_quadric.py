@@ -104,7 +104,7 @@ def test_quadric_projection(n, p, seed):
     quadric = Quadric(A, b, c)
 
     for j in range(p):
-        sol = quadric.projection(j)
+        sol = quadric._projection(j)
         assert np.allclose(quadric(np.array(sol)), 0)
 
         # The gradient of the quadric at the solution should be zero in each direction
