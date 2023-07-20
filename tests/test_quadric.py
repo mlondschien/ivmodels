@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+import scipy
 
 from ivmodels.quadric import Quadric
 
@@ -85,3 +86,38 @@ def test_quadric_from_constraints():
     assert np.allclose(
         quadric(beta_hat.reshape(1, -1)), (beta_hat - beta).T @ A @ (beta_hat - beta)
     )
+
+
+@pytest.mark.parametrize("n", [10, 100])
+@pytest.mark.parametrize("p", [2, 10])
+@pytest.mark.parametrize("seed", [0, 1])
+def test_quadric_projection(n, p, seed):
+    rng = np.random.RandomState(seed)
+
+    X = rng.normal(0, 1, (n, p))
+    beta = rng.normal(0, 1, p)
+
+    A = X.T @ X
+    b = 2 * -A @ beta
+    c = beta.T @ A @ beta - 10
+
+    quadric = Quadric(A, b, c)
+
+    for j in range(p):
+        sol = quadric._projection(j)
+        assert np.allclose(quadric(np.array(sol)), 0)
+
+        # The gradient of the quadric at the solution should be zero in each direction
+        # other than j. In direction j, the gradient should be negative for the min,
+        # (first component) and positive for the max (second component).
+        grad0 = scipy.optimize.approx_fprime(sol[0], lambda x: quadric(x), 1e-8)
+        grad1 = scipy.optimize.approx_fprime(sol[1], lambda x: quadric(x), 1e-8)
+
+        assert grad0[j] < 0
+        assert grad1[j] > 0
+
+        grad0[j] = 0
+        grad1[j] = 0
+
+        assert np.allclose(grad0, 0, atol=1e-3)
+        assert np.allclose(grad1, 0, atol=1e-3)

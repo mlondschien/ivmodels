@@ -143,3 +143,29 @@ class Quadric:
                 / scipy.special.gamma(d / 2)
                 * np.sqrt(np.prod(-self.c_standardized / self.D))
             )
+
+    def _projection(self, coordinate):
+        """
+        Return the projection of the quadric onto the coordinate.
+
+        Solves argmin/max { x_coordinate | quadric(x) <= 0 }. The `coordinate`-th
+        coordinate of the solution can be seen as the boundary of the projection of the
+        quadric onto the coordinate.
+
+        Parameters
+        ----------
+        coordinate: int
+            The coordinate onto which to project the quadric. Must be between 0 and
+            p - 1.
+
+        Returns
+        -------
+        (np.ndarray of dimension (p,), np.ndarray of dimension (p,))
+            The lower and upper bounds of the projection of the quadric onto the
+            coordinate.
+        """
+        one_hot = np.zeros_like(self.center)
+        one_hot[coordinate] = 1
+        solution = np.linalg.solve(self.A, one_hot)
+        solution *= np.sqrt(-self.c_standardized / solution[coordinate])
+        return (self.center - solution, self.center + solution)
