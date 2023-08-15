@@ -5,12 +5,14 @@ import scipy
 
 class Quadric:
     """
-    A class to represent a quadric x^T A x + b^T x + c <= 0.
+    A class to represent a quadric :math:`x^T A x + b^T x + c <= 0`.
 
-    Internally, works with a standardized form of the quadric. If `V^T D V = A` with
-    D diagonal and V orthonormal, define `center=-A^{-1}b / 2` and
-    `x_tilde=V^T (x - center)`. Then the standardized form is given by
-    `x_tilde^T D x_tilde + c_standardized <= 0`.
+    Internally, works with a standardized form of the quadric. If :math:``V^T D V = A``
+    with :math:`D` diagonal and :math:`V` orthonormal, define
+    :math:`\\mathrm{center} :=-A^{-1}b / 2`,
+    :math:`\\tilde x = V^T (x - \\mathrm{center})` and
+    :math:`\\tilde c = c - \\mathrm{center}^T A \\mathrm{center}`. Then the standardized
+    form is given by :math:`\\tilde x^T D \\tilde x + \\tilde c <= 0`.
 
     Parameters
     ----------
@@ -43,7 +45,7 @@ class Quadric:
         self.V = eigenvectors
 
     def __call__(self, x):
-        """Evaluate the quadric at x.
+        """Evaluate the quadric at :math:`x`.
 
         Parameters
         ----------

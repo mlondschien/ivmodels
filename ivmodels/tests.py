@@ -7,9 +7,9 @@ from ivmodels.utils import proj
 
 def pulse_test(Z, residuals):
     """
-    Test proposed in [1]_ with H0: Z and residuals are uncorrelated.
+    Test proposed in [1] with null hypothesis: ``Z`` and ``residuals`` are uncorrelated.
 
-    See [1]_ Section 3.2 for details.
+    See [1] Section 3.2 for details.
 
     References
     ----------
@@ -28,9 +28,9 @@ def anderson_rubin_test(Z, residuals):
     Perform the Anderson Rubin test.
 
     Test the null hypothesis that the residuals are uncorrelated with the instruments.
-    Under the null, the test statistic is distributed as `F_{q, n - q}`, where `q` is
-    the number of instruments and `n` is the number of observations. Requires normally
-    distributed errors for exactness.
+    Under the null, the test statistic is distributed as :math:`F_{q, n - q}``, where
+    :math:`q` is the number of instruments and :math:`n` is the number of observations.
+    Requires normally distributed errors for exactness.
 
     Parameters
     ----------
@@ -123,9 +123,9 @@ def asymptotic_confidence_interval(Z, X, y, beta, alpha=0.05):
 
 def bounded_inverse_anderson_rubin(Z, X):
     """
-    Return the largest p-value `p` such that the inverse-AR confidence set is unbounded.
+    Return the largest p-value such that the inverse-AR confidence set is unbounded.
 
-    In practice, the confidence set might be unbounded for `1.001 * p` only.
+    In practice, the confidence set might be unbounded for ``1.001 * p`` only.
 
     Parameters
     ----------
