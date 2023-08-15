@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 from ivmodels.linear_models import KClass
@@ -21,7 +22,7 @@ def test_pulse(p_min, rtol, n, p, q, u):
     assert test_p_value >= p_min
 
     kclass = KClass(kappa=pulse.kappa_).fit(X, Y.flatten(), A)
-    assert kclass.coef_ == pulse.coef_
+    assert np.allclose(kclass.coef_, pulse.coef_)
     assert kclass.intercept_ == pulse.intercept_
 
     if not pulse.kappa == 0:
