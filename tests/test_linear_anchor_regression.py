@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 from glum import GeneralizedLinearRegressor
 
-from ivmodels.linear_model import AnchorRegression
+from ivmodels.linear_models import AnchorRegression
 from ivmodels.simulate import simulate_gaussian_iv
 
 

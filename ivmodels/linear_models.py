@@ -221,11 +221,11 @@ class KClassMixin:
 
     def fit(self, X, y, Z=None, *args, **kwargs):
         """
-        Fit a k-class estimator.
+        Fit a k-class or anchor regression estimator.
 
         If `instrument_names` or `instrument_regex` are specified, `X` must be a
-        pandas DataFrame containing columns `instrument_names` and `a` must be
-        `None`. At least one one of `a`, `instrument_names`, and `instrument_regex`
+        pandas DataFrame containing columns `instrument_names` and `Z` must be
+        `None`. At least one one of `Z`, `instrument_names`, and `instrument_regex`
         must be specified.
 
         Parameters
@@ -234,7 +234,7 @@ class KClassMixin:
             The training input samples. If `instrument_names` or `instrument_regex`
             are specified, `X` must be a pandas DataFrame containing columns
             `instrument_names`.
-        y: array-like, shape (n_samples,) or (n_samples, n_targets)
+        y: array-like, shape (n_samples,)
             The target values.
         Z: array-like, shape (n_samples, n_instruments), optional
             The instrument values. If `instrument_names` or `instrument_regex` are
@@ -292,7 +292,69 @@ class KClassMixin:
 
 
 class KClass(KClassMixin, GeneralizedLinearRegressor):
-    """K-Class estimator for linear regression."""
+    r"""K-Class estimator for instrumental variable regression.
+
+    The k-class estimator with parameter :math:`\\kappa` is defined as the solution to
+
+    .. math:: \\hat\\beta_\\textrm{k-class}(\\kappa) := \\arg\\min_\\beta \\ (1 - \\kappa)
+       \\| y - X \\beta \\|_2^2 + \\kappa \\|P_Z (y - X \\beta) \\|_2^2,
+
+    where :math:`P_Z` is the projection matrix onto the subspace spanned by :math:`Z`.
+    This includes the the OLS estimator (:math:`\\kappa = 0`), the 2SLS estimator
+    (:math:`\\kappa = 1`), the limited information maximum likelihood (LIML) estimator
+    (:math:`\\kappa = \\kappa_\\mathrm{liml}`), and the Fuller estimator
+    (:math:`\\kappa = \\kappa_\\mathrm{liml} - \\alpha / (n - q)`) as special cases.
+
+    Parameters
+    ----------
+    kappa: float or {fuller(a), liml}
+        The kappa parameter of the k-class estimator. If float, then kappa must be in
+        :math:`[0, \\kappa_\\mathrm{liml} := 1 / (1 - \\lambda_\\mathrm{liml})] \\geq 1`,
+        where :math:`\\lambda_\\mathrm{liml}` is the smallest eigenvalue of the matrix
+        :math:`((X \\ \\ y)^T (X \\ \\ y))^{-1} (X \\ \\ y)^T P_Z (X \\ \\ y)` and
+        :math:`P_Z` is the projection matrix onto the subspace spanned by :math:`Z`.
+        If string, then must be one of `liml`, `fuller`, or `fuller(a)`, where `a` is
+        numeric. If `kappa="liml"`, then :math:`\\kappa = \\kappa_\\mathrm{liml}` is used.
+        If `kappa="fuller(a)"`, then
+        :math:`\\kappa = \\kappa_\\mathrm{liml} - a / (n - q)`, where
+        :math:`n` is the number of observations and :math:`q = \\mathrm{dim}(Z)` is the
+        number of instruments. The string `fuller` is interpreted as `fuller(1.0)`,
+        yielding an estimator that is unbiased up to :math:`O(1/n)` [1].
+    instrument_names: str or list of str, optional
+        The names of the columns in `X` that should be used as instruments.
+        Requires `X` to be a pandas DataFrame. If both `instrument_names` and
+        `instrument_regex` are specified, the union of the two is used.
+    instrument_regex: str, optional
+        A regex that is used to select columns in `X` that should be used as
+        instruments. Requires `X` to be a pandas DataFrame. If both `instrument_names`
+        and `instrument_regex` are specified, the union of the two is used.
+    alpha: float, optional, default=0
+        Regularization parameter for elastic net regularization.
+    l1_ratio: float, optional, default=0
+        Ratio of L1 to L2 regularization for elastic net regularization. For
+        l1_ratio=0 the penalty is an L2 penalty. For l1_ratio=1 it is an L1 penalty.
+
+    Attributes
+    ----------
+    coef_: array-like, shape (n_features,)
+        The estimated coefficients for the linear regression problem.
+    intercept_: float
+        The estimated intercept for the linear regression problem.
+    kappa_: float
+        The kappa parameter of the k-class estimator.
+    fuller_alpha_: float
+        If `kappa` is one of `{"fuller", "fuller(a)", "liml"}` for some numeric `a`, the
+        alpha parameter of the Fuller estimator.
+    lambda_liml_: float
+        If `kappa` is one of `{"fuller", "fuller(a)", "liml"}` for some numeric `a`, the
+        lambda parameter of the LIML estimator.
+
+    References
+    ----------
+    .. [1] Wayne A. Fuller, Some Properties of a Modification of the Limited Information
+           Estimator. The Econometric Society (1977)
+
+    """
 
     def __init__(
         self, kappa=1, instrument_names=None, instrument_regex=None, alpha=0, l1_ratio=0
@@ -334,20 +396,30 @@ class AnchorMixin(KClassMixin):
 
 
 class AnchorRegression(AnchorMixin, GeneralizedLinearRegressor):
-    """
+    r"""
     Linear regression with anchor regularization.
 
-    This is based on OLS after a data transformation. First standardizes `X` and `y`
-    by subtracting the column means as proposed in [1]_. Consequently, no anchor
-    regularization is applied to the intercept.
+    The anchor regression estimator with parameter :math:`\\gamma` is defined as the
+    solution to
+
+    .. math:: \\hat\\beta_\\textrm{anchor}(\\gamma) := \\arg\\min_\\beta \
+       \\| y - X \\beta \\|_2^2 + (\\gamma - 1) \\|P_Z (y - X \\beta) \\|_2^2.
+
+    If :math:`\\gamma \\geq 1`, then :math:`\\hat\\beta_\\textrm{anchor}(\\gamma) =
+    \\hat\\beta_\\textrm{k-class}(1 / (1 - \\gamma))`.
+
+    The optimization is based on OLS after a data transformation. First standardizes
+    `X` and `y` by subtracting the column means as proposed in [1]. Consequently, no
+    anchor regularization is applied to the intercept.
 
     Parameters
     ----------
     gamma: float
-        The anchor regularization parameter. Gamma=1 corresponds to standard OLS.
+        The anchor regularization parameter. :math:`\\gamma=1` corresponds to OLS.
     instrument_names: str or list of str, optional
         The names of the columns in `X` that should be used as instruments (anchors).
-        Requires `X` to be a pandas DataFrame.
+        Requires `X` to be a pandas DataFrame. If both `instrument_names` and
+        `instrument_regex` are specified, the union of the two is used.
     instrument_regex: str, optional
         A regex that is used to select columns in `X` that should be used as instruments
         (anchors). Requires `X` to be a pandas DataFrame. If both `instrument_names` and
@@ -358,6 +430,14 @@ class AnchorRegression(AnchorMixin, GeneralizedLinearRegressor):
         Ratio of L1 to L2 regularization for elastic net regularization. For
         l1_ratio=0 the penalty is an L2 penalty. For l1_ratio=1 it is an L1 penalty.
 
+    Attributes
+    ----------
+    coef_: array-like, shape (n_features,)
+        The estimated coefficients for the linear regression problem.
+    intercept_: float
+        The estimated intercept for the linear regression problem.
+    kappa_: float
+        If `gamma >= `, the kappa parameter of the corresponding k-class estimator.
 
     References
     ----------

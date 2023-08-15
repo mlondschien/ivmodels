@@ -26,8 +26,14 @@ extensions = [
     "IPython.sphinxext.ipython_console_highlighting",
     "IPython.sphinxext.ipython_directive",
     "sphinx_rtd_theme",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.mathjax",
 ]
 
+# intersphinx configuration
+intersphinx_mapping = {
+    "sklearn": ("https://scikit-learn.org/stable/", None),
+}
 apidoc_module_dir = "../ivmodels"
 apidoc_output_dir = "api"
 apidoc_extra_args = ["--implicit-namespaces"]

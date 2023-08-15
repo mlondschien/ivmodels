@@ -2,10 +2,12 @@ This is `ivmodels`' documentation
 ===========================================
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 0
    :caption: Contents:
 
-   API Reference <api/modules>
+   self
+   Linear Models <linear_models>
+
 
 
 Indices and tables
