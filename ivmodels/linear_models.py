@@ -29,7 +29,7 @@ class KClassMixin:
         if instrument_names is not None or instrument_regex is not None:
             if not _PANDAS_INSTALLED:
                 raise ImportError(
-                    "pandas is required to use instrument columns or regex"
+                    "pandas is required to use instrument columns or regex."
                 )
 
         self.instrument_names = instrument_names
@@ -296,7 +296,7 @@ class KClass(KClassMixin, GeneralizedLinearRegressor):
 
     The k-class estimator with parameter :math:`\\kappa` is defined as the solution to
 
-    .. math:: \\hat\\beta_\\textrm{k-class}(\\kappa) := \\arg\\min_\\beta \\
+    .. math:: \\hat\\beta_\\mathrm{k-class}(\\kappa) := \\arg\\min_\\beta \\
        (1 - \\kappa) \\| y - X \\beta \\|_2^2 + \\kappa \\|P_Z (y - X \\beta) \\|_2^2,
 
     where :math:`P_Z` is the projection matrix onto the subspace spanned by :math:`Z`.
@@ -408,8 +408,8 @@ class AnchorRegression(AnchorMixin, GeneralizedLinearRegressor):
     .. math:: \\hat\\beta_\\mathrm{anchor}(\\gamma) := \\arg\\min_\\beta \\
        \\| y - X \\beta \\|_2^2 + (\\gamma - 1) \\|P_Z (y - X \\beta) \\|_2^2.
 
-    If :math:`\\gamma \\geq 1`, then :math:`\\hat\\beta_\\textrm{anchor}(\\gamma) =
-    \\hat\\beta_\\textrm{k-class}(1 / (1 - \\gamma))`.
+    If :math:`\\gamma \\geq 0`, then :math:`\\hat\\beta_\\mathrm{anchor}(\\gamma) =
+    \\hat\\beta_\\mathrm{k-class}((1 - \\gamma) / \\gamma)`.
 
     The optimization is based on OLS after a data transformation. First standardizes
     ``X`` and ``y`` by subtracting the column means as proposed in [1]. Consequently, no

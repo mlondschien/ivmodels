@@ -20,7 +20,7 @@ def test_linear_anchor_regression_equal_to_ols(alpha, l1_ratio, n, p, q, u):
 
     lar = AnchorRegression(
         gamma=1, alpha=alpha, l1_ratio=l1_ratio, instrument_regex="anchor"
-    ).fit(df, y.flatten())
+    ).fit(X=df, y=y.flatten())
     ols = GeneralizedLinearRegressor(
         family="gaussian", alpha=alpha, l1_ratio=l1_ratio, fit_intercept=True
     ).fit(X, y.flatten())
