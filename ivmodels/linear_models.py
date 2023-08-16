@@ -302,25 +302,25 @@ class KClass(KClassMixin, GeneralizedLinearRegressor):
     where :math:`P_Z` is the projection matrix onto the subspace spanned by :math:`Z`.
     This includes the the OLS estimator (:math:`\\kappa = 0`), the 2SLS estimator
     (:math:`\\kappa = 1`), the limited information maximum likelihood (LIML) estimator
-    (:math:`\\kappa = \\kappa_\\mathrm{liml}`), and the Fuller estimator
-    (:math:`\\kappa = \\kappa_\\mathrm{liml} - \\alpha / (n - q)`) as special cases.
+    (:math:`\\kappa = \\kappa_\\mathrm{LIML}`), and the Fuller estimator
+    (:math:`\\kappa = \\kappa_\\mathrm{LIML} - \\alpha / (n - q)`) as special cases.
 
     Parameters
     ----------
     kappa: float or {fuller(a), liml}
         The kappa parameter of the k-class estimator. If float, then kappa must be in
-        :math:`[0, \\kappa_\\mathrm{liml} := 1 / (1 - \\lambda_\\mathrm{liml})] \\geq 1`,
-        where :math:`\\lambda_\\mathrm{liml}` is the smallest eigenvalue of the matrix
+        :math:`[0, \\kappa_\\mathrm{LIML} := 1 / (1 - \\lambda_\\mathrm{LIML})] \\geq 1`,
+        where :math:`\\lambda_\\mathrm{LIML}` is the smallest eigenvalue of the matrix
         :math:`((X \\ \\ y)^T (X \\ \\ y))^{-1} (X \\ \\ y)^T P_Z (X \\ \\ y)` and
         :math:`P_Z` is the projection matrix onto the subspace spanned by :math:`Z`.
         If string, then must be one of ``"liml"``, ``"fuller"``, or ``"fuller(a)"``,
         where ``a`` is numeric. If ``kappa="liml"``, then
-        :math:`\\kappa = \\kappa_\\mathrm{liml}` is used. If ``kappa="fuller(a)"``, then
-        :math:`\\kappa = \\kappa_\\mathrm{liml} - a / (n - q)`, where
+        :math:`\\kappa = \\kappa_\\mathrm{LIML}` is used. If ``kappa="fuller(a)"``, then
+        :math:`\\kappa = \\kappa_\\mathrm{LIML} - a / (n - q)`, where
         :math:`n` is the number of observations and :math:`q = \\mathrm{dim}(Z)` is the
         number of instruments. The string ``"fuller"`` is interpreted as
         ``"fuller(1.0)"``, yielding an estimator that is unbiased up to
-        :math:`O(1/n)` [1].
+        :math:`O(1/n)` :cite:p:`fuller1977some`.
     instrument_names: str or list of str, optional
         The names of the columns in ``X`` that should be used as instruments.
         Requires ``X`` to be a pandas DataFrame. If both ``instrument_names`` and
@@ -354,9 +354,10 @@ class KClass(KClassMixin, GeneralizedLinearRegressor):
 
     References
     ----------
-    .. [1] Wayne A. Fuller, Some Properties of a Modification of the Limited Information
-           Estimator. The Econometric Society (1977)
+    .. bibliography::
+       :filter: False
 
+       fuller1977some
     """
 
     def __init__(
@@ -400,7 +401,7 @@ class AnchorMixin(KClassMixin):
 
 class AnchorRegression(AnchorMixin, GeneralizedLinearRegressor):
     """
-    Linear regression with anchor regularization.
+    Linear regression with anchor regularization :cite:p:`rothenhausler2021anchor`.
 
     The anchor regression estimator with parameter :math:`\\gamma` is defined as the
     solution to
@@ -412,8 +413,9 @@ class AnchorRegression(AnchorMixin, GeneralizedLinearRegressor):
     \\hat\\beta_\\mathrm{k-class}((1 - \\gamma) / \\gamma)`.
 
     The optimization is based on OLS after a data transformation. First standardizes
-    ``X`` and ``y`` by subtracting the column means as proposed in [1]. Consequently, no
-    anchor regularization is applied to the intercept.
+    ``X`` and ``y`` by subtracting the column means as proposed by
+    :cite:t:`rothenhausler2021anchor`. Consequently, no anchor regularization is applied
+    to the intercept.
 
     Parameters
     ----------
@@ -445,7 +447,10 @@ class AnchorRegression(AnchorMixin, GeneralizedLinearRegressor):
 
     References
     ----------
-    .. [1] https://arxiv.org/abs/1801.06229
+    .. bibliography::
+       :filter: False
+
+       rothenhausler2021anchor
     """
 
     def __init__(

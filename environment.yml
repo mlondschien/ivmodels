@@ -9,6 +9,10 @@ dependencies:
   - scikit-learn
   - glum
   - pandas  # optional
-  - pylops
-  - pyproximal
-  - sphinx
+  - pylops  # basis-pursuit
+  - pyproximal  # basis-pursuit
+  - sphinx  # docs
+  - sphinxcontrib-apidoc  # docs
+  - ipython  # docs
+  - sphinx_rtd_theme  # docs
+  - sphinxcontrib-bibtex  # docs

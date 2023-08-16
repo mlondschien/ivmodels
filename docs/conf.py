@@ -28,7 +28,11 @@ extensions = [
     "sphinx_rtd_theme",
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
+    "sphinxcontrib.bibtex",
 ]
+
+bibtex_bibfiles = ["bib.bib"]
+bibtex_reference_style = "author_year"
 
 # intersphinx configuration
 intersphinx_mapping = {

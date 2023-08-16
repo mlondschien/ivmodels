@@ -104,7 +104,7 @@ class PULSEMixin:
 
 class PULSE(PULSEMixin, KClass):
     """
-    p-uncorrelated least squares estimator (PULSE) [1].
+    p-uncorrelated least squares estimator (PULSE) :cite:p:`jakobsen2022distributional`.
 
     Perform (linear) k-class estimation with k-class parameter
     :math:`\\kappa \\in [0, 1]` chosen minimally such that the PULSE test of correlation
@@ -153,7 +153,10 @@ class PULSE(PULSEMixin, KClass):
 
     References
     ----------
-    .. [1] https://arxiv.org/abs/2005.03353
+    .. bibliography::
+       :filter: False
+
+       jakobsen2022distributional
     """
 
     def __init__(

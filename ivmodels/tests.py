@@ -7,13 +7,16 @@ from ivmodels.utils import proj
 
 def pulse_test(Z, residuals):
     """
-    Test proposed in [1] with null hypothesis: ``Z`` and ``residuals`` are uncorrelated.
+    Test proposed by :cite:t:`jakobsen2022distributional` with null hypothesis: ``Z`` and ``residuals`` are uncorrelated.
 
-    See [1] Section 3.2 for details.
+    See Section 3.2 of :cite:p:`jakobsen2022distributional` for details.
 
     References
     ----------
-    .. [1] https://arxiv.org/abs/2005.03353
+    .. bibliography::
+       :filter: False
+
+       jakobsen2022distributional
     """
     proj_residuals = proj(Z, residuals)
     statistic = np.square(proj_residuals).sum() / np.square(residuals).sum()
@@ -25,7 +28,7 @@ def pulse_test(Z, residuals):
 
 def anderson_rubin_test(Z, residuals):
     """
-    Perform the Anderson Rubin test.
+    Perform the Anderson Rubin test :cite:p:`anderson1949estimation`.
 
     Test the null hypothesis that the residuals are uncorrelated with the instruments.
     Under the null, the test statistic is distributed as :math:`F_{q, n - q}``, where
@@ -48,9 +51,10 @@ def anderson_rubin_test(Z, residuals):
 
     References
     ----------
-    .. [1] Anderson, T.W. and Rubin, H. (1949), Estimation of the parameters of a single
-           equation in a complete system of stochastic equations, Annals of Mathematical
-           Statistics, 20, 46-63.
+    .. bibliography::
+       :filter: False
+
+       anderson1949estimation
     """
     if residuals.ndim != 1 and residuals.shape[1] != 1:
         raise ValueError(f"residuals must be a vector. Got shape {residuals.shape}.")

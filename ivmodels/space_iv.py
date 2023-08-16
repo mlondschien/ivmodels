@@ -8,7 +8,7 @@ from ivmodels.tests import anderson_rubin_test
 
 class SpaceIV:
     """
-    Run the space IV algorithm [1].
+    Run the space IV algorithm from :cite:t:`pfister2022identifiability`.
 
     Returns :math:`\\arg\\min \\| \\beta \\|_0` subject to
     :math:`\\mathrm{AR}(\\beta) \\leq q_{1 - \\alpha}`, where :math:`q_{1 - \\alpha}`
@@ -37,8 +37,10 @@ class SpaceIV:
 
     References
     ----------
-    .. [1]: https://arxiv.org/abs/2203.09380
+    .. bibliography::
+       :filter: False
 
+       pfister2022identifiability
     """
 
     def __init__(self, s_max=None, p_min=0.05):

@@ -30,3 +30,8 @@ Tests
 
 .. automodule:: ivmodels.tests
    :members:
+
+Bibliography
+============
+
+.. bibliography::
