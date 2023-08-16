@@ -7,13 +7,16 @@ from ivmodels.utils import proj
 
 def pulse_test(Z, residuals):
     """
-    Test proposed in [1]_ with H0: Z and residuals are uncorrelated.
+    Test proposed by :cite:t:`jakobsen2022distributional` with null hypothesis: ``Z`` and ``residuals`` are uncorrelated.
 
-    See [1]_ Section 3.2 for details.
+    See Section 3.2 of :cite:p:`jakobsen2022distributional` for details.
 
     References
     ----------
-    .. [1] https://arxiv.org/abs/2005.03353
+    .. bibliography::
+       :filter: False
+
+       jakobsen2022distributional
     """
     proj_residuals = proj(Z, residuals)
     statistic = np.square(proj_residuals).sum() / np.square(residuals).sum()
@@ -25,12 +28,12 @@ def pulse_test(Z, residuals):
 
 def anderson_rubin_test(Z, residuals):
     """
-    Perform the Anderson Rubin test.
+    Perform the Anderson Rubin test :cite:p:`anderson1949estimation`.
 
     Test the null hypothesis that the residuals are uncorrelated with the instruments.
-    Under the null, the test statistic is distributed as `F_{q, n - q}`, where `q` is
-    the number of instruments and `n` is the number of observations. Requires normally
-    distributed errors for exactness.
+    Under the null, the test statistic is distributed as :math:`F_{q, n - q}``, where
+    :math:`q` is the number of instruments and :math:`n` is the number of observations.
+    Requires normally distributed errors for exactness.
 
     Parameters
     ----------
@@ -48,9 +51,10 @@ def anderson_rubin_test(Z, residuals):
 
     References
     ----------
-    .. [1] Anderson, T.W. and Rubin, H. (1949), Estimation of the parameters of a single
-           equation in a complete system of stochastic equations, Annals of Mathematical
-           Statistics, 20, 46-63.
+    .. bibliography::
+       :filter: False
+
+       anderson1949estimation
     """
     if residuals.ndim != 1 and residuals.shape[1] != 1:
         raise ValueError(f"residuals must be a vector. Got shape {residuals.shape}.")
@@ -123,9 +127,9 @@ def asymptotic_confidence_interval(Z, X, y, beta, alpha=0.05):
 
 def bounded_inverse_anderson_rubin(Z, X):
     """
-    Return the largest p-value `p` such that the inverse-AR confidence set is unbounded.
+    Return the largest p-value such that the inverse-AR confidence set is unbounded.
 
-    In practice, the confidence set might be unbounded for `1.001 * p` only.
+    In practice, the confidence set might be unbounded for ``1.001 * p`` only.
 
     Parameters
     ----------

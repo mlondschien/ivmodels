@@ -7,3 +7,8 @@ __pycache__
 .mypy_cache
 *.png
 *.eps
+
+# Sphinx documentation
+docs/_build/
+docs/api/
+docs/modules.rst

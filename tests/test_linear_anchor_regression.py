@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 from glum import GeneralizedLinearRegressor
 
-from ivmodels.linear_model import AnchorRegression
+from ivmodels.linear_models import AnchorRegression
 from ivmodels.simulate import simulate_gaussian_iv
 
 
@@ -20,7 +20,7 @@ def test_linear_anchor_regression_equal_to_ols(alpha, l1_ratio, n, p, q, u):
 
     lar = AnchorRegression(
         gamma=1, alpha=alpha, l1_ratio=l1_ratio, instrument_regex="anchor"
-    ).fit(df, y.flatten())
+    ).fit(X=df, y=y.flatten())
     ols = GeneralizedLinearRegressor(
         family="gaussian", alpha=alpha, l1_ratio=l1_ratio, fit_intercept=True
     ).fit(X, y.flatten())

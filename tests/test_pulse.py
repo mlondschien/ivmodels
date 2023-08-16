@@ -1,5 +1,7 @@
+import numpy as np
 import pytest
 
+from ivmodels.linear_models import KClass
 from ivmodels.pulse import PULSE
 from ivmodels.simulate import simulate_gaussian_iv
 from ivmodels.tests import pulse_test
@@ -18,6 +20,10 @@ def test_pulse(p_min, rtol, n, p, q, u):
     # selects kappa = 0.
     test_p_value = pulse_test(A, Y.flatten() - pulse.predict(X))[1]
     assert test_p_value >= p_min
+
+    kclass = KClass(kappa=pulse.kappa_).fit(X, Y.flatten(), A)
+    assert np.allclose(kclass.coef_, pulse.coef_)
+    assert kclass.intercept_ == pulse.intercept_
 
     if not pulse.kappa == 0:
         test_p_value / (1 + rtol) < p_min

@@ -1,6 +1,6 @@
 import logging
 
-from ivmodels.linear_model import KClass
+from ivmodels.linear_models import KClass
 from ivmodels.tests import pulse_test
 
 logger = logging.getLogger(__name__)
@@ -22,25 +22,25 @@ class PULSEMixin:
         self.kappa_max = kappa_max
 
     def fit(self, X, y, Z=None, *args, **kwargs):
-        """Fit a p-uncorrelated least squares estimator (PULSE) [1]_.
+        """Fit a p-uncorrelated least squares estimator (PULSE) [1].
 
-        If `instrument_names` or `instrument_regex` are specified, `X` must be a
-        pandas DataFrame containing columns `instrument_names` and `a` must be
-        `None`. At least one one of `a`, `instrument_names`, and `instrument_regex`
-        must be specified.
+        If ``instrument_names`` or ``instrument_regex`` are specified, ``X`` must be a
+        pandas DataFrame containing columns ``instrument_names`` and ``a`` must be
+        ``None``. At least one one of ``a``, ``instrument_names``, and
+        ``instrument_regex`` must be specified.
 
         Parameters
         ----------
         X: array-like, shape (n_samples, n_features)
-            The training input samples. If `instrument_names` or `instrument_regex`
-            are specified, `X` must be a pandas DataFrame containing columns
-            `instrument_names`.
+            The training input samples. If ``instrument_names`` or ``instrument_regex``
+            are specified, ``X`` must be a pandas DataFrame containing columns
+            ``instrument_names``.
         y: array-like, shape (n_samples,) or (n_samples, n_targets)
             The target values.
         Z: array-like, shape (n_samples, n_anchors), optional
-            The instrument (anchor) values. If `instrument_names` or `instrument_regex`
-            are specified, `Z` must be `None`. If `Z` is specified, `instrument_names`
-            and `instrument_regex` must be `None`.
+            The instrument (anchor) values. If ``instrument_names`` or
+            ``instrument_regex`` are specified, ``Z`` must be ``None``. If ``Z`` is
+            specified, ``instrument_names`` and ``instrument_regex`` must be ``None``.
         """
         _, Z_ = self._X_Z(X, Z, check=False)
 
@@ -104,45 +104,59 @@ class PULSEMixin:
 
 class PULSE(PULSEMixin, KClass):
     """
-    p-uncorrelated least squares estimator (PULSE) [1]_.
+    p-uncorrelated least squares estimator (PULSE) :cite:p:`jakobsen2022distributional`.
 
-    Perform (linear) k-class estimation parameter with `kappa` in [0, 1] chosen
-    minimally such that the PULSE test of correlation between the
-    instruments and the residuals is not significant at level `p_value`.
+    Perform (linear) k-class estimation with k-class parameter
+    :math:`\\kappa \\in [0, 1]` chosen minimally such that the PULSE test of correlation
+    between the instruments and the residuals is not significant at level ``p_value``.
 
     Parameters
     ----------
     instrument_names: str or list of str, optional
-        The names of the columns in `X` that should be used as anchors. Requires `X` to
-        be a pandas DataFrame.
+        The names of the columns in ``X`` that should be used as anchors. Requires ``X``
+        to be a pandas DataFrame.
     instrument_regex: str, optional
-        A regex that is used to select columns in `X` that should be used as anchors.
-        Requires `X` to be a pandas DataFrame. If both `instrument_names` and
-        `instrument_regex` are specified, the union of the two is used.
+        A regex that is used to select columns in ``X`` that should be used as anchors.
+        Requires ``X`` to be a pandas DataFrame. If both ``instrument_names`` and
+        ``instrument_regex`` are specified, the union of the two is used.
     p_min: float, optional, default = 0.05
-        The p-value of the Anderson-Rubin test that is used to determine the regularization
-        parameter `gamma`. The PULSE will search for the smallest `gamma` that makes the
-        test not significant at level `p_min` with binary search.
+        The p-value of the PULSE test that is used to determine the
+        regularization parameter ``gamma``. The PULSE will search for the smallest
+        ``gamma`` that makes the test not significant at level ``p_min`` with binary
+        search.
     rtol: float, optional, default = 0.01
         The relative tolerance of the binary search. The PULSE will search for a kappa
-        such that the PULSE test is not significant at level `p_min` with binary search
-        but is significant at level `p_min * (1 + rtol)`.
+        such that the PULSE test is not significant at level ``p_min`` with binary
+        search but is significant at level ``p_min * (1 + rtol)``.
     kappa_max: float, optional, default = 1
-        The maximum value of `kappa` to consider. The PULSE will search for the smallest
-        `kappa` that makes the test not significant at level `p_min` with binary search.
-        If kappa_max = 1, the PULSE will run a regression equivalent to
-        two-stage-least-squares. If `alpha` = 0 and `Z.shape[1]` < `X.shape[1]`, this is
-        not well-defined and the PULSE will raise an exception.
+        The maximum value of ``kappa`` to consider. The PULSE will search for the
+        smallest ``kappa`` that makes the test not significant at level ``p_min`` with
+        binary search. If ``kappa_max = 1``, the PULSE will run a regression equivalent
+        to two-stage-least-squares. If ``alpha`` = 0 and
+        ``Z.shape[1]`` < ``X.shape[1]``, this is not well-defined and the PULSE will
+        raise an exception.
     alpha: float, optional, default = 0
-        The regularization parameter for elastic net. If `alpha` is 0, the estimator is
-        unregularized.
+        The regularization parameter for elastic net. If ``alpha`` is 0, the estimator
+        is unregularized.
     l1_ratio: float, optional, default = 0
-        The ratio of L1 to L2 regularization for elastic net. If `l1_ratio` is 1, the
-        estimator is Lasso. If `l1_ratio` is 0, the estimator is Ridge.
+        The ratio of L1 to L2 regularization for elastic net. If ``l1_ratio`` is 1, the
+        estimator is Lasso. If ``l1_ratio`` is 0, the estimator is Ridge.
+
+    Attributes
+    ----------
+    coef_: array-like, shape (n_features,)
+        The estimated coefficients.
+    intercept_: float
+        The estimated intercept.
+    kappa_: float
+        The estimated kappa.
 
     References
     ----------
-    .. [1] https://arxiv.org/abs/2005.03353
+    .. bibliography::
+       :filter: False
+
+       jakobsen2022distributional
     """
 
     def __init__(
