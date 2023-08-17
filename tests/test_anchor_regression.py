@@ -1,10 +1,12 @@
 import numpy as np
 import pandas as pd
 import pytest
+import scipy
 from glum import GeneralizedLinearRegressor
 
 from ivmodels.anchor_regression import AnchorRegression
 from ivmodels.simulate import simulate_gaussian_iv
+from ivmodels.utils import proj
 
 
 @pytest.mark.parametrize("alpha, l1_ratio", [(0, 0), (1, 0), (1, 0.5), (1, 1)])
@@ -116,3 +118,24 @@ def test_score():
     A, X, Y = simulate_gaussian_iv(100, 2, 2, 1)
     model = AnchorRegression(gamma=1).fit(X, Y.flatten(), A)
     assert model.score(X, Y.flatten()) > 0.5
+
+
+@pytest.mark.parametrize("gamma", [0.1, 1, 5])
+@pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
+def test_anchor_solution_minimizes_loss(n, p, q, u, gamma):
+    """
+    Test that the anchor solution minimizes the loss function.
+
+    This indirectly checks the mapping kappa <-> gamma for validity.
+    """
+    Z, X, Y = simulate_gaussian_iv(n, p, q, u)
+    Y = Y.flatten()
+
+    ar = AnchorRegression(gamma=gamma).fit(X, Y, Z)
+
+    def loss(beta):
+        return np.mean((Y - X @ beta - ar.intercept_) ** 2) + (gamma - 1) * np.mean(
+            proj(Z, Y - X @ beta - ar.intercept_) ** 2
+        )
+
+    assert np.allclose(scipy.optimize.approx_fprime(ar.coef_, loss), 0, atol=1e-6)
