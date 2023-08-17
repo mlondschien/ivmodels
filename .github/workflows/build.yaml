@@ -30,7 +30,7 @@ jobs:
           path: dist/*
 
   upload-testpypi:
-    needs: [python-build-wheels, python-build-sdist]
+    needs: [python-build]
     runs-on: ubuntu-latest
     if: github.event_name == 'release' && github.event.action == 'published'
     steps:
@@ -46,7 +46,7 @@ jobs:
           repository_url: https://test.pypi.org/legacy/
 
   upload-pypi:
-    needs: [python-build-wheels, python-build-sdist, upload-testpypi]
+    needs: [python-build, upload-testpypi]
     runs-on: ubuntu-latest
     if: github.event_name == 'release' && github.event.action == 'published'
     steps:
