@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from ivmodels.linear_models import KClass
+from ivmodels.kclass import KClass
 from ivmodels.pulse import PULSE
 from ivmodels.simulate import simulate_gaussian_iv
 from ivmodels.tests import pulse_test

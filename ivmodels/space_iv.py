@@ -2,7 +2,7 @@ import itertools
 
 import numpy as np
 
-from ivmodels.linear_models import KClass
+from ivmodels.kclass import KClass
 from ivmodels.tests import anderson_rubin_test
 
 

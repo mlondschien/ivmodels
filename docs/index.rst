@@ -1,31 +1,25 @@
 ivmodels
 ========
 
-Linear Models
+Estimators
 =============
 
-.. autoclass:: ivmodels.linear_models.KClass
+.. autoclass:: ivmodels.KClass
    :members: fit
 
-.. autoclass:: ivmodels.linear_models.AnchorRegression
+.. autoclass:: ivmodels.AnchorRegression
    :members: fit
 
-PULSE
-=====
-
-.. autoclass:: ivmodels.pulse.PULSE
+.. autoclass:: ivmodels.PULSE
    :members: fit
 
-SpaceIV
-=======
-
-.. autoclass:: ivmodels.space_iv.SpaceIV
+.. autoclass:: ivmodels.SpaceIV
    :members: fit
 
 Quadric
 =======
 
-.. autoclass:: ivmodels.quadric.Quadric
+.. autoclass:: ivmodels.Quadric
    :members:
 
 Tests

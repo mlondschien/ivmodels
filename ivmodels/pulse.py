@@ -1,6 +1,6 @@
 import logging
 
-from ivmodels.linear_models import KClass
+from ivmodels.kclass import KClass
 from ivmodels.tests import pulse_test
 
 logger = logging.getLogger(__name__)
