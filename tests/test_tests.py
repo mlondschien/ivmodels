@@ -3,8 +3,8 @@ import pytest
 import scipy
 from sklearn.linear_model import LinearRegression
 
-from ivmodels import AnchorRegression
-from ivmodels.linear_models import KClass
+from ivmodels.anchor_regression import AnchorRegression
+from ivmodels.kclass import KClass
 from ivmodels.simulate import simulate_gaussian_iv
 from ivmodels.tests import (
     anderson_rubin_test,
