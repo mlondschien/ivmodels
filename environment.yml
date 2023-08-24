@@ -14,3 +14,4 @@ dependencies:
   - ipython  # docs
   - sphinx_rtd_theme  # docs
   - sphinxcontrib-bibtex  # docs
+  - pip  # docs
