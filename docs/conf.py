@@ -14,12 +14,12 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
-# -- Project information -----------------------------------------------------
 import os
 import sys
 
 sys.path.insert(0, os.path.abspath("../ivmodels"))
 
+# -- Project information -----------------------------------------------------
 project = "ivmodels"
 copyright = "2023, Malte Londschien"
 author = "Malte Londschien"
