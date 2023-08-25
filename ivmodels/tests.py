@@ -59,7 +59,7 @@ def anderson_rubin_test(Z, residuals):
     Under the null and normally distributed errors, the test statistic is distributed as
     :math:`F_{q, n - q}``, where :math:`q` is the number of instruments and :math:`n` is
     the number of observations. The statistic is asymptotically distributed as
-    :math:`\\chi^2(q)` under the null and non-normally distributed errors.
+    :math:`\\chi^2(q) / q` under the null and non-normally distributed errors.
 
     Parameters
     ----------
