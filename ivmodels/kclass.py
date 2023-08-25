@@ -297,9 +297,7 @@ class KClass(KClassMixin, GeneralizedLinearRegressor):
     The k-class estimator with parameter :math:`\\kappa` is defined as
 
     .. math::
-       :nowrap:
 
-       \\begin{align*}
        \\hat\\beta_\\mathrm{k-class}(\\kappa) &:= \\arg\\min_\\beta \\
        (1 - \\kappa) \\| y - X \\beta \\|_2^2 + \\kappa \\|P_Z (y - X \\beta) \\|_2^2
        \\\\
