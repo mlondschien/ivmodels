@@ -292,7 +292,7 @@ class KClassMixin:
 
 
 class KClass(KClassMixin, GeneralizedLinearRegressor):
-    r"""K-class estimator for instrumental variable regression.
+    """K-class estimator for instrumental variable regression.
 
     The k-class estimator with parameter :math:`\\kappa` is defined as
 
