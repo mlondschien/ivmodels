@@ -28,7 +28,7 @@ def test__fuller_alpha(kappa, expected):
 
 
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
-def test__lambda_liml_same_with_shortcut(n, p, q, u):
+def test__eta_liml_same_with_shortcut(n, p, q, u):
     Z, X, y = simulate_gaussian_iv(n, p, q, u)
 
     X = X - X.mean(axis=0)
@@ -40,14 +40,14 @@ def test__lambda_liml_same_with_shortcut(n, p, q, u):
     k_class = KClass(kappa="liml")
 
     lbda = k_class.fit(X, y, Z).lambda_liml_
-    assert np.allclose(lbda, k_class._lambda_liml(X, y, X_proj=X_proj, y_proj=y_proj))
-    assert np.allclose(lbda, k_class._lambda_liml(X, y, Z=Z, X_proj=X_proj))
-    assert np.allclose(lbda, k_class._lambda_liml(X, y, Z=Z, y_proj=y_proj))
-    assert np.allclose(lbda, k_class._lambda_liml(X, y, Z=Z))
+    assert np.allclose(lbda, k_class._eta_liml(X, y, X_proj=X_proj, y_proj=y_proj))
+    assert np.allclose(lbda, k_class._eta_liml(X, y, Z=Z, X_proj=X_proj))
+    assert np.allclose(lbda, k_class._eta_liml(X, y, Z=Z, y_proj=y_proj))
+    assert np.allclose(lbda, k_class._eta_liml(X, y, Z=Z))
 
 
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
-def test__lambda_liml_positive(n, p, q, u):
+def test__eta_liml_positive(n, p, q, u):
     Z, X, y = simulate_gaussian_iv(n, p, q, u)
 
     k_class = KClass(kappa="liml")
@@ -110,7 +110,7 @@ def test_liml_equal_to_tsls_in_just_identified_setting(n, p, q, u):
 
 
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 4, 4, 2)])
-def test_anderson_rubin_at_liml_is_equal_to_lambda_liml(n, p, q, u):
+def test_anderson_rubin_at_liml_is_equal_to_eta_liml(n, p, q, u):
     Z, X, y = simulate_gaussian_iv(n, p, q, u)
     y = y.flatten()
 
