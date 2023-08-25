@@ -108,7 +108,7 @@ class PULSE(PULSEMixin, KClass):
 
     Perform (linear) k-class estimation with k-class parameter
     :math:`\\kappa \\in [0, 1]` chosen minimally such that the PULSE test of correlation
-    between the instruments and the residuals is not significant at level ``p_value``.
+    between the instruments and the residuals is not significant at level ``p_min``.
 
     Parameters
     ----------

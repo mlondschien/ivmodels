@@ -176,16 +176,16 @@ class KClassMixin:
         else:
             return 0.0
 
-    def _lambda_liml(self, X, y, Z=None, X_proj=None, y_proj=None):
-        """Compute the lambda parameter of the LIML estimator.
+    def _eta_liml(self, X, y, Z=None, X_proj=None, y_proj=None):
+        """Compute the eta parameter of the LIML estimator.
 
         Either ``Z`` or both ``X_proj`` and ``y_proj`` must be specified.
 
         Parameters
         ----------
-        X: np.ndarray of dimension (n, k).
+        X: np.ndarray of dimension (n, k)
             Possibly endogenous regressors.
-        y: np.ndarray of dimension (n,).
+        y: np.ndarray of dimension (n,)
             Outcome.
         Z: np.ndarray of dimension (n, l), optional, default=None.
             Instruments.
@@ -196,7 +196,7 @@ class KClassMixin:
 
         Returns
         -------
-        lambda_liml: float
+        eta_liml: float
             Smallest eigenvalue of ``((X y)^T (X y))^{-1} (X y)^T P_Z (X y)``, where
             ``P_Z`` is the projection matrix onto the subspace spanned by Z.
         """
@@ -256,7 +256,7 @@ class KClassMixin:
 
         if isinstance(self.kappa, str):
             self.fuller_alpha_ = self._fuller_alpha(self.kappa)
-            self.lambda_liml_ = self._lambda_liml(X, y, X_proj=X_proj, y_proj=y_proj)
+            self.lambda_liml_ = self._eta_liml(X, y, X_proj=X_proj, y_proj=y_proj)
             self.kappa_ = 1 / (1 - self.lambda_liml_) - self.fuller_alpha_ / (n - q)
         else:
             self.kappa_ = self.kappa
@@ -292,32 +292,39 @@ class KClassMixin:
 
 
 class KClass(KClassMixin, GeneralizedLinearRegressor):
-    """K-Class estimator for instrumental variable regression.
+    """K-class estimator for instrumental variable regression.
 
-    The k-class estimator with parameter :math:`\\kappa` is defined as the solution to
+    The k-class estimator with parameter :math:`\\kappa` is defined as
 
-    .. math:: \\hat\\beta_\\mathrm{k-class}(\\kappa) := \\arg\\min_\\beta \\
-       (1 - \\kappa) \\| y - X \\beta \\|_2^2 + \\kappa \\|P_Z (y - X \\beta) \\|_2^2,
+    .. math::
 
-    where :math:`P_Z` is the projection matrix onto the subspace spanned by :math:`Z`.
+       \\hat\\beta_\\mathrm{k-class}(\\kappa) &:= \\arg\\min_\\beta \\
+       (1 - \\kappa) \\| y - X \\beta \\|_2^2 + \\kappa \\|P_Z (y - X \\beta) \\|_2^2
+       \\\\
+       &= (X^T (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) X)^{-1} X^T
+       (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) X) y
+
+    where :math:`P_Z` is the projection matrix onto the subspace spanned by :math:`Z`
+    and :math:`\\mathrm{Id}` is the identity matrix.
     This includes the the ordinary least-squares (OLS) estimator (:math:`\\kappa = 0`),
     the two-stage least-squares (2SLS) estimator
     (:math:`\\kappa = 1`), the limited information maximum likelihood (LIML) estimator
-    (:math:`\\kappa = \\kappa_\\mathrm{LIML}`), and the Fuller estimator
-    (:math:`\\kappa = \\kappa_\\mathrm{LIML} - \\alpha / (n - q)`) as special cases.
+    (:math:`\\kappa = \\hat\\kappa_\\mathrm{LIML}`), and the Fuller estimator
+    (:math:`\\kappa = \\hat\\kappa_\\mathrm{LIML} - \\alpha / (n - q)`) as special
+    cases.
 
     Parameters
     ----------
     kappa: float or {fuller(a), liml}
         The kappa parameter of the k-class estimator. If float, then kappa must be in
-        :math:`[0, \\kappa_\\mathrm{LIML} := 1 / (1 - \\lambda_\\mathrm{LIML})] \\geq 1`,
-        where :math:`\\lambda_\\mathrm{LIML}` is the smallest eigenvalue of the matrix
-        :math:`((X \\ \\ y)^T (X \\ \\ y))^{-1} (X \\ \\ y)^T P_Z (X \\ \\ y)` and
-        :math:`P_Z` is the projection matrix onto the subspace spanned by :math:`Z`.
+        :math:`[0, \\hat\\kappa_\\mathrm{LIML} := 1 / (1 - \\eta_\\mathrm{LIML})
+        \\geq 1]`, where :math:`\\eta_\\mathrm{LIML}` is the smallest eigenvalue of
+        the matrix :math:`((X \\ \\ y)^T (X \\ \\ y))^{-1} (X \\ \\ y)^T P_Z (X \\ y)`
+        and :math:`P_Z` is the projection matrix onto the subspace spanned by :math:`Z`.
         If string, then must be one of ``"liml"``, ``"fuller"``, or ``"fuller(a)"``,
         where ``a`` is numeric. If ``kappa="liml"``, then
-        :math:`\\kappa = \\kappa_\\mathrm{LIML}` is used. If ``kappa="fuller(a)"``, then
-        :math:`\\kappa = \\kappa_\\mathrm{LIML} - a / (n - q)`, where
+        :math:`\\kappa = \\hat\\kappa_\\mathrm{LIML}` is used. If ``kappa="fuller(a)"``,
+        then :math:`\\kappa = \\hat\\kappa_\\mathrm{LIML} - a / (n - q)`, where
         :math:`n` is the number of observations and :math:`q = \\mathrm{dim}(Z)` is the
         number of instruments. The string ``"fuller"`` is interpreted as
         ``"fuller(1.0)"``, yielding an estimator that is unbiased up to
@@ -349,9 +356,9 @@ class KClass(KClassMixin, GeneralizedLinearRegressor):
     fuller_alpha_: float
         If ``kappa`` is one of ``{"fuller", "fuller(a)", "liml"}`` for some numeric
         value ``a``, the alpha parameter of the Fuller estimator.
-    lambda_liml_: float
+    eta_liml_: float
         If ``kappa`` is one of ``{"fuller", "fuller(a)", "liml"}`` for some numeric
-        value ``a``, the lambda parameter of the LIML estimator.
+        value ``a``, the eta parameter of the LIML estimator.
 
     References
     ----------

@@ -14,8 +14,12 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
-# -- Project information -----------------------------------------------------
+import os
+import sys
 
+sys.path.insert(0, os.path.abspath(".."))
+
+# -- Project information -----------------------------------------------------
 project = "ivmodels"
 copyright = "2023, Malte Londschien"
 author = "Malte Londschien"
@@ -45,4 +49,3 @@ apidoc_extra_args = ["--implicit-namespaces"]
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 html_theme = "sphinx_rtd_theme"
-html_static_path = ["_static"]

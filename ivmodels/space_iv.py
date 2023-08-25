@@ -12,15 +12,15 @@ class SpaceIV:
 
     Returns :math:`\\arg\\min \\| \\beta \\|_0` subject to
     :math:`\\mathrm{AR}(\\beta) \\leq q_{1 - \\alpha}`, where :math:`q_{1 - \\alpha}`
-    is the :math:`1 - \\alpha` quantile of the F distribution with degrees of freedom
-    :math:`(q, n - q)`.
+    is the :math:`1 - \\alpha` quantile of the F distribution with :math:`q` and
+    :math:`n-q` degrees of freedom.
 
     Parameters
     ----------
     s_max : int, optional, default = None
         Maximum number of variables to consider. If ``None``, set to ``X.shape[1]``.
     p_min : float, optional, default = 0.05
-        Confidence level.
+        Confidence level (:math:`\\alpha` above).
 
     Attributes
     ----------
@@ -29,11 +29,11 @@ class SpaceIV:
     intercept_ : float
         Independent term in the linear model.
     S_ : array-like, shape (s,)
-        Indices of the variables selected.
+        Indices of the selected variables.
     s_ : int
-        Number of variables selected.
+        Number of selected variables.
     kappa_ : float
-        Equal to :math:`\\kappa_\\mathrm{LIML}` for the selected model.
+        Equal to :math:`\\hat\\kappa_\\mathrm{LIML}` for the selected model.
 
     References
     ----------
