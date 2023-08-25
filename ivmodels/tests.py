@@ -18,9 +18,9 @@ def pulse_test(Z, residuals):
 
     Parameters
     ----------
-    Z: np.ndarray of dimension (n, q).
+    Z: np.ndarray of dimension (n, q)
         Instruments.
-    residuals: np.ndarray of dimension (n,).
+    residuals: np.ndarray of dimension (n,)
         The residuals to test.
 
     Returns
@@ -54,7 +54,7 @@ def anderson_rubin_test(Z, residuals):
     Test the null hypothesis that the residuals are uncorrelated with the instruments.
     The test statistic is defined as
 
-    ..math:: AR := \\frac{n - q}{q} \\frac{\\| P_Z r \\|_2^2}{\\| r - P_Z r \\|_2^2}.
+    .. math:: AR := \\frac{n - q}{q} \\frac{\\| P_Z r \\|_2^2}{\\| r - P_Z r \\|_2^2}.
 
     Under the null and normally distributed errors, the test statistic is distributed as
     :math:`F_{q, n - q}``, where :math:`q` is the number of instruments and :math:`n` is
@@ -63,9 +63,9 @@ def anderson_rubin_test(Z, residuals):
 
     Parameters
     ----------
-    Z: np.ndarray of dimension (n, q).
+    Z: np.ndarray of dimension (n, q)
         Instruments.
-    residuals: np.ndarray of dimension (n,).
+    residuals: np.ndarray of dimension (n,)
         The residuals to test.
 
     Returns
@@ -161,9 +161,9 @@ def bounded_inverse_anderson_rubin(Z, X):
 
     Parameters
     ----------
-    Z: np.ndarray of dimension (n, q).
+    Z: np.ndarray of dimension (n, q)
         Instruments.
-    X: np.ndarray of dimension (n, p).
+    X: np.ndarray of dimension (n, p)
         Regressors.
     """
     n, q = Z.shape

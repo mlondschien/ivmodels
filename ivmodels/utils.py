@@ -6,9 +6,9 @@ def proj(Z, f):
 
     Parameters
     ----------
-    Z: np.ndarray of dimension (n, d_Z).
+    Z: np.ndarray of dimension (n, d_Z)
         The Z matrix.
-    f: np.ndarray of dimension (n, d_f) or (n,).
+    f: np.ndarray of dimension (n, d_f) or (n,)
         The vector to project.
 
     Returns

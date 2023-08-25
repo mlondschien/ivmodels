@@ -183,9 +183,9 @@ class KClassMixin:
 
         Parameters
         ----------
-        X: np.ndarray of dimension (n, k).
+        X: np.ndarray of dimension (n, k)
             Possibly endogenous regressors.
-        y: np.ndarray of dimension (n,).
+        y: np.ndarray of dimension (n,)
             Outcome.
         Z: np.ndarray of dimension (n, l), optional, default=None.
             Instruments.
