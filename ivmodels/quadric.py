@@ -7,12 +7,12 @@ class Quadric:
     """
     A class to represent a quadric :math:`x^T A x + b^T x + c <= 0`.
 
-    Internally, works with a standardized form of the quadric. If :math:``V^T D V = A``
+    Internally, works with a standardized form of the quadric. If :math:`V^T D V = A`
     with :math:`D` diagonal and :math:`V` orthonormal, define
-    :math:`\\mathrm{center} :=-A^{-1}b / 2`,
-    :math:`\\tilde x = V^T (x - \\mathrm{center})` and
-    :math:`\\tilde c = c - \\mathrm{center}^T A \\mathrm{center}`. Then the standardized
-    form is given by :math:`\\tilde x^T D \\tilde x + \\tilde c <= 0`.
+    :math:`x_\\mathrm{center} :=-A^{-1} b / 2`,
+    :math:`\\tilde x = V^T (x - x_\\mathrm{center})` and
+    :math:`\\tilde c = c - x_\\mathrm{center}^T A x_\\mathrm{center}`. Then, the
+    standardized form is given by :math:`\\tilde x^T D \\tilde x + \\tilde c <= 0`.
 
     Parameters
     ----------
@@ -22,6 +22,19 @@ class Quadric:
         The vector b of the quadratic form.
     c: float
         The constant c of the quadratic form.
+
+    Attributes
+    ----------
+    center: np.ndarray of dimension (n,)
+        The center of the quadric. Equal to :math:`-A^{-1} b / 2`.
+    c_standardized: float
+        The constant c of the standardized quadric. Equal to
+        :math:`c - x_\\mathrm{center}^T A x_\\mathrm{center}`.
+    D: np.ndarray of dimension (n,)
+        The diagonal of the matrix :math:`D` in the eigenvalue decomposition
+        :math:`V^T D V = A`.
+    V: np.ndarray of dimension (n, n)
+        The matrix :math:`V` in the eigenvalue decomposition :math:`V^T D V = A`.
     """
 
     def __init__(self, A, b, c):
@@ -81,7 +94,18 @@ class Quadric:
         return (x - self.center.T) @ self.V
 
     def _boundary(self, num=200, error=True):
-        assert len(self.D) == 2
+        assert len(self.D) <= 2
+
+        if len(self.D) == 1:
+            if self.D[0] * self.c_standardized > 0:
+                raise ValueError("Quadric is empty.")
+            else:
+                return np.array(
+                    [
+                        self.center - np.sqrt(-self.c_standardized / self.D[0]),
+                        self.center + np.sqrt(-self.c_standardized / self.D[0]),
+                    ]
+                ).T
 
         if np.all(self.D > 0) and (self.c_standardized > 0):
             if error:

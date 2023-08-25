@@ -177,7 +177,7 @@ class KClassMixin:
             return 0.0
 
     def _eta_liml(self, X, y, Z=None, X_proj=None, y_proj=None):
-        """Compute the lambda parameter of the LIML estimator.
+        """Compute the eta parameter of the LIML estimator.
 
         Either ``Z`` or both ``X_proj`` and ``y_proj`` must be specified.
 
@@ -196,7 +196,7 @@ class KClassMixin:
 
         Returns
         -------
-        lambda_liml: float
+        eta_liml: float
             Smallest eigenvalue of ``((X y)^T (X y))^{-1} (X y)^T P_Z (X y)``, where
             ``P_Z`` is the projection matrix onto the subspace spanned by Z.
         """
@@ -358,9 +358,9 @@ class KClass(KClassMixin, GeneralizedLinearRegressor):
     fuller_alpha_: float
         If ``kappa`` is one of ``{"fuller", "fuller(a)", "liml"}`` for some numeric
         value ``a``, the alpha parameter of the Fuller estimator.
-    lambda_liml_: float
+    eta_liml_: float
         If ``kappa`` is one of ``{"fuller", "fuller(a)", "liml"}`` for some numeric
-        value ``a``, the lambda parameter of the LIML estimator.
+        value ``a``, the eta parameter of the LIML estimator.
 
     References
     ----------

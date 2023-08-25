@@ -32,8 +32,7 @@ class AnchorRegression(AnchorMixin, GeneralizedLinearRegressor):
     """
     Linear regression with anchor regularization :cite:p:`rothenhausler2021anchor`.
 
-    The anchor regression estimator with parameter :math:`\\gamma` is defined as the
-    solution to
+    The anchor regression estimator with parameter :math:`\\gamma` is defined as
 
     .. math:: \\hat\\beta_\\mathrm{anchor}(\\gamma) := \\arg\\min_\\beta \\
        \\| y - X \\beta \\|_2^2 + (\\gamma - 1) \\|P_Z (y - X \\beta) \\|_2^2.

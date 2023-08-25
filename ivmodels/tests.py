@@ -9,7 +9,28 @@ def pulse_test(Z, residuals):
     """
     Test proposed by :cite:t:`jakobsen2022distributional` with null hypothesis: ``Z`` and ``residuals`` are uncorrelated.
 
+    The test statistic is defined as
+
+    .. math:: T := n \\frac{\\| P_Z r \\|_2^2}{\\| r \\|_2^2}.
+
+    Under the null, :math:`T` is asymptotically distributed as :math:`\\chi^2(q)`.
     See Section 3.2 of :cite:p:`jakobsen2022distributional` for details.
+
+    Parameters
+    ----------
+    Z: np.ndarray of dimension (n, q).
+        Instruments.
+    residuals: np.ndarray of dimension (n,).
+        The residuals to test.
+
+    Returns
+    -------
+    statistic: float
+        The test statistic :math:`T`.
+    p_value: float
+        The p-value of the test. Equal to :math:`1 - F_{\\chi^2(q)}(T)`, where
+        :math:`F_\\chi^2(q)` is the cumulative distribution function of the
+        :math:`\\chi^2(q)` distribution.
 
     References
     ----------
@@ -31,13 +52,18 @@ def anderson_rubin_test(Z, residuals):
     Perform the Anderson Rubin test :cite:p:`anderson1949estimation`.
 
     Test the null hypothesis that the residuals are uncorrelated with the instruments.
-    Under the null, the test statistic is distributed as :math:`F_{q, n - q}``, where
-    :math:`q` is the number of instruments and :math:`n` is the number of observations.
-    Requires normally distributed errors for exactness.
+    The test statistic is defined as
+
+    ..math:: AR := \\frac{n - q}{q} \\frac{\\| P_Z r \\|_2^2}{\\| r - P_Z r \\|_2^2}.
+
+    Under the null and normally distributed errors, the test statistic is distributed as
+    :math:`F_{q, n - q}``, where :math:`q` is the number of instruments and :math:`n` is
+    the number of observations. The statistic is asymptotically distributed as
+    :math:`\\chi^2(q)` under the null and non-normally distributed errors.
 
     Parameters
     ----------
-    Z: np.ndarray of dimension (n, d).
+    Z: np.ndarray of dimension (n, q).
         Instruments.
     residuals: np.ndarray of dimension (n,).
         The residuals to test.
@@ -45,9 +71,11 @@ def anderson_rubin_test(Z, residuals):
     Returns
     -------
     statistic: float
-        The test statistic.
+        The test statistic :math:`AR`.
     p_value: float
-        The p-value of the test.
+        The p-value of the test. Equal to :math:`1 - F_{F_{q, n - q}}(AR)`, where
+        :math:`F_{F_{q, n - q}}` is the cumulative distribution function of the
+        :math:`F_{q, n - q}` distribution.
 
     References
     ----------
