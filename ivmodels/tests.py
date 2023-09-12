@@ -142,7 +142,7 @@ def wald_test(Z, X, y, beta, estimator="tsls"):
 
     .. math::
 
-       W := (beta - \\hat \\beta)^T X^T P_Z X (beta - \\hat \\beta) / \\hat \\sigma^2,
+       W := (\\beta - \\hat{\\beta})^T X^T P_Z X (\\beta - \\hat{\\beta}) / \\hat{\\sigma}^2,
 
     where :math:`\\hat \\beta` is the TSLS (or LIML) estimator,
     :math:`\\hat \\sigma^2 = \\frac{1}{n - p} \\| y - X \\hat \\beta \\|^2_2` is an
@@ -268,7 +268,7 @@ def likelihood_ratio_test(Z, X, y, beta):
 
     .. math::
 
-       \\mathrm{LR} &:= n \\log(1 + \\frac{(y - X \\beta)^T P_Z (y - X \\beta)}{(y - X \\beta)^T M_Z (y - X \\beta)}) - n \\log(1 + \\frac{(y - X \\beta_\\mathrm{LIML})^T (y - X \\beta_\\mathrm{LIML})}{(y - X \\beta_\\mathrm{LIML})^T (y - X \\beta_\\mathrm{LIML})}) \\\\
+       \\mathrm{LR} &:= n \\log(1 + \\frac{(y - X \\beta)^T P_Z (y - X \\beta)}{(y - X \\beta)^T M_Z (y - X \\beta)}) - n \\log(1 + \\frac{(y - X \\beta_\\mathrm{LIML})^T P_Z (y - X \\beta_\\mathrm{LIML})}{(y - X \\beta_\\mathrm{LIML})^T M_Z (y - X \\beta_\\mathrm{LIML})}) \\\\
        &= n \\log(1 + \\frac{q}{n-q}\\mathrm{AR}(\\beta)) - n \\log(1 + \\frac{q}{n-q}\\mathrm{AR}(\\beta_\\mathrm{LIML})),
 
     where :math:`P_Z` is the projection matrix onto the column space of :math:`Z`,
@@ -391,7 +391,7 @@ def inverse_wald_test(Z, X, y, alpha=0.05, estimator="tsls"):
 
     .. math::
 
-       (\\beta - \\hat \\beta)^T X^T P_Z X (\\beta - \\hat \\beta) \\leq \\hat \\hat\\sigma^2 F_{\\chi^2(p)}(1 - \\alpha),
+       (\\beta - \\hat{\\beta})^T X^T P_Z X (\\beta - \\hat{\\beta}) \\leq \\hat{\\sigma}^2 F_{\\chi^2(p)}(1 - \\alpha),
 
     where :math:`\\hat \\beta` is an estimate of the causal parameter :math:`\\beta`
     (controlled by the parameter ``estimator``),
