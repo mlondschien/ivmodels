@@ -123,12 +123,14 @@ def pulse_test(Z, X, y, beta):
     """
     Z, X, y, _, beta = _check_test_inputs(Z, X, y, beta=beta)
 
+    n, q = Z.shape
+
     residuals = y - X @ beta
     proj_residuals = proj(Z, residuals)
     statistic = np.square(proj_residuals).sum() / np.square(residuals).sum()
-    statistic *= Z.shape[0]
+    statistic *= n - q
 
-    p_value = 1 - scipy.stats.chi2.cdf(statistic, df=Z.shape[1])
+    p_value = 1 - scipy.stats.chi2.cdf(statistic, df=q)
     return statistic, p_value
 
 
@@ -330,7 +332,7 @@ def inverse_pulse_test(Z, X, y, alpha=0.05):
 
     n, q = Z.shape
 
-    quantile = scipy.stats.f.ppf(1 - alpha, dfn=q, dfd=n - q)
+    quantile = scipy.stats.chi2.ppf(1 - alpha, df=q)
 
     Z = Z - Z.mean(axis=0)
     X = X - X.mean(axis=0)
@@ -339,9 +341,9 @@ def inverse_pulse_test(Z, X, y, alpha=0.05):
     X_proj = proj(Z, X)
     y_proj = proj(Z, y)
 
-    A = X.T @ (X_proj - q / (n - q) * quantile * X)
-    b = -2 * (X_proj - q / (n - q) * quantile * X).T @ y
-    c = y.T @ (y_proj - q / (n - q) * quantile * y)
+    A = X.T @ (X_proj - 1 / (n - q) * quantile * X)
+    b = -2 * (X_proj - 1 / (n - q) * quantile * X).T @ y
+    c = y.T @ (y_proj - 1 / (n - q) * quantile * y)
 
     if isinstance(c, np.ndarray):
         c = c.item()
@@ -379,8 +381,35 @@ def inverse_anderson_rubin_test(Z, X, y, alpha=0.05):
     return Quadric(A, b, c)
 
 
-def inverse_wald_test(Z, X, y, beta, alpha=0.05):
-    """Return the quadric for the acceptance region based on asymptotic normality."""
+def inverse_wald_test(Z, X, y, alpha=0.05, estimator="tsls"):
+    """
+    Return the quadric for the acceptance region based on asymptotic normality.
+
+    The quadric is defined as
+
+    .. math:
+         \\{ \\beta \\in \\mathbb{R}^p : (\\beta - \\hat \\beta)^T X^T P_Z X (\\beta - \\hat \\beta) \\leq \\hat \\hat\\sigma^2 F_{\\chi^2(p)}(1 - \\alpha),
+
+    where :math:`\\hat \\beta` is an estimate of the causal parameter :math:`\\beta`
+    (controlled by the parameter ``estimator``),
+    :math:`\\hat \\sigma^2 = \\frac{1}{n} \\| y - X \\hat \\beta \\|^2_2`,
+    :math:`P_Z` is the projection matrix onto the column space of :math:`Z`,
+    and :math:`F_{\\chi^2(p)}` is the cumulative distribution function of the
+    :math:`\\chi^2(p)` distribution.
+
+    Parameters
+    ----------
+    Z: np.ndarray of dimension (n, q)
+        Instruments.
+    X: np.ndarray of dimension (n, p)
+        Regressors.
+    y: np.ndarray of dimension (n,)
+        Outcomes.
+    alpha: float
+        Significance level.
+    estimator: float or str, optional, default = "tsls"
+        Estimator to use. Passed as ``kappa`` parameter to ``KClass``.
+    """
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1).")
 
@@ -394,6 +423,7 @@ def inverse_wald_test(Z, X, y, beta, alpha=0.05):
 
     X_proj = proj(Z, X)
 
+    beta = KClass(kappa=estimator).fit(X, y, Z).coef_
     # Avoid settings where (X @ beta).shape = (n, 1) and y.shape = (n,), resulting in
     # predictions.shape = (n, n) and residuals.shape = (n, n).
     predictions = X @ beta
@@ -435,7 +465,7 @@ def inverse_likelihood_ratio_test(Z, X, y, alpha=0.05):
     eta_liml = min(np.linalg.eigvals(W))
     kappa_liml = eta_liml / (1 - eta_liml)
 
-    quantile = np.exp(scipy.stats.chi2.ppf(1 - alpha, df=p) / n - kappa_liml) - 1
+    quantile = np.exp(scipy.stats.chi2.ppf(1 - alpha, df=p) / n) * (1 + kappa_liml) - 1
 
     A = X.T @ (X_proj - quantile * X_orth)
     b = -2 * (X_proj - quantile * X_orth).T @ y

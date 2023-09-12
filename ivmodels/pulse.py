@@ -60,7 +60,7 @@ class PULSEMixin:
         # default kappa_max.
         self.kappa = high
         super().fit(X, y, Z, *args, **kwargs)
-        p_value_high = pulse_test(Z_, y.flatten() - self.predict(X))[1]
+        p_value_high = pulse_test(Z_, X, y.flatten(), self.coef_)[1]
 
         if p_value_high < self.p_min:
             raise ValueError(
@@ -70,7 +70,7 @@ class PULSEMixin:
 
         self.kappa = 0
         super().fit(X, y, Z, *args, **kwargs)
-        p_value_low = pulse_test(Z_, y.flatten() - self.predict(X))[1]
+        p_value_low = pulse_test(Z_, X, y.flatten(), self.coef_)[1]
 
         if p_value_low > self.p_min:
             return self
@@ -82,7 +82,7 @@ class PULSEMixin:
             mid = (high + low) / 2
             self.kappa = mid
             super().fit(X, y, Z, *args, **kwargs)
-            p_value_mid = pulse_test(Z_, y - self.predict(X))[1]
+            p_value_mid = pulse_test(Z_, X, y.flatten(), self.coef_)[1]
             logger.debug(
                 f"The PULSE test with kappa={mid} yields p_value={p_value_mid}."
             )
