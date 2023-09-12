@@ -140,7 +140,8 @@ def wald_test(Z, X, y, beta, estimator="tsls"):
 
     The test statistic is defined as
 
-    .. math:
+    .. math::
+
        W := (beta - \\hat \\beta)^T X^T P_Z X (beta - \\hat \\beta) / \\hat \\sigma^2,
 
     where :math:`\\hat \\beta` is the TSLS (or LIML) estimator,
@@ -265,7 +266,8 @@ def likelihood_ratio_test(Z, X, y, beta):
 
     The test statistic is defined as
 
-    .. math:
+    .. math::
+
        \\mathrm{LR} &:= n \\log(1 + \\frac{(y - X \\beta)^T P_Z (y - X \\beta)}{(y - X \\beta)^T M_Z (y - X \\beta)}) - n \\log(1 + \\frac{(y - X \\beta_\\mathrm{LIML})^T (y - X \\beta_\\mathrm{LIML})}{(y - X \\beta_\\mathrm{LIML})^T (y - X \\beta_\\mathrm{LIML})}) \\\\
        &= n \\log(1 + \\frac{q}{n-q}\\mathrm{AR}(\\beta)) - n \\log(1 + \\frac{q}{n-q}\\mathrm{AR}(\\beta_\\mathrm{LIML})),
 
@@ -387,8 +389,9 @@ def inverse_wald_test(Z, X, y, alpha=0.05, estimator="tsls"):
 
     The quadric is defined as
 
-    .. math:
-        (\\beta - \\hat \\beta)^T X^T P_Z X (\\beta - \\hat \\beta) \\leq \\hat \\hat\\sigma^2 F_{\\chi^2(p)}(1 - \\alpha),
+    .. math::
+
+       (\\beta - \\hat \\beta)^T X^T P_Z X (\\beta - \\hat \\beta) \\leq \\hat \\hat\\sigma^2 F_{\\chi^2(p)}(1 - \\alpha),
 
     where :math:`\\hat \\beta` is an estimate of the causal parameter :math:`\\beta`
     (controlled by the parameter ``estimator``),
