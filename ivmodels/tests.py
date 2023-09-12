@@ -388,7 +388,7 @@ def inverse_wald_test(Z, X, y, alpha=0.05, estimator="tsls"):
     The quadric is defined as
 
     .. math:
-         \\{ \\beta \\in \\mathbb{R}^p : (\\beta - \\hat \\beta)^T X^T P_Z X (\\beta - \\hat \\beta) \\leq \\hat \\hat\\sigma^2 F_{\\chi^2(p)}(1 - \\alpha),
+        (\\beta - \\hat \\beta)^T X^T P_Z X (\\beta - \\hat \\beta) \\leq \\hat \\hat\\sigma^2 F_{\\chi^2(p)}(1 - \\alpha),
 
     where :math:`\\hat \\beta` is an estimate of the causal parameter :math:`\\beta`
     (controlled by the parameter ``estimator``),
