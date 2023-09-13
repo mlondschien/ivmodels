@@ -393,7 +393,7 @@ def inverse_wald_test(Z, X, y, alpha=0.05, estimator="tsls"):
 
        (\\beta - \\hat{\\beta})^T X^T P_Z X (\\beta - \\hat{\\beta}) \\leq \\hat{\\sigma}^2 F_{\\chi^2(p)}(1 - \\alpha),
 
-    where :math:`\\hat \\beta` is an estimate of the causal parameter :math:`\\beta`
+    where :math:`\\hat \\beta` is an estimate of the causal parameter :math:`\\beta_0`
     (controlled by the parameter ``estimator``),
     :math:`\\hat \\sigma^2 = \\frac{1}{n} \\| y - X \\hat \\beta \\|^2_2`,
     :math:`P_Z` is the projection matrix onto the column space of :math:`Z`,
