@@ -18,7 +18,7 @@ def test_pulse(p_min, rtol, n, p, q, u):
     # "smallest" is defined up to rtol in p_value. I.e.,
     # p_value(kappa) / (1 + rtol) < p_min. If p_value(0) >= p_min, then the PULSE
     # selects kappa = 0.
-    test_p_value = pulse_test(A, Y.flatten() - pulse.predict(X))[1]
+    test_p_value = pulse_test(A, X, Y, pulse.coef_)[1]
     assert test_p_value >= p_min
 
     kclass = KClass(kappa=pulse.kappa_).fit(X, Y.flatten(), A)

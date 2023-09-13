@@ -255,9 +255,14 @@ class KClassMixin:
         y_proj = proj(Z, y)
 
         if isinstance(self.kappa, str):
-            self.fuller_alpha_ = self._fuller_alpha(self.kappa)
-            self.lambda_liml_ = self._eta_liml(X, y, X_proj=X_proj, y_proj=y_proj)
-            self.kappa_ = 1 / (1 - self.lambda_liml_) - self.fuller_alpha_ / (n - q)
+            if self.kappa.lower() in {"tsls", "2sls"}:
+                self.kappa_ = 1
+            elif self.kappa.lower() == "ols":
+                self.kappa = 0
+            else:
+                self.fuller_alpha_ = self._fuller_alpha(self.kappa)
+                self.eta_liml_ = self._eta_liml(X, y, X_proj=X_proj, y_proj=y_proj)
+                self.kappa_ = 1 / (1 - self.eta_liml_) - self.fuller_alpha_ / (n - q)
         else:
             self.kappa_ = self.kappa
 

@@ -174,7 +174,7 @@ class Quadric:
         """
         Return the projection of the quadric onto the coordinate.
 
-        Solves argmin/max { x_coordinate | quadric(x) <= 0 }. The `coordinate`-th
+        Solves argmin/max { x_coordinate | quadric(x) <= 0 }. The ``coordinate``-th
         coordinate of the solution can be seen as the boundary of the projection of the
         quadric onto the coordinate.
 

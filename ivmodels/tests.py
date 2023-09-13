@@ -1,17 +1,90 @@
 import numpy as np
 import scipy
 
+from ivmodels.kclass import KClass
 from ivmodels.quadric import Quadric
 from ivmodels.utils import proj
 
 
-def pulse_test(Z, residuals):
+def _check_test_inputs(Z, X, y, W=None, beta=None):
     """
-    Test proposed by :cite:t:`jakobsen2022distributional` with null hypothesis: ``Z`` and ``residuals`` are uncorrelated.
+    Test dimensions of inputs to tests.
+
+    Parameters
+    ----------
+    Z: np.ndarray of dimension (n, q)
+        Instruments.
+    X: np.ndarray of dimension (n, p)
+        Regressors of interest.
+    y: np.ndarray of dimension (n,)
+        Outcomes.
+    W: np.ndarray of dimension (n, r), optional, default=None
+        Regressors to control for.
+    beta: np.ndarray of dimension (p,), optional, default=None
+        Coefficients.
+
+    Raises
+    ------
+    ValueError:
+        If the dimensions of the inputs are incorrect.
+
+    Returns
+    -------
+    Z: np.ndarray of dimension (n, q)
+        Instruments.
+    X: np.ndarray of dimension (n, p)
+        Regressors of interest.
+    y: np.ndarray of dimension (n,)
+        Outcomes.
+    W: np.ndarray of dimension (n, r) or None
+        Regressors to control for.
+    beta: np.ndarray of dimension (p,) or None
+        Coefficients.
+    """
+    if Z.ndim != 2:
+        raise ValueError(f"Z must be a matrix. Got shape {Z.shape}.")
+    if X.ndim != 2:
+        raise ValueError(f"X must be a matrix. Got shape {X.shape}.")
+    if y.ndim != 1:
+        if y.shape[1] != 1:
+            raise ValueError(f"y must be a vector. Got shape {y.shape}.")
+        else:
+            y = y.flatten()
+
+    if not Z.shape[0] == X.shape[0] == y.shape[0]:
+        raise ValueError(
+            f"Z, X, and y must have the same number of rows. Got shapes {Z.shape}, {X.shape}, and {y.shape}."
+        )
+
+    if beta is not None and beta.ndim != 1:
+        if beta.shape[1] != 1:
+            raise ValueError(f"beta must be a vector. Got shape {beta.shape}.")
+        else:
+            beta = beta.flatten()
+
+        if beta.shape[0] != X.shape[1]:
+            raise ValueError(
+                f"beta must have the same number of rows as X. Got shapes {beta.shape} and {X.shape}."
+            )
+
+    if W is not None:
+        if W.ndim != 2:
+            raise ValueError(f"W must be a matrix. Got shape {W.shape}.")
+        if not W.shape[0] == X.shape[0]:
+            raise ValueError(
+                f"W and X must have the same number of rows. Got shapes {W.shape} and {X.shape}."
+            )
+
+    return Z, X, y, W, beta
+
+
+def pulse_test(Z, X, y, beta):
+    """
+    Test proposed by :cite:t:`jakobsen2022distributional` with null hypothesis: :math:`Z` and :math:`y - X \\beta` are uncorrelated.
 
     The test statistic is defined as
 
-    .. math:: T := n \\frac{\\| P_Z r \\|_2^2}{\\| r \\|_2^2}.
+    .. math:: T := n \\frac{\\| P_Z (y - X \\beta) \\|_2^2}{\\| (y - X \\beta) \\|_2^2}.
 
     Under the null, :math:`T` is asymptotically distributed as :math:`\\chi^2(q)`.
     See Section 3.2 of :cite:p:`jakobsen2022distributional` for details.
@@ -20,8 +93,12 @@ def pulse_test(Z, residuals):
     ----------
     Z: np.ndarray of dimension (n, q)
         Instruments.
-    residuals: np.ndarray of dimension (n,)
-        The residuals to test.
+    X: np.ndarray of dimension (n, p)
+        Regressors.
+    y: np.ndarray of dimension (n,)
+        Outcomes.
+    beta: np.ndarray of dimension (p,)
+        Coefficients to test.
 
     Returns
     -------
@@ -32,6 +109,11 @@ def pulse_test(Z, residuals):
         :math:`F_\\chi^2(q)` is the cumulative distribution function of the
         :math:`\\chi^2(q)` distribution.
 
+    Raises
+    ------
+    ValueError:
+        If the dimensions of the inputs are incorrect.
+
     References
     ----------
     .. bibliography::
@@ -39,34 +121,109 @@ def pulse_test(Z, residuals):
 
        jakobsen2022distributional
     """
+    Z, X, y, _, beta = _check_test_inputs(Z, X, y, beta=beta)
+
+    n, q = Z.shape
+
+    residuals = y - X @ beta
     proj_residuals = proj(Z, residuals)
     statistic = np.square(proj_residuals).sum() / np.square(residuals).sum()
-    statistic *= Z.shape[0]
+    statistic *= n - q
 
-    p_value = 1 - scipy.stats.chi2.cdf(statistic, df=Z.shape[1])
+    p_value = 1 - scipy.stats.chi2.cdf(statistic, df=q)
     return statistic, p_value
 
 
-def anderson_rubin_test(Z, residuals):
+def wald_test(Z, X, y, beta, estimator="tsls"):
+    """
+    Test based on asymptotic normality of the TSLS (or LIML) estimator.
+
+    The test statistic is defined as
+
+    .. math::
+
+       W := (\\beta - \\hat{\\beta})^T X^T P_Z X (\\beta - \\hat{\\beta}) / \\hat{\\sigma}^2,
+
+    where :math:`\\hat \\beta` is the TSLS (or LIML) estimator,
+    :math:`\\hat \\sigma^2 = \\frac{1}{n - p} \\| y - X \\hat \\beta \\|^2_2` is an
+    estimate of the variance of the errors, and :math:`P_Z` is the projection matrix
+    onto the column space of :math:`Z`. If
+    :math:`(X^T P_Z X)^{1/2}(\\hat \\beta - \\beta_0) \\overset{d}{\\to} \\mathcal{N}(0, \\sigma^2 \\mathrm{Id})`,
+    for :math:`n \\to \\infty`, the test statistic is asymptotically distributed as
+    :math:`\\chi^2(p)` under the null. This requires strong instruments.
+
+    Parameters
+    ----------
+    Z: np.ndarray of dimension (n, q)
+        Instruments.
+    X: np.ndarray of dimension (n, p)
+        Regressors.
+    y: np.ndarray of dimension (n,)
+        Outcomes.
+    beta: np.ndarray of dimension (p,)
+        Coefficients to test.
+    estimator: str
+        Estimator to use. Must be one of ``"tsls"`` or ``"liml"``.
+
+    Raises
+    ------
+    ValueError:
+        If the dimensions of the inputs are incorrect.
+
+    Returns
+    -------
+    statistic: float
+        The test statistic :math:`W`.
+    p_value: float
+        The p-value of the test. Equal to :math:`1 - F_{\\chi^2(p)}(W)`, where
+        :math:`F_\\chi^2(p)` is the cumulative distribution function of the
+        :math:`\\chi^2(p)` distribution.
+    """
+    Z, X, y, _, beta = _check_test_inputs(Z, X, y, beta=beta)
+
+    X_proj = proj(Z, X)
+
+    estimator = KClass(kappa=estimator).fit(X, y, Z)
+    beta_hat = estimator.coef_
+
+    sigma_hat_sq = np.mean(np.square(y - X @ beta_hat))
+
+    statistic = (beta_hat - beta).T @ X_proj.T @ X_proj @ (beta_hat - beta)
+    statistic /= sigma_hat_sq
+
+    p_value = 1 - scipy.stats.chi2.cdf(statistic, df=X.shape[1])
+
+    return statistic, p_value
+
+
+def anderson_rubin_test(Z, X, y, beta):
     """
     Perform the Anderson Rubin test :cite:p:`anderson1949estimation`.
 
     Test the null hypothesis that the residuals are uncorrelated with the instruments.
     The test statistic is defined as
 
-    .. math:: AR := \\frac{n - q}{q} \\frac{\\| P_Z r \\|_2^2}{\\| r - P_Z r \\|_2^2}.
+    .. math:: AR := \\frac{n - q}{q} \\frac{\\| P_Z (y - X \\beta) \\|_2^2}{\\| M_Z  (y - X \\beta) \\|_2^2},
+
+    where :math:`P_Z` is the projection matrix onto the column space of :math:`Z` and
+    :math:`M_Z = \\mathrm{Id} - P_Z`.
 
     Under the null and normally distributed errors, the test statistic is distributed as
     :math:`F_{q, n - q}``, where :math:`q` is the number of instruments and :math:`n` is
     the number of observations. The statistic is asymptotically distributed as
-    :math:`\\chi^2(q) / q` under the null and non-normally distributed errors.
+    :math:`\\chi^2(q) / q` under the null and non-normally distributed errors, even for
+    weak instruments.
 
     Parameters
     ----------
     Z: np.ndarray of dimension (n, q)
         Instruments.
-    residuals: np.ndarray of dimension (n,)
-        The residuals to test.
+    X: np.ndarray of dimension (n, p)
+        Regressors.
+    y: np.ndarray of dimension (n,)
+        Outcomes.
+    beta: np.ndarray of dimension (p,)
+        Coefficients to test.
 
     Returns
     -------
@@ -77,6 +234,11 @@ def anderson_rubin_test(Z, residuals):
         :math:`F_{F_{q, n - q}}` is the cumulative distribution function of the
         :math:`F_{q, n - q}` distribution.
 
+    Raises
+    ------
+    ValueError:
+        If the dimensions of the inputs are incorrect.
+
     References
     ----------
     .. bibliography::
@@ -84,26 +246,119 @@ def anderson_rubin_test(Z, residuals):
 
        anderson1949estimation
     """
-    if residuals.ndim != 1 and residuals.shape[1] != 1:
-        raise ValueError(f"residuals must be a vector. Got shape {residuals.shape}.")
-
+    Z, X, y, _, beta = _check_test_inputs(Z, X, y, beta=beta)
     n, q = Z.shape
-    proj_residuals = proj(Z, residuals)
-    statistic = (
-        np.square(proj_residuals).sum() / np.square(residuals - proj_residuals).sum()
-    )
-    statistic *= (n - q) / q
 
-    p_value = 1 - scipy.stats.f.cdf(statistic, dfn=q, dfd=n - q)
+    residuals = y - X @ beta
+
+    proj_residuals = proj(Z, residuals)
+    ar = np.square(proj_residuals).sum() / np.square(residuals - proj_residuals).sum()
+    ar *= (n - q) / q
+
+    p_value = 1 - scipy.stats.f.cdf(ar, dfn=q, dfd=n - q)
+
+    return ar, p_value
+
+
+def likelihood_ratio_test(Z, X, y, beta):
+    """
+    Perform the likelihood ratio test for ``beta``.
+
+    The test statistic is defined as
+
+    .. math::
+
+       \\mathrm{LR} &:= n \\log(1 + \\frac{(y - X \\beta)^T P_Z (y - X \\beta)}{(y - X \\beta)^T M_Z (y - X \\beta)}) - n \\log(1 + \\frac{(y - X \\beta_\\mathrm{LIML})^T P_Z (y - X \\beta_\\mathrm{LIML})}{(y - X \\beta_\\mathrm{LIML})^T M_Z (y - X \\beta_\\mathrm{LIML})}) \\\\
+       &= n \\log(1 + \\frac{q}{n-q}\\mathrm{AR}(\\beta)) - n \\log(1 + \\frac{q}{n-q}\\mathrm{AR}(\\beta_\\mathrm{LIML})),
+
+    where :math:`P_Z` is the projection matrix onto the column space of :math:`Z`,
+    :math:`M_Z = \\mathrm{Id} - P_Z`, and :math:`\\beta_\\mathrm{LIML}` is the LIML
+    estimator of :math:`\\beta`, minimizing :math:`\\mathrm{AR}(\\beta)` at
+    :math:`\\mathrm{AR}(\\beta_\\mathrm{LIML}) = \\frac{n - q}{q} (\\hat\\kappa_\\mathrm{LIML} - 1)`.
+
+    Under the null and given strong instruments, the test statistic is asymptotically
+    distributed as :math:`\\chi^2(p)`, where :math:`p` is the number of regressors.
+
+    Parameters
+    ----------
+    Z: np.ndarray of dimension (n, q)
+        Instruments.
+    X: np.ndarray of dimension (n, p)
+        Regressors.
+    y: np.ndarray of dimension (n,)
+        Outcomes.
+    beta: np.ndarray of dimension (p,)
+        Coefficients to test.
+
+    Returns
+    -------
+    statistic: float
+        The test statistic :math:`LR`.
+    p_value: float
+        The p-value of the test. Equal to :math:`1 - F_{\\chi^2(p)}(LR)`, where
+        :math:`F_{\\chi^2(p)}` is the cumulative distribution function of the
+        :math:`\\chi^2(p)` distribution.
+
+    Raises
+    ------
+    ValueError:
+        If the dimensions of the inputs are incorrect.
+    """
+    Z, X, y, _, beta = _check_test_inputs(Z, X, y, beta=beta)
+
+    n, p = X.shape
+
+    X_proj = proj(Z, X)
+    y_proj = proj(Z, y)
+    Xy_proj = np.concatenate([X_proj, y_proj.reshape(-1, 1)], axis=1)
+    Xy = np.concatenate([X, y.reshape(-1, 1)], axis=1)
+
+    W = np.linalg.solve(Xy.T @ Xy, Xy_proj.T @ Xy)
+    eta_liml = min(np.abs(scipy.linalg.eigvals(W)))
+    kappa_liml = eta_liml / (1 - eta_liml)
+
+    residuals = y - X @ beta
+    proj_residuals = y_proj - X_proj @ beta
+
+    ar = np.square(proj_residuals).sum() / np.square(residuals - proj_residuals).sum()
+    statistic = n * (np.log1p(ar) - np.log1p(kappa_liml))
+
+    p_value = 1 - scipy.stats.chi2.cdf(statistic, df=p)
+
     return statistic, p_value
 
 
-def inverse_anderson_rubin(Z, X, y, alpha=0.05):
+def inverse_pulse_test(Z, X, y, alpha=0.05):
+    """Return the quadric for the inverse pulse test's acceptance region."""
+    Z, X, y, _, _ = _check_test_inputs(Z, X, y)
+
+    n, q = Z.shape
+
+    quantile = scipy.stats.chi2.ppf(1 - alpha, df=q)
+
+    Z = Z - Z.mean(axis=0)
+    X = X - X.mean(axis=0)
+    y = y - y.mean()
+
+    X_proj = proj(Z, X)
+    y_proj = proj(Z, y)
+
+    A = X.T @ (X_proj - 1 / (n - q) * quantile * X)
+    b = -2 * (X_proj - 1 / (n - q) * quantile * X).T @ y
+    c = y.T @ (y_proj - 1 / (n - q) * quantile * y)
+
+    if isinstance(c, np.ndarray):
+        c = c.item()
+
+    return Quadric(A, b, c)
+
+
+def inverse_anderson_rubin_test(Z, X, y, alpha=0.05):
     """Return the quadric for to the inverse Anderson-Rubin test's acceptance region."""
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1).")
 
-    assert Z.shape[0] == X.shape[0] == y.shape[0]
+    Z, X, y, _, _ = _check_test_inputs(Z, X, y)
 
     n, q = Z.shape
 
@@ -128,10 +383,40 @@ def inverse_anderson_rubin(Z, X, y, alpha=0.05):
     return Quadric(A, b, c)
 
 
-def asymptotic_confidence_interval(Z, X, y, beta, alpha=0.05):
-    """Return the quadric for the acceptance region based on asymptotic normality."""
+def inverse_wald_test(Z, X, y, alpha=0.05, estimator="tsls"):
+    """
+    Return the quadric for the acceptance region based on asymptotic normality.
+
+    The quadric is defined as
+
+    .. math::
+
+       (\\beta - \\hat{\\beta})^T X^T P_Z X (\\beta - \\hat{\\beta}) \\leq \\hat{\\sigma}^2 F_{\\chi^2(p)}(1 - \\alpha),
+
+    where :math:`\\hat \\beta` is an estimate of the causal parameter :math:`\\beta_0`
+    (controlled by the parameter ``estimator``),
+    :math:`\\hat \\sigma^2 = \\frac{1}{n} \\| y - X \\hat \\beta \\|^2_2`,
+    :math:`P_Z` is the projection matrix onto the column space of :math:`Z`,
+    and :math:`F_{\\chi^2(p)}` is the cumulative distribution function of the
+    :math:`\\chi^2(p)` distribution.
+
+    Parameters
+    ----------
+    Z: np.ndarray of dimension (n, q)
+        Instruments.
+    X: np.ndarray of dimension (n, p)
+        Regressors.
+    y: np.ndarray of dimension (n,)
+        Outcomes.
+    alpha: float
+        Significance level.
+    estimator: float or str, optional, default = "tsls"
+        Estimator to use. Passed as ``kappa`` parameter to ``KClass``.
+    """
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1).")
+
+    Z, X, y, _, _ = _check_test_inputs(Z, X, y)
 
     z_alpha = scipy.stats.chi2.ppf(1 - alpha, df=X.shape[1])
 
@@ -141,7 +426,8 @@ def asymptotic_confidence_interval(Z, X, y, beta, alpha=0.05):
 
     X_proj = proj(Z, X)
 
-    # Avoid setting where (X @ beta).shape = (n, 1) and y.shape = (n,), resulting in
+    beta = KClass(kappa=estimator).fit(X, y, Z).coef_
+    # Avoid settings where (X @ beta).shape = (n, 1) and y.shape = (n,), resulting in
     # predictions.shape = (n, n) and residuals.shape = (n, n).
     predictions = X @ beta
     residuals = y.reshape(predictions.shape) - predictions
@@ -150,6 +436,47 @@ def asymptotic_confidence_interval(Z, X, y, beta, alpha=0.05):
     A = X.T @ X_proj
     b = -2 * A @ beta
     c = beta.T @ A @ beta - hat_sigma_sq * z_alpha
+
+    if isinstance(c, np.ndarray):
+        c = c.item()
+
+    return Quadric(A, b, c)
+
+
+def inverse_likelihood_ratio_test(Z, X, y, alpha=0.05):
+    """Return the quadric for the inverse likelihood ratio test's acceptance region."""
+    if not 0 < alpha < 1:
+        raise ValueError("alpha must be in (0, 1).")
+
+    Z, X, y, _, _ = _check_test_inputs(Z, X, y)
+
+    n, p = X.shape
+
+    Z = Z - Z.mean(axis=0)
+    X = X - X.mean(axis=0)
+    y = y - y.mean()
+
+    X_proj = proj(Z, X)
+    X_orth = X - X_proj
+    y_proj = proj(Z, y)
+    y_orth = y - y_proj
+
+    Xy_proj = np.concatenate([X_proj, y_proj.reshape(-1, 1)], axis=1)
+    Xy = np.concatenate([X, y.reshape(-1, 1)], axis=1)
+
+    W = np.linalg.solve(Xy.T @ Xy, Xy.T @ Xy_proj)
+    eta_liml = min(np.linalg.eigvals(W))
+    kappa_liml = eta_liml / (1 - eta_liml)
+
+    quantile = np.exp(scipy.stats.chi2.ppf(1 - alpha, df=p) / n) * (1 + kappa_liml) - 1
+
+    A = X.T @ (X_proj - quantile * X_orth)
+    b = -2 * (X_proj - quantile * X_orth).T @ y
+    c = y.T @ (y_proj - quantile * y_orth)
+
+    if isinstance(c, np.ndarray):
+        c = c.item()
+
     return Quadric(A, b, c)
 
 
