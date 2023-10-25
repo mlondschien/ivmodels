@@ -29,6 +29,30 @@ TEST_PAIRS = [
 # The Pulse and the LM tests don't have subvector versions.
 @pytest.mark.parametrize("test", [pair[0] for pair in TEST_PAIRS[2:]])
 @pytest.mark.parametrize("n, p, r, q, u", [(100, 1, 1, 2, 1), (100, 1, 2, 5, 2)])
+def test_subvector_test_equal_to_original(test, n, p, r, q, u):
+    """Test that test(.., W=None) == test(.., W=np.zeros((n, 0)))."""
+    rng = np.random.RandomState(0)
+
+    delta_X = rng.normal(0, 1, (u, p))
+    delta_y = rng.normal(0, 1, (u, 1))
+
+    beta = rng.normal(0, 0.1, (p, 1))
+    Pi_X = rng.normal(0, 1, (q, p))
+
+    U = rng.normal(0, 1, (n, u))
+
+    Z = rng.normal(0, 1, (n, q))
+    X = Z @ Pi_X + U @ delta_X + rng.normal(0, 1, (n, p))
+    y = X @ beta + U @ delta_y + rng.normal(0, 1, (n, 1))
+
+    np.testing.assert_almost_equal(
+        test(Z, X, y, beta, W=None), test(Z, X, y, beta, W=np.zeros((n, 0))), decimal=2
+    )
+
+
+# The Pulse and the LM tests don't have subvector versions.
+@pytest.mark.parametrize("test", [pair[0] for pair in TEST_PAIRS[2:]])
+@pytest.mark.parametrize("n, p, r, q, u", [(100, 1, 1, 2, 1), (100, 1, 2, 5, 2)])
 def test_subvector_test_size(test, n, p, r, q, u):
     """Test that the test size is close to the nominal level."""
     n_seeds = 200
