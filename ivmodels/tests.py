@@ -135,7 +135,7 @@ def pulse_test(Z, X, y, beta):
 
 
 def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
-    r"""
+    """
     Test based on asymptotic normality of the TSLS (or LIML) estimator.
 
     If ``W = None``, the test statistic is defined as
