@@ -64,7 +64,7 @@ def _check_test_inputs(Z, X, y, W=None, beta=None):
 
         if beta.shape[0] != X.shape[1]:
             raise ValueError(
-                f"beta must have the same number of rows as X. Got shapes {beta.shape} and {X.shape}."
+                f"beta must have the same length or number of rows as X has columns. Got shapes {beta.shape} and {X.shape}."
             )
 
     if W is not None:
@@ -135,14 +135,14 @@ def pulse_test(Z, X, y, beta):
 
 
 def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
-    """
+    r"""
     Test based on asymptotic normality of the TSLS (or LIML) estimator.
 
-    The test statistic is defined as
+    If ``W = None``, the test statistic is defined as
 
     .. math::
 
-       W := (\\beta - \\hat{\\beta})^T X^T P_Z X (\\beta - \\hat{\\beta}) / \\hat{\\sigma}^2,
+       Wald := (\\beta - \\hat{\\beta})^T X^T P_Z X (\\beta - \\hat{\\beta}) / \\hat{\\sigma}^2,
 
     where :math:`\\hat \\beta` is the TSLS (or LIML) estimator,
     :math:`\\hat \\sigma^2 = \\frac{1}{n - p} \\| y - X \\hat \\beta \\|^2_2` is an
@@ -152,6 +152,15 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
     for :math:`n \\to \\infty`, the test statistic is asymptotically distributed as
     :math:`\\chi^2(p)` under the null. This requires strong instruments.
 
+    If ``W != None``, the test statistic is defined as
+
+    .. math::
+
+        Wald := (\\beta - \\hat{\\beta})^T (D ( (X W)^T P_Z (X W) )^{-1} D)^{-1} (\\beta - \\hat{\\beta}) / \\hat{\\sigma}^2,
+
+    where :math:`D \\in \\mathbb{R}^{(p + r) \\times (p + r)}` is diagonal with
+    :math:`D_{ii} = 1` if :math:`i \\leq p` and :math:`D_{ii} = 0` otherwise.
+
     Parameters
     ----------
     Z: np.ndarray of dimension (n, q)
@@ -160,6 +169,8 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
         Regressors.
     y: np.ndarray of dimension (n,)
         Outcomes.
+    W: np.ndarray of dimension (n, r) or None
+        Endogenous regressors not of interest.
     beta: np.ndarray of dimension (p,)
         Coefficients to test.
     estimator: str
@@ -173,22 +184,40 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
     Returns
     -------
     statistic: float
-        The test statistic :math:`W`.
+        The test statistic :math:`Wald`.
     p_value: float
-        The p-value of the test. Equal to :math:`1 - F_{\\chi^2(p)}(W)`, where
+        The p-value of the test. Equal to :math:`1 - F_{\\chi^2(p)}(Wald)`, where
         :math:`F_\\chi^2(p)` is the cumulative distribution function of the
         :math:`\\chi^2(p)` distribution.
     """
-    Z, X, y, _, beta = _check_test_inputs(Z, X, y, beta=beta)
+    Z, X, y, W, beta = _check_test_inputs(Z, X, y, W=W, beta=beta)
 
-    X_proj = proj(Z, X)
+    p = X.shape[1]
 
-    estimator = KClass(kappa=estimator).fit(X, y, Z)
-    beta_hat = estimator.coef_
+    if W is None:
+        W = np.zeros((X.shape[0], 0))
 
-    sigma_hat_sq = np.mean(np.square(y - X @ beta_hat))
+    XW = np.concatenate([X, W], axis=1)
 
-    statistic = (beta_hat - beta).T @ X_proj.T @ X_proj @ (beta_hat - beta)
+    estimator = KClass(kappa=estimator).fit(XW, y, Z)
+    beta_gamma_hat = estimator.coef_
+
+    sigma_hat_sq = np.mean(np.square(y - XW @ beta_gamma_hat))
+
+    XW_proj = proj(Z, XW)
+
+    if W.shape[1] == 0:
+        statistic = (
+            (beta_gamma_hat - beta).T @ XW_proj.T @ XW_proj @ (beta_gamma_hat - beta)
+        )
+    else:
+        beta_hat = beta_gamma_hat[:p]
+        statistic = (
+            (beta_hat - beta).T
+            @ np.linalg.inv(np.linalg.inv(XW_proj.T @ XW_proj)[:p, :p])
+            @ (beta_hat - beta)
+        )
+
     statistic /= sigma_hat_sq
 
     p_value = 1 - scipy.stats.chi2.cdf(statistic, df=X.shape[1])
@@ -361,8 +390,10 @@ def likelihood_ratio_test(Z, X, y, beta, W=None):
             y_proj - X_proj @ beta
         ) ** 2 / np.linalg.norm((y - y_proj) - (X - X_proj) @ beta) ** 2 - ar_min
     else:
-        Wy = np.concatenate([W, y - X @ beta], axis=1)
-        Wy_proj = np.concatenate([W_proj, y_proj - X_proj @ beta], axis=1)
+        Wy = np.concatenate([W, (y - X @ beta).reshape(-1, 1)], axis=1)
+        Wy_proj = np.concatenate(
+            [W_proj, (y_proj - X_proj @ beta).reshape(-1, 1)], axis=1
+        )
         matrix = np.linalg.solve(Wy.T @ (Wy - Wy_proj), Wy_proj.T @ Wy)
         statistic = (n - q) * min(np.abs(scipy.linalg.eigvals(matrix))) - ar_min
 

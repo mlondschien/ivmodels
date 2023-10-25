@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+import scipy
 
 from ivmodels.kclass import KClass
 from ivmodels.simulate import simulate_gaussian_iv
@@ -17,31 +18,95 @@ from ivmodels.tests import (
 )
 
 TEST_PAIRS = [
-    (anderson_rubin_test, inverse_anderson_rubin_test),
     (pulse_test, inverse_pulse_test),
     (lagrange_multiplier_test, None),
+    (anderson_rubin_test, inverse_anderson_rubin_test),
     (likelihood_ratio_test, inverse_likelihood_ratio_test),
     (wald_test, inverse_wald_test),
 ]
 
-# def test_projected_test():
-#     n=1000
-#     p = 2
-#     q = 3
-#     u = 3
 
-#     Z, X, y = simulate_gaussian_iv(n, p, q, u, seed=0)
+# The Pulse and the LM tests don't have subvector versions.
+@pytest.mark.parametrize("test", [pair[0] for pair in TEST_PAIRS[2:]])
+@pytest.mark.parametrize("n, p, r, q, u", [(100, 1, 1, 2, 1), (100, 1, 2, 5, 2)])
+def test_subvector_test_size(test, n, p, r, q, u):
+    """Test that the test size is close to the nominal level."""
+    n_seeds = 200
+    p_values = np.zeros(n_seeds)
 
-#     Z = Z - Z.mean(axis=0)
-#     X = X - X.mean(axis=0)
-#     y = y.flatten() - y.mean()
+    for seed in range(n_seeds):
+        rng = np.random.RandomState(seed)
 
-#     W = np.zeros((n, 0))
+        delta_X = rng.normal(0, 1, (u, p))
+        delta_W = rng.normal(0, 1, (u, r))
+        delta_y = rng.normal(0, 1, (u, 1))
+
+        beta = rng.normal(0, 0.1, (p, 1))
+        gamma = rng.normal(0, 1, (r, 1))
+        Pi_X = rng.normal(0, 1, (q, p))
+        Pi_W = rng.normal(0, 1, (q, r))
+
+        U = rng.normal(0, 1, (n, u))
+
+        Z = rng.normal(0, 1, (n, q))
+        X = Z @ Pi_X + U @ delta_X + rng.normal(0, 1, (n, p))
+        W = Z @ Pi_W + U @ delta_W + rng.normal(0, 1, (n, r))
+        y = X @ beta + W @ gamma + U @ delta_y + rng.normal(0, 1, (n, 1))
+
+        _, p_values[seed] = test(Z, X, y, beta, W)
+
+    assert np.mean(p_values < 0.05) < 0.07  # 4 stds above 0.05 for n_seeds = 100
 
 
-#     res1=projected_anderson_rubin_test(Z, X, W, y, np.zeros((p, 1)))
-#     res2=anderson_rubin_test(Z, X, y,  np.zeros((p, 1)))
-#     breakpoint()
+# The Pulse and the LM tests don't have subvector versions. The Wald and LR tests are
+# not valid for weak instruments.
+@pytest.mark.parametrize("test", [pair[0] for pair in TEST_PAIRS[2:-2]])
+@pytest.mark.parametrize("n, q", [(100, 5), (100, 30)])
+def test_subvector_test_size_weak_instruments(test, n, q):
+    """
+    Test that the test size is close to the nominal level for weak instruments.
+
+    This data generating process is proposed in :cite:p:`guggenberger2012asymptotic`.
+    Here r = p = 1.
+    """
+    n_seeds = 200
+    p_values = np.zeros(n_seeds)
+
+    p = 1
+    r = 1
+
+    for seed in range(n_seeds):
+        rng = np.random.RandomState(seed)
+
+        # Make sure that sqrt(n) || Pi_W | ~ 1, sqrt(n) || Pi_X | ~ 100, and
+        # sqrt(n) < Pi_W, Pi_X> ~ 0.95
+        Pi_X = rng.normal(0, 1, (q, p))
+        Pi_W = rng.normal(0, 1, (q, r))
+
+        Pi_W = np.sqrt(0.05) * Pi_W + np.sqrt(0.95) * Pi_X
+        Pi_W = Pi_W / np.linalg.norm(Pi_W) / np.sqrt(n)
+        Pi_X = 100 * Pi_X / np.linalg.norm(Pi_X) / np.sqrt(n)
+
+        # Equal to [eps, V_X, V_W]. Have Cov(eps, V_X) = 0, Cov(eps, V_w = 0.95), and
+        # Cov(V_X, V_W) = 0.3.
+        noise = scipy.stats.multivariate_normal.rvs(
+            cov=np.array([[1, 0, 0.95], [0, 1, 0.3], [0.95, 0.3, 1]]),
+            size=n,
+            random_state=seed,
+        )
+
+        Z = rng.normal(0, 1, (n, q))
+
+        X = Z @ Pi_X + noise[:, 1:2]
+        W = Z @ Pi_W + noise[:, 2:3]
+        y = X + W + noise[:, 0:1]
+
+        # True beta
+        beta = np.array([[1]])
+
+        _, p_values[seed] = test(Z, X, y, beta, W)
+
+    assert np.mean(p_values < 0.05) < 0.07  # 4 stds above 0.05 for n_seeds = 100
 
 
 @pytest.mark.parametrize("test", [pair[0] for pair in TEST_PAIRS])
