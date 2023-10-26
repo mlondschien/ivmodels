@@ -64,7 +64,7 @@ def _check_test_inputs(Z, X, y, W=None, beta=None):
 
         if beta.shape[0] != X.shape[1]:
             raise ValueError(
-                f"beta must have the same number of rows as X. Got shapes {beta.shape} and {X.shape}."
+                f"beta must have the same length or number of rows as X has columns. Got shapes {beta.shape} and {X.shape}."
             )
 
     if W is not None:
@@ -134,15 +134,15 @@ def pulse_test(Z, X, y, beta):
     return statistic, p_value
 
 
-def wald_test(Z, X, y, beta, estimator="tsls"):
+def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
     """
     Test based on asymptotic normality of the TSLS (or LIML) estimator.
 
-    The test statistic is defined as
+    If ``W = None``, the test statistic is defined as
 
     .. math::
 
-       W := (\\beta - \\hat{\\beta})^T X^T P_Z X (\\beta - \\hat{\\beta}) / \\hat{\\sigma}^2,
+       Wald := (\\beta - \\hat{\\beta})^T X^T P_Z X (\\beta - \\hat{\\beta}) / \\hat{\\sigma}^2,
 
     where :math:`\\hat \\beta` is the TSLS (or LIML) estimator,
     :math:`\\hat \\sigma^2 = \\frac{1}{n - p} \\| y - X \\hat \\beta \\|^2_2` is an
@@ -152,6 +152,15 @@ def wald_test(Z, X, y, beta, estimator="tsls"):
     for :math:`n \\to \\infty`, the test statistic is asymptotically distributed as
     :math:`\\chi^2(p)` under the null. This requires strong instruments.
 
+    If ``W != None``, the test statistic is defined as
+
+    .. math::
+
+        Wald := (\\beta - \\hat{\\beta})^T (D ( (X W)^T P_Z (X W) )^{-1} D)^{-1} (\\beta - \\hat{\\beta}) / \\hat{\\sigma}^2,
+
+    where :math:`D \\in \\mathbb{R}^{(p + r) \\times (p + r)}` is diagonal with
+    :math:`D_{ii} = 1` if :math:`i \\leq p` and :math:`D_{ii} = 0` otherwise.
+
     Parameters
     ----------
     Z: np.ndarray of dimension (n, q)
@@ -160,6 +169,8 @@ def wald_test(Z, X, y, beta, estimator="tsls"):
         Regressors.
     y: np.ndarray of dimension (n,)
         Outcomes.
+    W: np.ndarray of dimension (n, r) or None
+        Endogenous regressors not of interest.
     beta: np.ndarray of dimension (p,)
         Coefficients to test.
     estimator: str
@@ -173,22 +184,40 @@ def wald_test(Z, X, y, beta, estimator="tsls"):
     Returns
     -------
     statistic: float
-        The test statistic :math:`W`.
+        The test statistic :math:`Wald`.
     p_value: float
-        The p-value of the test. Equal to :math:`1 - F_{\\chi^2(p)}(W)`, where
+        The p-value of the test. Equal to :math:`1 - F_{\\chi^2(p)}(Wald)`, where
         :math:`F_\\chi^2(p)` is the cumulative distribution function of the
         :math:`\\chi^2(p)` distribution.
     """
-    Z, X, y, _, beta = _check_test_inputs(Z, X, y, beta=beta)
+    Z, X, y, W, beta = _check_test_inputs(Z, X, y, W=W, beta=beta)
 
-    X_proj = proj(Z, X)
+    p = X.shape[1]
 
-    estimator = KClass(kappa=estimator).fit(X, y, Z)
-    beta_hat = estimator.coef_
+    if W is None:
+        W = np.zeros((X.shape[0], 0))
 
-    sigma_hat_sq = np.mean(np.square(y - X @ beta_hat))
+    XW = np.concatenate([X, W], axis=1)
 
-    statistic = (beta_hat - beta).T @ X_proj.T @ X_proj @ (beta_hat - beta)
+    estimator = KClass(kappa=estimator).fit(XW, y, Z)
+    beta_gamma_hat = estimator.coef_
+
+    sigma_hat_sq = np.mean(np.square(y - XW @ beta_gamma_hat))
+
+    XW_proj = proj(Z, XW)
+
+    if W.shape[1] == 0:
+        statistic = (
+            (beta_gamma_hat - beta).T @ XW_proj.T @ XW_proj @ (beta_gamma_hat - beta)
+        )
+    else:
+        beta_hat = beta_gamma_hat[:p]
+        statistic = (
+            (beta_hat - beta).T
+            @ np.linalg.inv(np.linalg.inv(XW_proj.T @ XW_proj)[:p, :p])
+            @ (beta_hat - beta)
+        )
+
     statistic /= sigma_hat_sq
 
     p_value = 1 - scipy.stats.chi2.cdf(statistic, df=X.shape[1])
@@ -196,23 +225,31 @@ def wald_test(Z, X, y, beta, estimator="tsls"):
     return statistic, p_value
 
 
-def anderson_rubin_test(Z, X, y, beta):
+def anderson_rubin_test(Z, X, y, beta, W=None):
     """
     Perform the Anderson Rubin test :cite:p:`anderson1949estimation`.
 
     Test the null hypothesis that the residuals are uncorrelated with the instruments.
-    The test statistic is defined as
+    If `W` is `None`, the test statistic is defined as
 
     .. math:: AR := \\frac{n - q}{q} \\frac{\\| P_Z (y - X \\beta) \\|_2^2}{\\| M_Z  (y - X \\beta) \\|_2^2},
 
     where :math:`P_Z` is the projection matrix onto the column space of :math:`Z` and
     :math:`M_Z = \\mathrm{Id} - P_Z`.
 
-    Under the null and normally distributed errors, the test statistic is distributed as
+    Under the null and normally distributed errors, this test statistic is distributed as
     :math:`F_{q, n - q}``, where :math:`q` is the number of instruments and :math:`n` is
     the number of observations. The statistic is asymptotically distributed as
     :math:`\\chi^2(q) / q` under the null and non-normally distributed errors, even for
     weak instruments.
+
+    If `W` is not `None`, the test statistic is defined as
+
+    .. math:: AR := \\max_\\gamma \\frac{n - q}{q - r} \\frac{\\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2},
+
+    Under the null, this test statistic is asymptotically distributed as
+    :math:`\\chi^2(q - r) / (q - r)`, where `r = W.shape[1]`
+    :cite:p:`guggenberger2012asymptotic`.
 
     Parameters
     ----------
@@ -224,15 +261,17 @@ def anderson_rubin_test(Z, X, y, beta):
         Outcomes.
     beta: np.ndarray of dimension (p,)
         Coefficients to test.
+    W: np.ndarray of dimension (n, r) or None
+        Endogenous regressors not of interest.
 
     Returns
     -------
     statistic: float
         The test statistic :math:`AR`.
     p_value: float
-        The p-value of the test. Equal to :math:`1 - F_{F_{q, n - q}}(AR)`, where
-        :math:`F_{F_{q, n - q}}` is the cumulative distribution function of the
-        :math:`F_{q, n - q}` distribution.
+        The p-value of the test. Equal to :math:`1 - F_{F_{q - r, n - q}}(AR)`, where
+        :math:`F_{F_{q - r, n - q}}` is the cumulative distribution function of the
+        :math:`F_{q - r, n - q}` distribution and `r = 0` if `W` is `None`.
 
     Raises
     ------
@@ -245,36 +284,58 @@ def anderson_rubin_test(Z, X, y, beta):
        :filter: False
 
        anderson1949estimation
+       guggenberger2012asymptotic
     """
-    Z, X, y, _, beta = _check_test_inputs(Z, X, y, beta=beta)
+    Z, X, y, W, beta = _check_test_inputs(Z, X, y, W=W, beta=beta)
     n, q = Z.shape
 
-    residuals = y - X @ beta
+    if W is None:
+        residuals = y - X @ beta
+        proj_residuals = proj(Z, residuals)
+        ar = (
+            np.square(proj_residuals).sum()
+            / np.square(residuals - proj_residuals).sum()
+        )
+        ar *= (n - q) / q
+        r = 0
+    else:
+        liml = KClass(kappa="liml").fit(X=W, y=y - X @ beta, Z=Z)
+        ar = (liml.kappa_ - 1) * (n - q) / q
+        r = W.shape[1]
 
-    proj_residuals = proj(Z, residuals)
-    ar = np.square(proj_residuals).sum() / np.square(residuals - proj_residuals).sum()
-    ar *= (n - q) / q
-
-    p_value = 1 - scipy.stats.f.cdf(ar, dfn=q, dfd=n - q)
+    p_value = 1 - scipy.stats.f.cdf(ar, dfn=q - r, dfd=n - q)
 
     return ar, p_value
 
 
-def likelihood_ratio_test(Z, X, y, beta):
+def likelihood_ratio_test(Z, X, y, beta, W=None):
     """
     Perform the likelihood ratio test for ``beta``.
 
-    The test statistic is defined as
+    If ``W = None``, the test statistic is defined as
 
     .. math::
 
-       \\mathrm{LR} &:= n \\log(1 + \\frac{(y - X \\beta)^T P_Z (y - X \\beta)}{(y - X \\beta)^T M_Z (y - X \\beta)}) - n \\log(1 + \\frac{(y - X \\beta_\\mathrm{LIML})^T P_Z (y - X \\beta_\\mathrm{LIML})}{(y - X \\beta_\\mathrm{LIML})^T M_Z (y - X \\beta_\\mathrm{LIML})}) \\\\
-       &= n \\log(1 + \\frac{q}{n-q}\\mathrm{AR}(\\beta)) - n \\log(1 + \\frac{q}{n-q}\\mathrm{AR}(\\beta_\\mathrm{LIML})),
+       \\mathrm{LR(\\beta)} &:= (n - q) \\frac{ \\| P_Z (y - X \\beta) \\|_2^2}{ \\| M_Z (y - X \\beta) \\|_2^2} - (n - q) \\frac{ \\| P_Z (y - X \\hat\\beta_\\mathrm{LIML}) \\|_2^2 }{ \\| M_Z (y - X \\hat\\beta_\\mathrm{LIML}) \\|_2^2 } \\\\
+       &= q \\ \\mathrm{AR}(\\beta)) - q \\ \\mathrm{AR}(\\hat\\beta_\\mathrm{LIML}),
 
     where :math:`P_Z` is the projection matrix onto the column space of :math:`Z`,
-    :math:`M_Z = \\mathrm{Id} - P_Z`, and :math:`\\beta_\\mathrm{LIML}` is the LIML
-    estimator of :math:`\\beta`, minimizing :math:`\\mathrm{AR}(\\beta)` at
-    :math:`\\mathrm{AR}(\\beta_\\mathrm{LIML}) = \\frac{n - q}{q} (\\hat\\kappa_\\mathrm{LIML} - 1)`.
+    :math:`M_Z = \\mathrm{Id} - P_Z`, and :math:`\\hat\\beta_\\mathrm{LIML}` is the LIML
+    estimator of :math:`\\beta`, minimizing the Anderson-Rubin test statistic
+    :math:`\\mathrm{AR}(\\beta)` (see :py:func:`ivmodels.tests.anderson_rubin_test`) at
+    :math:`\\mathrm{AR}(\\hat\\beta_\\mathrm{LIML}) = \\frac{n - q}{q} (\\hat\\kappa_\\mathrm{LIML} - 1)`.
+
+    If ``W != None``, the test statistic is defined as
+
+    .. math::
+
+       \\mathrm{LR(\\beta)} := (n - q) \\frac{ \\|P_Z (y - X \\beta - W \\hat\\gamma_\\mathrm{LIML}) \\|^2_2 }{\\| M_Z (y - X \\beta - W \\hat\\gamma_\\mathrm{LIML}) \\|_2^2 } - (n - q) \\frac{\\| P_Z (y - (X \\ W) \\hat\\delta_\\mathrm{LIML}) \\|_2^2 }{ \\| M_Z (y - (X \\ W) \\hat\\delta_\\mathrm{LIML}) \\|_2^2}
+
+    where :math:`\\gamma_\\mathrm{LIML}` is the LIML estimator (see
+    :py:class:`ivmodels.kclass.KClass`) using instruments :math:`Z`, endogenous
+    covariates :math:`W`, and outcomes :math:`y - X \\beta` and
+    :math:`\\hat\\delta_\\mathrm{LIML}` is the LIML estimator
+    using instruments :math:`Z`, endogenous covariates :math:`X \\ W`, and outcomes :math:`y`.
 
     Under the null and given strong instruments, the test statistic is asymptotically
     distributed as :math:`\\chi^2(p)`, where :math:`p` is the number of regressors.
@@ -289,6 +350,8 @@ def likelihood_ratio_test(Z, X, y, beta):
         Outcomes.
     beta: np.ndarray of dimension (p,)
         Coefficients to test.
+    W: np.ndarray of dimension (n, r) or None
+        Endogenous regressors not of interest.
 
     Returns
     -------
@@ -304,24 +367,84 @@ def likelihood_ratio_test(Z, X, y, beta):
     ValueError:
         If the dimensions of the inputs are incorrect.
     """
-    Z, X, y, _, beta = _check_test_inputs(Z, X, y, beta=beta)
+    Z, X, y, W, beta = _check_test_inputs(Z, X, y, W=W, beta=beta)
 
     n, p = X.shape
+    q = Z.shape[1]
+
+    if W is None:
+        W = np.zeros((n, 0))
 
     X_proj = proj(Z, X)
     y_proj = proj(Z, y)
-    Xy_proj = np.concatenate([X_proj, y_proj.reshape(-1, 1)], axis=1)
-    Xy = np.concatenate([X, y.reshape(-1, 1)], axis=1)
+    W_proj = proj(Z, W)
 
-    W = np.linalg.solve(Xy.T @ Xy, Xy_proj.T @ Xy)
-    eta_liml = min(np.abs(scipy.linalg.eigvals(W)))
-    kappa_liml = eta_liml / (1 - eta_liml)
+    XWy = np.concatenate([X, W, y.reshape(-1, 1)], axis=1)
+    XWy_proj = np.concatenate([X_proj, W_proj, y_proj.reshape(-1, 1)], axis=1)
 
-    residuals = y - X @ beta
-    proj_residuals = y_proj - X_proj @ beta
+    matrix = np.linalg.solve(XWy.T @ (XWy - XWy_proj), XWy_proj.T @ XWy)
+    ar_min = (n - q) * min(np.abs(scipy.linalg.eigvals(matrix)))
 
-    ar = np.square(proj_residuals).sum() / np.square(residuals - proj_residuals).sum()
-    statistic = n * (np.log1p(ar) - np.log1p(kappa_liml))
+    if W.shape[1] == 0:
+        statistic = (n - q) * np.linalg.norm(
+            y_proj - X_proj @ beta
+        ) ** 2 / np.linalg.norm((y - y_proj) - (X - X_proj) @ beta) ** 2 - ar_min
+    else:
+        Wy = np.concatenate([W, (y - X @ beta).reshape(-1, 1)], axis=1)
+        Wy_proj = np.concatenate(
+            [W_proj, (y_proj - X_proj @ beta).reshape(-1, 1)], axis=1
+        )
+        matrix = np.linalg.solve(Wy.T @ (Wy - Wy_proj), Wy_proj.T @ Wy)
+        statistic = (n - q) * min(np.abs(scipy.linalg.eigvals(matrix))) - ar_min
+
+    p_value = 1 - scipy.stats.chi2.cdf(statistic, df=p)
+
+    return statistic, p_value
+
+
+def lagrange_multiplier_test(Z, X, y, beta):
+    """
+    Perform the Lagrange multiplier test for ``beta`` :cite:p:`kleibergen2002pivotal`.
+
+    Test the null hypothesis that the residuals are uncorrelated with the instruments.
+    Let
+
+    .. math:: \\tilde X(\\beta) := X - (y - X \\beta) \\frac{(y - X \\beta) M_Z X}{(y - X \\beta) M_Z (y - X \\beta)}.
+
+    The test statistic is
+
+    .. math:: LM := (n - q) \\frac{\\| P_{P_Z \\tilde X(\\beta)} (y - X \\beta) \\|_2^2}{\\| M_Z  (y - X \\beta) \\|_2^2},
+
+    This test statistic is asymptotically distributed as :math:`\\chi^2(p)` under the
+    null, even if the instruments are weak :cite:p:`kleibergen2002pivotal`.
+
+    Parameters
+    ----------
+    Z: np.ndarray of dimension (n, q)
+        Instruments.
+    X: np.ndarray of dimension (n, p)
+        Regressors.
+    y: np.ndarray of dimension (n,)
+        Outcomes.
+    beta: np.ndarray of dimension (p,)
+        Coefficients to test.
+
+    """
+    Z, X, y, _, beta = _check_test_inputs(Z, X, y, beta=beta)
+    n, q = Z.shape
+    p = X.shape[1]
+
+    residuals = (y - X @ beta).reshape(-1, 1)
+    proj_residuals = proj(Z, residuals)
+    orth_residuals = residuals - proj_residuals
+
+    # X - (y - X beta) * (y - X beta)^T M_Z X / (y - X beta)^T M_Z (y - X beta)
+    X_tilde = X - residuals @ (orth_residuals.T @ X) / (residuals.T @ orth_residuals)
+    proj_X_tilde = proj(Z, X_tilde)
+    X_tilde_proj_residuals = proj(proj_X_tilde, residuals)
+    # (y - X beta) P_{P_Z X_tilde} (y - X beta) / (y - X_beta) M_Z (y - X beta)
+    statistic = np.square(X_tilde_proj_residuals).sum() / (residuals.T @ orth_residuals)
+    statistic *= n - q
 
     p_value = 1 - scipy.stats.chi2.cdf(statistic, df=p)
 
@@ -449,8 +572,8 @@ def inverse_likelihood_ratio_test(Z, X, y, alpha=0.05):
         raise ValueError("alpha must be in (0, 1).")
 
     Z, X, y, _, _ = _check_test_inputs(Z, X, y)
-
     n, p = X.shape
+    q = Z.shape[1]
 
     Z = Z - Z.mean(axis=0)
     X = X - X.mean(axis=0)
@@ -464,15 +587,14 @@ def inverse_likelihood_ratio_test(Z, X, y, alpha=0.05):
     Xy_proj = np.concatenate([X_proj, y_proj.reshape(-1, 1)], axis=1)
     Xy = np.concatenate([X, y.reshape(-1, 1)], axis=1)
 
-    W = np.linalg.solve(Xy.T @ Xy, Xy.T @ Xy_proj)
-    eta_liml = min(np.linalg.eigvals(W))
-    kappa_liml = eta_liml / (1 - eta_liml)
+    W = np.linalg.solve(Xy.T @ (Xy - Xy_proj), Xy.T @ Xy_proj)
+    kappa_liml = min(np.abs(np.linalg.eigvals(W)))
 
-    quantile = np.exp(scipy.stats.chi2.ppf(1 - alpha, df=p) / n) * (1 + kappa_liml) - 1
+    quantile = scipy.stats.chi2.ppf(1 - alpha, df=p) + (n - q) * kappa_liml
 
-    A = X.T @ (X_proj - quantile * X_orth)
-    b = -2 * (X_proj - quantile * X_orth).T @ y
-    c = y.T @ (y_proj - quantile * y_orth)
+    A = X.T @ (X_proj - 1 / (n - q) * quantile * X_orth)
+    b = -2 * (X_proj - 1 / (n - q) * quantile * X_orth).T @ y
+    c = y.T @ (y_proj - 1 / (n - q) * quantile * y_orth)
 
     if isinstance(c, np.ndarray):
         c = c.item()
