@@ -621,8 +621,8 @@ def bounded_inverse_anderson_rubin(Z, X):
 
     X_proj = proj(Z, X)
 
-    W = np.linalg.solve(X.T @ X, X.T @ X_proj)
-    eta_min = min(np.real(np.linalg.eigvals(W)))
+    W = np.linalg.solve(X.T @ (X - X_proj), X.T @ X_proj)
+    kappa = min(np.real(np.linalg.eigvals(W)))
 
-    cdf = scipy.stats.f.cdf((n - q) / q * eta_min / (1 - eta_min), dfn=q, dfd=n - q)
+    cdf = scipy.stats.f.cdf((n - q) / q * kappa, dfn=q, dfd=n - q)
     return 1 - cdf
