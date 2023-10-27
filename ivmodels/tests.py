@@ -23,11 +23,6 @@ def _check_test_inputs(Z, X, y, W=None, beta=None):
     beta: np.ndarray of dimension (p,), optional, default=None
         Coefficients.
 
-    Raises
-    ------
-    ValueError:
-        If the dimensions of the inputs are incorrect.
-
     Returns
     -------
     Z: np.ndarray of dimension (n, q)
@@ -40,6 +35,12 @@ def _check_test_inputs(Z, X, y, W=None, beta=None):
         Regressors to control for.
     beta: np.ndarray of dimension (p,) or None
         Coefficients.
+
+    Raises
+    ------
+    ValueError:
+        If the dimensions of the inputs are incorrect.
+
     """
     if Z.ndim != 2:
         raise ValueError(f"Z must be a matrix. Got shape {Z.shape}.")
@@ -176,11 +177,6 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
     estimator: str
         Estimator to use. Must be one of ``"tsls"`` or ``"liml"``.
 
-    Raises
-    ------
-    ValueError:
-        If the dimensions of the inputs are incorrect.
-
     Returns
     -------
     statistic: float
@@ -189,6 +185,12 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
         The p-value of the test. Equal to :math:`1 - F_{\\chi^2(p)}(Wald)`, where
         :math:`F_\\chi^2(p)` is the cumulative distribution function of the
         :math:`\\chi^2(p)` distribution.
+
+    Raises
+    ------
+    ValueError:
+        If the dimensions of the inputs are incorrect.
+
     """
     Z, X, y, W, beta = _check_test_inputs(Z, X, y, W=W, beta=beta)
 
@@ -429,6 +431,19 @@ def lagrange_multiplier_test(Z, X, y, beta):
     beta: np.ndarray of dimension (p,)
         Coefficients to test.
 
+    Returns
+    -------
+    statistic: float
+        The test statistic :math:`LM`.
+    p_value: float
+        The p-value of the test. Equal to :math:`1 - F_{\\chi^2(p)}(LM)`, where
+        :math:`F_{\\chi^2(p)}` is the cumulative distribution function of the
+        :math:`\\chi^2(p)` distribution.
+
+    Raises
+    ------
+    ValueError:
+        If the dimensions of the inputs are incorrect.
     """
     Z, X, y, _, beta = _check_test_inputs(Z, X, y, beta=beta)
     n, q = Z.shape
