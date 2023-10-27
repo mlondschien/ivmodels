@@ -136,23 +136,23 @@ class KClassMixin:
 
     def _fuller_alpha(self, kappa):
         """
-        Extract the alpha parameter from the kappa parameter.
+        Extract the Fuller alpha parameter from the kappa parameter.
 
         Parameters
         ----------
-        kappa: float or str
-            The kappa parameter. Must be a float, 'fuller(a)' for some integer or float
-            a, 'fuller', or 'liml'.
+        kappa: str
+            The kappa parameter. Must be ``"fuller(a)"`` for some integer or float
+            ``a``, ``"fuller"``, or ``"liml"``.
 
         Returns
         -------
         fuller_alpha: float
-            The alpha parameter. If kappa is a float, then alpha = kappa. If kappa is
-            'fuller(a)' for some integer or float a, then alpha = a. If kappa is
-            'fuller', then alpha = 1. If kappa is 'liml', then alpha = 0.
+            The alpha parameter. If kappa is ``"fuller(a)"`` for some integer or float
+            ``a``, then ``alpha = a``. If kappa is ``"fuller"``, then ``alpha = 1``.
+            If kappa is ``"liml"``, then ``alpha = 0``.
         """
         if not isinstance(kappa, str):
-            return float(kappa)
+            raise ValueError(f"Invalid kappa {kappa}. Must be a string.")
 
         fuller_match = re.match(r"fuller(\(\d+\.?\d*\))?", kappa, re.IGNORECASE)
         liml_match = re.match("liml", kappa, re.IGNORECASE)
@@ -197,7 +197,8 @@ class KClassMixin:
         Returns
         -------
         kappa_liml: float
-            Smallest eigenvalue of ``((X y)^T (X y))^{-1} (X y)^T P_Z (X y)``, where
+            One plus the smallest eigenvalue of
+            ``((X y)^T M_Z (X y))^{-1} (X y)^T P_Z (X y)``, where
             ``P_Z`` is the projection matrix onto the subspace spanned by Z.
         """
         if X_proj is None:
@@ -321,17 +322,21 @@ class KClass(KClassMixin, GeneralizedLinearRegressor):
 
     Parameters
     ----------
-    kappa: float or {fuller(a), liml}
+    kappa: float or {"fuller(a)", "liml", "ols", "tsls", "2sls"}
         The kappa parameter of the k-class estimator. If float, then kappa must be in
         :math:`[0, \\hat\\kappa_\\mathrm{LIML}]]`, where
         :math:`\\kappa_\\mathrm{LIML} \\geq 1` is 1 plus the smallest eigenvalue of the
         matrix :math:`((X \\ \\ y)^T M_Z (X \\ \\ y))^{-1} (X \\ \\ y)^T P_Z (X \\ y)`.
         and :math:`P_Z` is the projection matrix onto the subspace spanned by :math:`Z`
         and :math:`M_Z = Id - P_Z`.
-        If string, then must be one of ``"liml"``, ``"fuller"``, or ``"fuller(a)"``,
-        where ``a`` is numeric. If ``kappa="liml"``, then
-        :math:`\\kappa = \\hat\\kappa_\\mathrm{LIML}` is used. If ``kappa="fuller(a)"``,
-        then :math:`\\kappa = \\hat\\kappa_\\mathrm{LIML} - a / (n - q)`, where
+        If string, then must be one of ``"liml"``, ``"ols"``, ``"2sls"``, ``"tsls"``,
+        ``"fuller"``, or ``"fuller(a)"``, where ``a`` is numeric. If ``kappa="ols"``,
+        then ``kappa=0`` and the k-class estimator is the ordinary least squares
+        estimator. If ``kappa="tsls"`` or ``kappa="2sls"``m then ``kappa=1`` and the
+        k-class estimator is the two-stage least-squares estimator. If ``kappa="liml"``,
+        then :math:`\\kappa = \\hat\\kappa_\\mathrm{LIML}` is used. If
+        ``kappa="fuller(a)"``, then
+        :math:`\\kappa = \\hat\\kappa_\\mathrm{LIML} - a / (n - q)`, where
         :math:`n` is the number of observations and :math:`q = \\mathrm{dim}(Z)` is the
         number of instruments. The string ``"fuller"`` is interpreted as
         ``"fuller(1.0)"``, yielding an estimator that is unbiased up to
