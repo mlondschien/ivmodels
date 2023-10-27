@@ -71,7 +71,7 @@ class AnchorRegression(AnchorMixin, GeneralizedLinearRegressor):
     intercept_: float
         The estimated intercept for the linear regression problem.
     kappa_: float
-        If ``gamma >= 1``, the kappa parameter of the corresponding k-class estimator.
+        The kappa parameter of the corresponding k-class estimator.
 
     References
     ----------
