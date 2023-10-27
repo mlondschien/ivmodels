@@ -38,7 +38,7 @@ class AnchorRegression(AnchorMixin, GeneralizedLinearRegressor):
        \\| y - X \\beta \\|_2^2 + (\\gamma - 1) \\|P_Z (y - X \\beta) \\|_2^2.
 
     If :math:`\\gamma \\geq 0`, then :math:`\\hat\\beta_\\mathrm{anchor}(\\gamma) =
-    \\hat\\beta_\\mathrm{k-class}((1 - \\gamma) / \\gamma)`.
+    \\hat\\beta_\\mathrm{k-class}((\\gamma - 1) / \\gamma)`.
 
     The optimization is based on OLS after a data transformation. First standardizes
     ``X`` and ``y`` by subtracting the column means as proposed by
@@ -48,7 +48,7 @@ class AnchorRegression(AnchorMixin, GeneralizedLinearRegressor):
     Parameters
     ----------
     gamma: float
-        The anchor regularization parameter. :math:`\\gamma=1` corresponds to OLS.
+        The anchor regularization parameter. ``gamma=1`` corresponds to OLS.
     instrument_names: str or list of str, optional
         The names of the columns in ``X`` that should be used as instruments (anchors).
         Requires ``X`` to be a pandas DataFrame. If both ``instrument_names`` and

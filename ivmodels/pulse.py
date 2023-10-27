@@ -106,9 +106,10 @@ class PULSE(PULSEMixin, KClass):
     """
     p-uncorrelated least squares estimator (PULSE) :cite:p:`jakobsen2022distributional`.
 
-    Perform (linear) k-class estimation with k-class parameter
-    :math:`\\kappa \\in [0, 1]` chosen minimally such that the PULSE test of correlation
-    between the instruments and the residuals is not significant at level ``p_min``.
+    Perform k-class estimation with k-class parameter
+    :math:`\\kappa \\in [0, \\kappa_\\mathrm{max}]` chosen minimally such that the PULSE
+    test of correlation between the instruments and the residuals is not significant at
+    level ``p_min``.
 
     Parameters
     ----------
@@ -121,20 +122,19 @@ class PULSE(PULSEMixin, KClass):
         ``instrument_regex`` are specified, the union of the two is used.
     p_min: float, optional, default = 0.05
         The p-value of the PULSE test that is used to determine the
-        regularization parameter ``gamma``. The PULSE will search for the smallest
-        ``gamma`` that makes the test not significant at level ``p_min`` with binary
-        search.
+        k-class parameter :math:`\\kappa`. The PULSE will search for the smallest
+        :math:`\\kappa` that makes the test not significant at level ``p_min`` with
+        binary search.
     rtol: float, optional, default = 0.01
-        The relative tolerance of the binary search. The PULSE will search for a kappa
-        such that the PULSE test is not significant at level ``p_min`` with binary
-        search but is significant at level ``p_min * (1 + rtol)``.
+        The relative tolerance of the binary search. The PULSE will search for a
+        :math:`\\kappa` such that the PULSE test is not significant at level ``p_min`
+        with binary search but is significant at level ``p_min * (1 + rtol)``.
     kappa_max: float, optional, default = 1
         The maximum value of ``kappa`` to consider. The PULSE will search for the
         smallest ``kappa`` that makes the test not significant at level ``p_min`` with
         binary search. If ``kappa_max = 1``, the PULSE will run a regression equivalent
-        to two-stage-least-squares. If ``alpha`` = 0 and
-        ``Z.shape[1]`` < ``X.shape[1]``, this is not well-defined and the PULSE will
-        raise an exception.
+        to two-stage-least-squares. If ``alpha = 0`` and ``Z.shape[1] < X.shape[1]``,
+        this is not well-defined and the PULSE will raise an exception.
     alpha: float, optional, default = 0
         The regularization parameter for elastic net. If ``alpha`` is 0, the estimator
         is unregularized.

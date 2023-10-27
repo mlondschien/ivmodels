@@ -243,12 +243,12 @@ def anderson_rubin_test(Z, X, y, beta, W=None):
     :math:`\\chi^2(q) / q` under the null and non-normally distributed errors, even for
     weak instruments.
 
-    If `W` is not `None`, the test statistic is defined as
+    If ``W != None``, the test statistic is defined as
 
     .. math:: AR := \\max_\\gamma \\frac{n - q}{q - r} \\frac{\\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2},
 
     Under the null, this test statistic is asymptotically distributed as
-    :math:`\\chi^2(q - r) / (q - r)`, where `r = W.shape[1]`
+    :math:`\\frac{1}{q - r} \\chi^2(q - r)`, where :math:`r = \\mathrm{dim}(W)`. See
     :cite:p:`guggenberger2012asymptotic`.
 
     Parameters
@@ -404,7 +404,7 @@ def likelihood_ratio_test(Z, X, y, beta, W=None):
 
 def lagrange_multiplier_test(Z, X, y, beta):
     """
-    Perform the Lagrange multiplier test for ``beta`` :cite:p:`kleibergen2002pivotal`.
+    Perform the Lagrange multiplier test for ``beta`` by :cite:t:`kleibergen2002pivotal`.
 
     Test the null hypothesis that the residuals are uncorrelated with the instruments.
     Let
@@ -416,7 +416,7 @@ def lagrange_multiplier_test(Z, X, y, beta):
     .. math:: LM := (n - q) \\frac{\\| P_{P_Z \\tilde X(\\beta)} (y - X \\beta) \\|_2^2}{\\| M_Z  (y - X \\beta) \\|_2^2},
 
     This test statistic is asymptotically distributed as :math:`\\chi^2(p)` under the
-    null, even if the instruments are weak :cite:p:`kleibergen2002pivotal`.
+    null, even if the instruments are weak.
 
     Parameters
     ----------

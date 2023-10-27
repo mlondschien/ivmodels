@@ -322,14 +322,14 @@ class KClass(KClassMixin, GeneralizedLinearRegressor):
 
     Parameters
     ----------
-    kappa: float or {"fuller(a)", "liml", "ols", "tsls", "2sls"}
+    kappa: float or { "ols", "tsls", "2sls", "liml", "fuller", "fuller(a)"}
         The kappa parameter of the k-class estimator. If float, then kappa must be in
-        :math:`[0, \\hat\\kappa_\\mathrm{LIML}]]`, where
+        :math:`[0, \\hat\\kappa_\\mathrm{LIML}]`, where
         :math:`\\kappa_\\mathrm{LIML} \\geq 1` is 1 plus the smallest eigenvalue of the
-        matrix :math:`((X \\ \\ y)^T M_Z (X \\ \\ y))^{-1} (X \\ \\ y)^T P_Z (X \\ y)`.
-        and :math:`P_Z` is the projection matrix onto the subspace spanned by :math:`Z`
+        matrix :math:`((X \\ \\ y)^T M_Z (X \\ \\ y))^{-1} (X \\ \\ y)^T P_Z (X \\ y)`,
+        where :math:`P_Z` is the projection matrix onto the subspace spanned by :math:`Z`
         and :math:`M_Z = Id - P_Z`.
-        If string, then must be one of ``"liml"``, ``"ols"``, ``"2sls"``, ``"tsls"``,
+        If string, then must be one of ``"ols"``, ``"2sls"``, ``"tsls"``, ``"liml"``,
         ``"fuller"``, or ``"fuller(a)"``, where ``a`` is numeric. If ``kappa="ols"``,
         then ``kappa=0`` and the k-class estimator is the ordinary least squares
         estimator. If ``kappa="tsls"`` or ``kappa="2sls"``m then ``kappa=1`` and the

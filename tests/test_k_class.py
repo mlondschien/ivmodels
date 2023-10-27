@@ -154,7 +154,7 @@ def test_fuller_bias_and_mse(n, beta, Pi, gamma, delta):
     q, p = Pi.shape
     u = delta.shape[0]
 
-    kappas = ["liml", "fuller(1)", "fuller(4)", 0]  # 0 is for OLS
+    kappas = ["liml", "fuller(1)", "fuller(4)", "ols"]
     results = {kappa: np.zeros(shape=(n_iterations, p)) for kappa in kappas}
 
     for seed in range(n_iterations):
