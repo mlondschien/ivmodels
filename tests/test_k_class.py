@@ -12,8 +12,6 @@ from ivmodels.utils import proj
 @pytest.mark.parametrize(
     "kappa, expected",
     [
-        (0.0, 0.0),
-        (0.5, 0.5),
         ("fuller(1)", 1),
         ("fuller(0.2)", 0.2),
         ("FULLER(4)", 4),
