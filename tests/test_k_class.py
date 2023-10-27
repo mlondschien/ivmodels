@@ -12,8 +12,6 @@ from ivmodels.utils import proj
 @pytest.mark.parametrize(
     "kappa, expected",
     [
-        (0.0, 0.0),
-        (0.5, 0.5),
         ("fuller(1)", 1),
         ("fuller(0.2)", 0.2),
         ("FULLER(4)", 4),
@@ -28,7 +26,7 @@ def test__fuller_alpha(kappa, expected):
 
 
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
-def test__eta_liml_same_with_shortcut(n, p, q, u):
+def test__kappa_liml_same_with_shortcut(n, p, q, u):
     Z, X, y = simulate_gaussian_iv(n, p, q, u)
 
     X = X - X.mean(axis=0)
@@ -39,24 +37,24 @@ def test__eta_liml_same_with_shortcut(n, p, q, u):
 
     k_class = KClass(kappa="liml")
 
-    lbda = k_class.fit(X, y, Z).eta_liml_
-    assert np.allclose(lbda, k_class._eta_liml(X, y, X_proj=X_proj, y_proj=y_proj))
-    assert np.allclose(lbda, k_class._eta_liml(X, y, Z=Z, X_proj=X_proj))
-    assert np.allclose(lbda, k_class._eta_liml(X, y, Z=Z, y_proj=y_proj))
-    assert np.allclose(lbda, k_class._eta_liml(X, y, Z=Z))
+    lbda = k_class.fit(X, y, Z).kappa_liml_
+    assert np.allclose(lbda, k_class._kappa_liml(X, y, X_proj=X_proj, y_proj=y_proj))
+    assert np.allclose(lbda, k_class._kappa_liml(X, y, Z=Z, X_proj=X_proj))
+    assert np.allclose(lbda, k_class._kappa_liml(X, y, Z=Z, y_proj=y_proj))
+    assert np.allclose(lbda, k_class._kappa_liml(X, y, Z=Z))
 
 
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
-def test__eta_liml_positive(n, p, q, u):
+def test__kappa_liml_positive(n, p, q, u):
     Z, X, y = simulate_gaussian_iv(n, p, q, u)
 
     k_class = KClass(kappa="liml")
     k_class.fit(X, y.flatten(), Z)
 
     if Z.shape[1] > X.shape[1]:
-        assert k_class.eta_liml_ > 0
+        assert k_class.kappa_liml_ > 1
     else:
-        assert np.allclose(k_class.eta_liml_, 0)
+        assert np.allclose(k_class.kappa_liml_, 1)
 
 
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
@@ -110,7 +108,7 @@ def test_liml_equal_to_tsls_in_just_identified_setting(n, p, q, u):
 
 
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 4, 4, 2)])
-def test_anderson_rubin_at_liml_is_equal_to_eta_liml(n, p, q, u):
+def test_anderson_rubin_at_liml_is_equal_to_kappa_liml(n, p, q, u):
     Z, X, y = simulate_gaussian_iv(n, p, q, u)
     y = y.flatten()
 
@@ -119,7 +117,7 @@ def test_anderson_rubin_at_liml_is_equal_to_eta_liml(n, p, q, u):
 
     assert np.allclose(
         anderson_rubin_test(Z, X, y, liml.coef_)[0],
-        (n - q) / q * liml.eta_liml_ / (1 - liml.eta_liml_),
+        (n - q) / q * (liml.kappa_liml_ - 1),
         atol=1e-8,
     )
 
@@ -156,9 +154,8 @@ def test_fuller_bias_and_mse(n, beta, Pi, gamma, delta):
     q, p = Pi.shape
     u = delta.shape[0]
 
-    kappas = ["liml", "fuller(1)", "fuller(4)", 0]  # 0 is for OLS
+    kappas = ["liml", "fuller(1)", "fuller(4)", "ols"]
     results = {kappa: np.zeros(shape=(n_iterations, p)) for kappa in kappas}
-    limls = np.zeros(shape=n_iterations)
 
     for seed in range(n_iterations):
         rng = np.random.RandomState(seed)
@@ -169,7 +166,6 @@ def test_fuller_bias_and_mse(n, beta, Pi, gamma, delta):
 
         for kappa in kappas:
             results[kappa][seed, :] = KClass(kappa=kappa).fit(X, y, Z).coef_
-        limls[seed] = KClass(kappa="liml").fit(X, y, Z).eta_liml_
 
     mses = {k: np.mean((v - beta.flatten()) ** 2) for k, v in results.items()}
     # biases = {k: np.mean(v - beta.flatten(), axis=0) for k, v in results.items()}

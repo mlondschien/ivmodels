@@ -5,7 +5,7 @@ import scipy
 
 class Quadric:
     """
-    A class to represent a quadric :math:`x^T A x + b^T x + c <= 0`.
+    A class to represent a quadric :math:`x^T A x + b^T x + c \\leq 0`.
 
     Internally, works with a standardized form of the quadric. If :math:`V^T D V = A`
     with :math:`D` diagonal and :math:`V` orthonormal, define

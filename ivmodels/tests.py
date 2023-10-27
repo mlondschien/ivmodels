@@ -23,11 +23,6 @@ def _check_test_inputs(Z, X, y, W=None, beta=None):
     beta: np.ndarray of dimension (p,), optional, default=None
         Coefficients.
 
-    Raises
-    ------
-    ValueError:
-        If the dimensions of the inputs are incorrect.
-
     Returns
     -------
     Z: np.ndarray of dimension (n, q)
@@ -40,6 +35,12 @@ def _check_test_inputs(Z, X, y, W=None, beta=None):
         Regressors to control for.
     beta: np.ndarray of dimension (p,) or None
         Coefficients.
+
+    Raises
+    ------
+    ValueError:
+        If the dimensions of the inputs are incorrect.
+
     """
     if Z.ndim != 2:
         raise ValueError(f"Z must be a matrix. Got shape {Z.shape}.")
@@ -176,11 +177,6 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
     estimator: str
         Estimator to use. Must be one of ``"tsls"`` or ``"liml"``.
 
-    Raises
-    ------
-    ValueError:
-        If the dimensions of the inputs are incorrect.
-
     Returns
     -------
     statistic: float
@@ -189,6 +185,12 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
         The p-value of the test. Equal to :math:`1 - F_{\\chi^2(p)}(Wald)`, where
         :math:`F_\\chi^2(p)` is the cumulative distribution function of the
         :math:`\\chi^2(p)` distribution.
+
+    Raises
+    ------
+    ValueError:
+        If the dimensions of the inputs are incorrect.
+
     """
     Z, X, y, W, beta = _check_test_inputs(Z, X, y, W=W, beta=beta)
 
@@ -243,12 +245,12 @@ def anderson_rubin_test(Z, X, y, beta, W=None):
     :math:`\\chi^2(q) / q` under the null and non-normally distributed errors, even for
     weak instruments.
 
-    If `W` is not `None`, the test statistic is defined as
+    If ``W != None``, the test statistic is defined as
 
     .. math:: AR := \\max_\\gamma \\frac{n - q}{q - r} \\frac{\\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2},
 
     Under the null, this test statistic is asymptotically distributed as
-    :math:`\\chi^2(q - r) / (q - r)`, where `r = W.shape[1]`
+    :math:`\\frac{1}{q - r} \\chi^2(q - r)`, where :math:`r = \\mathrm{dim}(W)`. See
     :cite:p:`guggenberger2012asymptotic`.
 
     Parameters
@@ -404,7 +406,7 @@ def likelihood_ratio_test(Z, X, y, beta, W=None):
 
 def lagrange_multiplier_test(Z, X, y, beta):
     """
-    Perform the Lagrange multiplier test for ``beta`` :cite:p:`kleibergen2002pivotal`.
+    Perform the Lagrange multiplier test for ``beta`` by :cite:t:`kleibergen2002pivotal`.
 
     Test the null hypothesis that the residuals are uncorrelated with the instruments.
     Let
@@ -416,7 +418,7 @@ def lagrange_multiplier_test(Z, X, y, beta):
     .. math:: LM := (n - q) \\frac{\\| P_{P_Z \\tilde X(\\beta)} (y - X \\beta) \\|_2^2}{\\| M_Z  (y - X \\beta) \\|_2^2},
 
     This test statistic is asymptotically distributed as :math:`\\chi^2(p)` under the
-    null, even if the instruments are weak :cite:p:`kleibergen2002pivotal`.
+    null, even if the instruments are weak.
 
     Parameters
     ----------
@@ -429,6 +431,19 @@ def lagrange_multiplier_test(Z, X, y, beta):
     beta: np.ndarray of dimension (p,)
         Coefficients to test.
 
+    Returns
+    -------
+    statistic: float
+        The test statistic :math:`LM`.
+    p_value: float
+        The p-value of the test. Equal to :math:`1 - F_{\\chi^2(p)}(LM)`, where
+        :math:`F_{\\chi^2(p)}` is the cumulative distribution function of the
+        :math:`\\chi^2(p)` distribution.
+
+    Raises
+    ------
+    ValueError:
+        If the dimensions of the inputs are incorrect.
     """
     Z, X, y, _, beta = _check_test_inputs(Z, X, y, beta=beta)
     n, q = Z.shape
@@ -621,8 +636,8 @@ def bounded_inverse_anderson_rubin(Z, X):
 
     X_proj = proj(Z, X)
 
-    W = np.linalg.solve(X.T @ X, X.T @ X_proj)
-    eta_min = min(np.real(np.linalg.eigvals(W)))
+    W = np.linalg.solve(X.T @ (X - X_proj), X.T @ X_proj)
+    kappa = min(np.real(np.linalg.eigvals(W)))
 
-    cdf = scipy.stats.f.cdf((n - q) / q * eta_min / (1 - eta_min), dfn=q, dfd=n - q)
+    cdf = scipy.stats.f.cdf((n - q) / q * kappa, dfn=q, dfd=n - q)
     return 1 - cdf
