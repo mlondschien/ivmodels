@@ -139,7 +139,7 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
     """
     Test based on asymptotic normality of the TSLS (or LIML) estimator.
 
-    If ``W = None``, the test statistic is defined as
+    If ``W`` is ``None``, the test statistic is defined as
 
     .. math::
 
@@ -153,7 +153,7 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
     for :math:`n \\to \\infty`, the test statistic is asymptotically distributed as
     :math:`\\chi^2(p)` under the null. This requires strong instruments.
 
-    If ``W != None``, the test statistic is defined as
+    If ``W`` is not ``None``, the test statistic is defined as
 
     .. math::
 
@@ -245,7 +245,7 @@ def anderson_rubin_test(Z, X, y, beta, W=None):
     :math:`\\chi^2(q) / q` under the null and non-normally distributed errors, even for
     weak instruments.
 
-    If ``W != None``, the test statistic is defined as
+    If ``W`` is not ``None``, the test statistic is defined as
 
     .. math:: AR := \\max_\\gamma \\frac{n - q}{q - r} \\frac{\\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2},
 
@@ -312,7 +312,7 @@ def likelihood_ratio_test(Z, X, y, beta, W=None):
     """
     Perform the likelihood ratio test for ``beta``.
 
-    If ``W = None``, the test statistic is defined as
+    If ``W`` is ``None``, the test statistic is defined as
 
     .. math::
 
@@ -325,7 +325,7 @@ def likelihood_ratio_test(Z, X, y, beta, W=None):
     :math:`\\mathrm{AR}(\\beta)` (see :py:func:`ivmodels.tests.anderson_rubin_test`) at
     :math:`\\mathrm{AR}(\\hat\\beta_\\mathrm{LIML}) = \\frac{n - q}{q} (\\hat\\kappa_\\mathrm{LIML} - 1)`.
 
-    If ``W != None``, the test statistic is defined as
+    If ``W`` is not ``None``, the test statistic is defined as
 
     .. math::
 
@@ -498,7 +498,7 @@ def inverse_anderson_rubin_test(Z, X, y, alpha=0.05, W=None):
     for the causal parameter corresponding to the endogenous regressors of interest
     ``X``.
 
-    If ``W = None``, let :math:`q := \\frac{q}{n-q}F_{F(q, n-q)}(1 - \\alpha)`, where
+    If ``W`` is ``None``, let :math:`q := \\frac{q}{n-q}F_{F(q, n-q)}(1 - \\alpha)`, where
     :math:`F_{F(q, n-q)}` is the cumulative distribution function of the
     :math:`F(q, n-q)` distribution. The quadric is defined as
 
@@ -507,11 +507,11 @@ def inverse_anderson_rubin_test(Z, X, y, alpha=0.05, W=None):
        AR(\\beta) = \\frac{n - q}{q} \\frac{\\| P_Z (y - X \\beta) \\|_2^2}{\\| M_Z  (y - X \\beta) \\|_2^2} \\leq F_{F(q, n-q)}(1 - \\alpha) \\\\
        \\Leftrightarrow \\beta^T X^T (P_Z - q M_Z) X \\beta - 2 y^T (P_Z - q M_Z) X \\beta + y^T (P_Z - q M_Z) y \\leq 0.
 
-    If ``W != None``, let :math:`q := \\frac{q - r}{n-q}F_{F(q - r, n-q)}(1 - \\alpha)`.
+    If ``W`` is not ``None``, let :math:`q := \\frac{q - r}{n-q}F_{F(q - r, n-q)}(1 - \\alpha)`.
     The quadric is defined as
 
     .. math::
-        AR(\\beta) = \\max_\\gamma \\frac{n - q}{q - r} \\frac{\\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2} \\leq F_{F(q - r, n-q)}(1 - \\alpha).
+        AR(\\beta) = \\max_\\gamma \\frac{n - q}{q - r} \\frac{\\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2} \\leq F_(q - r, n-q)}(1 - \\alpha).
 
 
     Parameters
@@ -575,7 +575,7 @@ def inverse_wald_test(Z, X, y, alpha=0.05, W=None, estimator="tsls"):
     """
     Return the quadric for the acceptance region based on asymptotic normality.
 
-    If ``W = None``, the quadric is defined as
+    If ``W`` is ``None``, the quadric is defined as
 
     .. math::
 
@@ -588,7 +588,7 @@ def inverse_wald_test(Z, X, y, alpha=0.05, W=None, estimator="tsls"):
     and :math:`F_{\\chi^2(p)}` is the cumulative distribution function of the
     :math:`\\chi^2(p)` distribution.
 
-    If ``W != None``, the quadric is defined as
+    If ``W`` is not ``None``, the quadric is defined as
 
     .. math::
 
@@ -649,7 +649,7 @@ def inverse_likelihood_ratio_test(Z, X, y, alpha=0.05, W=None):
     """
     Return the quadric for the inverse likelihood ratio test's acceptance region.
 
-    If ``W = None``, the quadric is defined as
+    If ``W`` is ``None``, the quadric is defined as
 
     .. math::
 
