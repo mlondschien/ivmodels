@@ -672,14 +672,18 @@ def inverse_likelihood_ratio_test(Z, X, y, alpha=0.05, W=None):
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1).")
 
-    Z, X, y, _, _ = _check_test_inputs(Z, X, y)
+    Z, X, y, W, _ = _check_test_inputs(Z, X, y, W=W)
+
     n, p = X.shape
     q = Z.shape[1]
 
     Z = Z - Z.mean(axis=0)
     X = X - X.mean(axis=0)
-    W = W - W.mean(axis=0)
     y = y - y.mean()
+
+    if W is not None:
+        W = W - W.mean(axis=0)
+        X = np.concatenate([X, W], axis=1)
 
     X_proj = proj(Z, X)
     X_orth = X - X_proj
@@ -701,7 +705,10 @@ def inverse_likelihood_ratio_test(Z, X, y, alpha=0.05, W=None):
     if isinstance(c, np.ndarray):
         c = c.item()
 
-    return Quadric(A, b, c)
+    if W is not None:
+        return Quadric(A, b, c).project(range(X.shape[1] - W.shape[1]))
+    else:
+        return Quadric(A, b, c)
 
 
 def bounded_inverse_anderson_rubin(Z, X):
