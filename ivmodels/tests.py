@@ -139,7 +139,7 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
     """
     Test based on asymptotic normality of the TSLS (or LIML) estimator.
 
-    If ``W = None``, the test statistic is defined as
+    If ``W`` is ``None``, the test statistic is defined as
 
     .. math::
 
@@ -153,7 +153,7 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
     for :math:`n \\to \\infty`, the test statistic is asymptotically distributed as
     :math:`\\chi^2(p)` under the null. This requires strong instruments.
 
-    If ``W != None``, the test statistic is defined as
+    If ``W`` is not ``None``, the test statistic is defined as
 
     .. math::
 
@@ -232,7 +232,7 @@ def anderson_rubin_test(Z, X, y, beta, W=None):
     Perform the Anderson Rubin test :cite:p:`anderson1949estimation`.
 
     Test the null hypothesis that the residuals are uncorrelated with the instruments.
-    If `W` is `None`, the test statistic is defined as
+    If ``W`` is ``None``, the test statistic is defined as
 
     .. math:: AR := \\frac{n - q}{q} \\frac{\\| P_Z (y - X \\beta) \\|_2^2}{\\| M_Z  (y - X \\beta) \\|_2^2},
 
@@ -245,10 +245,13 @@ def anderson_rubin_test(Z, X, y, beta, W=None):
     :math:`\\chi^2(q) / q` under the null and non-normally distributed errors, even for
     weak instruments.
 
-    If ``W != None``, the test statistic is defined as
+    If ``W`` is not ``None``, the test statistic is
 
-    .. math:: AR := \\max_\\gamma \\frac{n - q}{q - r} \\frac{\\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2},
+    .. math:: AR &:= \\min_\\gamma \\frac{n - q}{q - r} \\frac{\\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2} \\\\
+    &= \frac{n - q}{q - r} \\frac{\\| P_Z (y - X \\beta - W \\hat\\gamma_\\mathrm{LIML}) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\hat\\gamma_\\mathrm{LIML}) \\|_2^2},
 
+    where :math:`\\hat\\gamma_\\mathrm{LIML}` is the LIML estimate using instruments
+    :math:`Z`, covariates :math:`W` and outcomes :math:`y - X \\beta`.
     Under the null, this test statistic is asymptotically distributed as
     :math:`\\frac{1}{q - r} \\chi^2(q - r)`, where :math:`r = \\mathrm{dim}(W)`. See
     :cite:p:`guggenberger2012asymptotic`.
@@ -273,7 +276,7 @@ def anderson_rubin_test(Z, X, y, beta, W=None):
     p_value: float
         The p-value of the test. Equal to :math:`1 - F_{F_{q - r, n - q}}(AR)`, where
         :math:`F_{F_{q - r, n - q}}` is the cumulative distribution function of the
-        :math:`F_{q - r, n - q}` distribution and `r = 0` if `W` is `None`.
+        :math:`F_{q - r, n - q}` distribution and ``r = 0`` if ``W`` is ``None``.
 
     Raises
     ------
@@ -298,14 +301,12 @@ def anderson_rubin_test(Z, X, y, beta, W=None):
             np.square(proj_residuals).sum()
             / np.square(residuals - proj_residuals).sum()
         )
-        ar *= (n - q) / q
-        r = 0
+        dfn = q
     else:
-        liml = KClass(kappa="liml").fit(X=W, y=y - X @ beta, Z=Z)
-        ar = (liml.kappa_ - 1) * (n - q) / q
-        r = W.shape[1]
+        ar = KClass(kappa="liml").fit(X=W, y=y - X @ beta, Z=Z).kappa_ - 1
+        dfn = q - W.shape[1]
 
-    p_value = 1 - scipy.stats.f.cdf(ar, dfn=q - r, dfd=n - q)
+    p_value = 1 - scipy.stats.f.cdf(ar * (n - q) / dfn, dfn=dfn, dfd=n - q)
 
     return ar, p_value
 
@@ -314,7 +315,7 @@ def likelihood_ratio_test(Z, X, y, beta, W=None):
     """
     Perform the likelihood ratio test for ``beta``.
 
-    If ``W = None``, the test statistic is defined as
+    If ``W`` is ``None``, the test statistic is defined as
 
     .. math::
 
@@ -327,7 +328,7 @@ def likelihood_ratio_test(Z, X, y, beta, W=None):
     :math:`\\mathrm{AR}(\\beta)` (see :py:func:`ivmodels.tests.anderson_rubin_test`) at
     :math:`\\mathrm{AR}(\\hat\\beta_\\mathrm{LIML}) = \\frac{n - q}{q} (\\hat\\kappa_\\mathrm{LIML} - 1)`.
 
-    If ``W != None``, the test statistic is defined as
+    If ``W`` is not ``None``, the test statistic is defined as
 
     .. math::
 
@@ -491,16 +492,64 @@ def inverse_pulse_test(Z, X, y, alpha=0.05):
     return Quadric(A, b, c)
 
 
-def inverse_anderson_rubin_test(Z, X, y, alpha=0.05):
-    """Return the quadric for to the inverse Anderson-Rubin test's acceptance region."""
+def inverse_anderson_rubin_test(Z, X, y, alpha=0.05, W=None):
+    """
+    Return the quadric for to the inverse Anderson-Rubin test's acceptance region.
+
+    The returned quadric satisfies ``quadric(x) <= 0`` if and only if
+    ``anderson_rubin_test(Z, X, y, W=W)[1] > alpha``. It is thus a confidence region
+    for the causal parameter corresponding to the endogenous regressors of interest
+    ``X``.
+
+    If ``W`` is ``None``, let :math:`q := \\frac{q}{n-q}F_{F(q, n-q)}(1 - \\alpha)`, where
+    :math:`F_{F(q, n-q)}` is the cumulative distribution function of the
+    :math:`F(q, n-q)` distribution. The quadric is defined as
+
+    .. math::
+
+       AR(\\beta) = \\frac{n - q}{q} \\frac{\\| P_Z (y - X \\beta) \\|_2^2}{\\| M_Z  (y - X \\beta) \\|_2^2} \\leq F_{F(q, n-q)}(1 - \\alpha) \\\\
+       \\Leftrightarrow \\beta^T X^T (P_Z - q M_Z) X \\beta - 2 y^T (P_Z - q M_Z) X \\beta + y^T (P_Z - q M_Z) y \\leq 0.
+
+    If ``W`` is not ``None``, let :math:`q := \\frac{q - r}{n-q}F_{F(q - r, n-q)}(1 - \\alpha)`.
+    The quadric is defined as
+
+    .. math::
+        AR(\\beta) = \\min_\\gamma \\frac{n - q}{q - r} \\frac{\\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2} \\leq F_(q - r, n-q)}(1 - \\alpha).
+
+
+    Parameters
+    ----------
+    Z: np.ndarray of dimension (n, q)
+        Instruments.
+    X: np.ndarray of dimension (n, p)
+        Regressors.
+    y: np.ndarray of dimension (n,)
+        Outcomes.
+    alpha: float
+        Significance level.
+    W: np.ndarray of dimension (n, r) or None
+        Endogenous regressors not of interest.
+
+    Returns
+    -------
+    Quadric
+        The quadric for the acceptance region.
+
+    """
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1).")
 
-    Z, X, y, _, _ = _check_test_inputs(Z, X, y)
+    Z, X, y, W, _ = _check_test_inputs(Z, X, y, W=W)
 
     n, q = Z.shape
 
-    quantile = scipy.stats.f.ppf(1 - alpha, dfn=q, dfd=n - q)
+    if W is not None:
+        X = np.concatenate([X, W], axis=1)
+        dfn = q - W.shape[1]
+    else:
+        dfn = q
+
+    quantile = scipy.stats.f.ppf(1 - alpha, dfn=dfn, dfd=n - q) * dfn / (n - q)
 
     Z = Z - Z.mean(axis=0)
     X = X - X.mean(axis=0)
@@ -511,21 +560,25 @@ def inverse_anderson_rubin_test(Z, X, y, alpha=0.05):
     y_proj = proj(Z, y)
     y_orth = y - y_proj
 
-    A = X.T @ (X_proj - q / (n - q) * quantile * X_orth)
-    b = -2 * (X_proj - q / (n - q) * quantile * X_orth).T @ y
-    c = y.T @ (y_proj - q / (n - q) * quantile * y_orth)
+    A = X.T @ (X_proj - quantile * X_orth)
+    b = -2 * (X_proj - quantile * X_orth).T @ y
+    c = y.T @ (y_proj - quantile * y_orth)
 
     if isinstance(c, np.ndarray):
         c = c.item()
 
-    return Quadric(A, b, c)
+    if W is not None:
+        return Quadric(A, b, c).project(range(X.shape[1] - W.shape[1]))
+
+    else:
+        return Quadric(A, b, c)
 
 
-def inverse_wald_test(Z, X, y, alpha=0.05, estimator="tsls"):
+def inverse_wald_test(Z, X, y, alpha=0.05, W=None, estimator="tsls"):
     """
     Return the quadric for the acceptance region based on asymptotic normality.
 
-    The quadric is defined as
+    If ``W`` is ``None``, the quadric is defined as
 
     .. math::
 
@@ -538,6 +591,12 @@ def inverse_wald_test(Z, X, y, alpha=0.05, estimator="tsls"):
     and :math:`F_{\\chi^2(p)}` is the cumulative distribution function of the
     :math:`\\chi^2(p)` distribution.
 
+    If ``W`` is not ``None``, the quadric is defined as
+
+    .. math::
+
+       (\\beta - B \\hat{\\beta})^T (B ((X W)^T P_Z (X W))^{-1} B^T)^{-1} (\\beta - B \\hat{\\beta}) \\leq \\hat{\\sigma}^2 F_{\\chi^2(p)}(1 - \\alpha).
+
     Parameters
     ----------
     Z: np.ndarray of dimension (n, q)
@@ -548,15 +607,20 @@ def inverse_wald_test(Z, X, y, alpha=0.05, estimator="tsls"):
         Outcomes.
     alpha: float
         Significance level.
+    W: np.ndarray of dimension (n, r) or None
+        Endogenous regressors not of interest.
     estimator: float or str, optional, default = "tsls"
         Estimator to use. Passed as ``kappa`` parameter to ``KClass``.
     """
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1).")
 
-    Z, X, y, _, _ = _check_test_inputs(Z, X, y)
+    Z, X, y, W, _ = _check_test_inputs(Z, X, y, W)
 
     z_alpha = scipy.stats.chi2.ppf(1 - alpha, df=X.shape[1])
+
+    if W is not None:
+        X = np.concatenate([X, W], axis=1)
 
     Z = Z - Z.mean(axis=0)
     X = X - X.mean(axis=0)
@@ -578,21 +642,51 @@ def inverse_wald_test(Z, X, y, alpha=0.05, estimator="tsls"):
     if isinstance(c, np.ndarray):
         c = c.item()
 
-    return Quadric(A, b, c)
+    if W is not None:
+        return Quadric(A, b, c).project(range(X.shape[1] - W.shape[1]))
+    else:
+        return Quadric(A, b, c)
 
 
-def inverse_likelihood_ratio_test(Z, X, y, alpha=0.05):
-    """Return the quadric for the inverse likelihood ratio test's acceptance region."""
+def inverse_likelihood_ratio_test(Z, X, y, alpha=0.05, W=None):
+    """
+    Return the quadric for the inverse likelihood ratio test's acceptance region.
+
+    If ``W`` is ``None``, the quadric is defined as
+
+    .. math::
+
+       LR(\\beta) = (n - q) \\frac{\\| P_Z (y - X \\beta) \\|_2^2}{\\| M_Z  (y - X \\beta) \\|_2^2} \\leq \\frac{1}{n} \\| y - X \\hat \\beta \\|^2_2 \\leq F_{\\chi^2(p)}(1 - \\alpha).
+
+    Parameters
+    ----------
+    Z: np.ndarray of dimension (n, q)
+        Instruments.
+    X: np.ndarray of dimension (n, p)
+        Regressors.
+    y: np.ndarray of dimension (n,)
+        Outcomes.
+    alpha: float
+        Significance level.
+    W: np.ndarray of dimension (n, r) or None
+        Endogenous regressors not of interest.
+
+    """
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1).")
 
-    Z, X, y, _, _ = _check_test_inputs(Z, X, y)
+    Z, X, y, W, _ = _check_test_inputs(Z, X, y, W=W)
+
     n, p = X.shape
     q = Z.shape[1]
 
     Z = Z - Z.mean(axis=0)
     X = X - X.mean(axis=0)
     y = y - y.mean()
+
+    if W is not None:
+        W = W - W.mean(axis=0)
+        X = np.concatenate([X, W], axis=1)
 
     X_proj = proj(Z, X)
     X_orth = X - X_proj
@@ -602,8 +696,8 @@ def inverse_likelihood_ratio_test(Z, X, y, alpha=0.05):
     Xy_proj = np.concatenate([X_proj, y_proj.reshape(-1, 1)], axis=1)
     Xy = np.concatenate([X, y.reshape(-1, 1)], axis=1)
 
-    W = np.linalg.solve(Xy.T @ (Xy - Xy_proj), Xy.T @ Xy_proj)
-    kappa_liml = min(np.abs(np.linalg.eigvals(W)))
+    matrix = np.linalg.solve(Xy.T @ (Xy - Xy_proj), Xy.T @ Xy_proj)
+    kappa_liml = min(np.abs(np.linalg.eigvals(matrix)))
 
     quantile = scipy.stats.chi2.ppf(1 - alpha, df=p) + (n - q) * kappa_liml
 
@@ -614,7 +708,10 @@ def inverse_likelihood_ratio_test(Z, X, y, alpha=0.05):
     if isinstance(c, np.ndarray):
         c = c.item()
 
-    return Quadric(A, b, c)
+    if W is not None:
+        return Quadric(A, b, c).project(range(X.shape[1] - W.shape[1]))
+    else:
+        return Quadric(A, b, c)
 
 
 def bounded_inverse_anderson_rubin(Z, X):

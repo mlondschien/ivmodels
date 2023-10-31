@@ -21,13 +21,15 @@ TEST_PAIRS = [
     (pulse_test, inverse_pulse_test),
     (lagrange_multiplier_test, None),
     (anderson_rubin_test, inverse_anderson_rubin_test),
-    (likelihood_ratio_test, inverse_likelihood_ratio_test),
     (wald_test, inverse_wald_test),
+    (likelihood_ratio_test, inverse_likelihood_ratio_test),
 ]
 
 
 # The Pulse and the LM tests don't have subvector versions.
-@pytest.mark.parametrize("test", [pair[0] for pair in TEST_PAIRS[2:]])
+@pytest.mark.parametrize(
+    "test", [anderson_rubin_test, wald_test, likelihood_ratio_test]
+)
 @pytest.mark.parametrize("n, p, r, q, u", [(100, 1, 1, 2, 1), (100, 1, 2, 5, 2)])
 def test_subvector_test_equal_to_original(test, n, p, r, q, u):
     """Test that test(.., W=None) == test(.., W=np.zeros((n, 0)))."""
@@ -51,7 +53,9 @@ def test_subvector_test_equal_to_original(test, n, p, r, q, u):
 
 
 # The Pulse and the LM tests don't have subvector versions.
-@pytest.mark.parametrize("test", [pair[0] for pair in TEST_PAIRS[2:]])
+@pytest.mark.parametrize(
+    "test", [anderson_rubin_test, wald_test, likelihood_ratio_test]
+)
 @pytest.mark.parametrize("n, p, r, q, u", [(100, 1, 1, 2, 1), (100, 1, 2, 5, 2)])
 def test_subvector_test_size(test, n, p, r, q, u):
     """Test that the test size is close to the nominal level."""
@@ -84,7 +88,7 @@ def test_subvector_test_size(test, n, p, r, q, u):
 
 # The Pulse and the LM tests don't have subvector versions. The Wald and LR tests are
 # not valid for weak instruments.
-@pytest.mark.parametrize("test", [pair[0] for pair in TEST_PAIRS[2:-2]])
+@pytest.mark.parametrize("test", [anderson_rubin_test])
 @pytest.mark.parametrize("n, q", [(100, 5), (100, 30)])
 def test_subvector_test_size_weak_instruments(test, n, q):
     """
@@ -133,7 +137,16 @@ def test_subvector_test_size_weak_instruments(test, n, q):
     assert np.mean(p_values < 0.05) < 0.07  # 4 stds above 0.05 for n_seeds = 100
 
 
-@pytest.mark.parametrize("test", [pair[0] for pair in TEST_PAIRS])
+@pytest.mark.parametrize(
+    "test",
+    [
+        pulse_test,
+        lagrange_multiplier_test,
+        anderson_rubin_test,
+        wald_test,
+        likelihood_ratio_test,
+    ],
+)
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
 def test_test_size(test, n, p, q, u):
     """Test that the test size is close to the nominal level."""
@@ -161,7 +174,9 @@ def test_test_size(test, n, p, q, u):
 
 
 # The wald and likelihood ratio tests are not valid for weak instruments
-@pytest.mark.parametrize("test", [pair[0] for pair in TEST_PAIRS[:-2]])
+@pytest.mark.parametrize(
+    "test", [pulse_test, lagrange_multiplier_test, anderson_rubin_test]
+)
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (1000, 2, 5, 2)])
 def test_test_size_weak_ivs(test, n, p, q, u):
     """Test that the test size is close to the nominal level for weak instruments."""
@@ -189,7 +204,13 @@ def test_test_size_weak_ivs(test, n, p, q, u):
 
 
 @pytest.mark.parametrize(
-    "test, inverse_test", [(p[0], p[1]) for p in TEST_PAIRS if p[1] is not None]
+    "test, inverse_test",
+    [
+        (pulse_test, inverse_pulse_test),
+        (anderson_rubin_test, inverse_anderson_rubin_test),
+        (wald_test, inverse_wald_test),
+        (likelihood_ratio_test, inverse_likelihood_ratio_test),
+    ],
 )
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
 @pytest.mark.parametrize("p_value", [0.1, 0.01])
@@ -213,7 +234,51 @@ def test_test_round_trip(test, inverse_test, n, p, q, u, p_value):
     assert np.allclose(p_values, p_value, atol=1e-8)
 
 
-@pytest.mark.parametrize("test", [pair[0] for pair in TEST_PAIRS])
+@pytest.mark.parametrize(
+    "test, inverse_test",
+    [
+        (wald_test, inverse_wald_test),
+        (anderson_rubin_test, inverse_anderson_rubin_test),
+        (likelihood_ratio_test, inverse_likelihood_ratio_test),
+    ],
+)
+@pytest.mark.parametrize("n, p, q, r, u", [(100, 2, 3, 1, 2), (100, 2, 5, 2, 3)])
+@pytest.mark.parametrize("p_value", [0.1, 0.01])
+def test_subvector_round_trip(test, inverse_test, n, p, q, u, r, p_value):
+    """
+    A test's p-value at the confidence set's boundary equals the nominal level.
+
+    This time for subvector tests.
+    """
+    Z, X, y, W = simulate_gaussian_iv(n, p, q, u, r=r, seed=0)
+
+    Z = Z - Z.mean(axis=0)
+    X = X - X.mean(axis=0)
+    y = y.flatten() - y.mean()
+    W = W - W.mean(axis=0)
+
+    quadric = inverse_test(Z, X, y, p_value, W=W)
+    boundary = quadric._boundary()
+
+    assert np.allclose(quadric(boundary), 0, atol=1e-7)
+
+    p_values = np.zeros(boundary.shape[0])
+    for idx, row in enumerate(boundary):
+        p_values[idx] = test(Z, X, y, beta=row, W=W)[1]
+
+    assert np.allclose(p_values, p_value, atol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "test",
+    [
+        pulse_test,
+        lagrange_multiplier_test,
+        anderson_rubin_test,
+        wald_test,
+        likelihood_ratio_test,
+    ],
+)
 @pytest.mark.parametrize("kappa", ["liml", "tsls"])
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
 def test_p_value_of_estimator(test, kappa, n, p, q, u):
@@ -241,7 +306,13 @@ def test_ar_test_monotonic_in_kappa(test, n, p, q, u):
 
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
 @pytest.mark.parametrize(
-    "inverse_test", [pair[1] for pair in TEST_PAIRS if pair[1] is not None]
+    "inverse_test",
+    [
+        inverse_pulse_test,
+        inverse_anderson_rubin_test,
+        inverse_wald_test,
+        inverse_likelihood_ratio_test,
+    ],
 )
 def test_inverse_test_sorted(inverse_test, n, p, q, u):
     """The volume of confidence sets should be increasing in the p-value."""

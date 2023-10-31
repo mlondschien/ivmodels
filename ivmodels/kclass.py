@@ -332,7 +332,7 @@ class KClass(KClassMixin, GeneralizedLinearRegressor):
         If string, then must be one of ``"ols"``, ``"2sls"``, ``"tsls"``, ``"liml"``,
         ``"fuller"``, or ``"fuller(a)"``, where ``a`` is numeric. If ``kappa="ols"``,
         then ``kappa=0`` and the k-class estimator is the ordinary least squares
-        estimator. If ``kappa="tsls"`` or ``kappa="2sls"``m then ``kappa=1`` and the
+        estimator. If ``kappa="tsls"`` or ``kappa="2sls"``, then ``kappa=1`` and the
         k-class estimator is the two-stage least-squares estimator. If ``kappa="liml"``,
         then :math:`\\kappa = \\hat\\kappa_\\mathrm{LIML}` is used. If
         ``kappa="fuller(a)"``, then
