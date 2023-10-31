@@ -498,6 +498,22 @@ def inverse_anderson_rubin_test(Z, X, y, alpha=0.05, W=None):
     for the causal parameter corresponding to the endogenous regressors of interest
     ``X``.
 
+    If ``W = None``, let :math:`q := \\frac{q}{n-q}F_{F(q, n-q)}(1 - \\alpha)`, where
+    :math:`F_{F(q, n-q)}` is the cumulative distribution function of the
+    :math:`F(q, n-q)` distribution. The quadric is defined as
+
+    .. math::
+
+       AR(\\beta) = \\frac{n - q}{q} \\frac{\\| P_Z (y - X \\beta) \\|_2^2}{\\| M_Z  (y - X \\beta) \\|_2^2} \\leq F(q, n-q)}(1 - \\alpha)
+       \\Leftrightarrow \\beta^T X^T (P_Z - q M_Z) X \\beta - 2 y^T (P_Z - q M_Z) X \\beta + y^T (P_Z - q M_Z) y \\leq 0.
+
+    If ``W != None``, let :math:`q := \\frac{q - r}{n-q}F_{F(q - r, n-q)}(1 - \\alpha)`.
+    The quadric is defined as
+
+    .. math::
+        AR(\\beta) = \\max_\\gamma \\frac{n - q}{q - r} \\frac{\\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2} \\leq F(q - r, n-q)}(1 - \\alpha).
+
+
     Parameters
     ----------
     Z: np.ndarray of dimension (n, q)
@@ -629,8 +645,30 @@ def inverse_wald_test(Z, X, y, alpha=0.05, W=None, estimator="tsls"):
         return Quadric(A, b, c)
 
 
-def inverse_likelihood_ratio_test(Z, X, y, alpha=0.05):
-    """Return the quadric for the inverse likelihood ratio test's acceptance region."""
+def inverse_likelihood_ratio_test(Z, X, y, alpha=0.05, W=None):
+    """
+    Return the quadric for the inverse likelihood ratio test's acceptance region.
+
+    If ``W = None``, the quadric is defined as
+
+    .. math::
+
+       LR(\\beta) = (n - q) \\frac{\\| P_Z (y - X \\beta) \\|_2^2}{\\| M_Z  (y - X \\beta) \\|_2^2} \\leq \\frac{1}{n} \\| y - X \\hat \\beta \\|^2_2 \\leq F_{\\chi^2(p)}(1 - \\alpha).
+
+    Parameters
+    ----------
+    Z: np.ndarray of dimension (n, q)
+        Instruments.
+    X: np.ndarray of dimension (n, p)
+        Regressors.
+    y: np.ndarray of dimension (n,)
+        Outcomes.
+    alpha: float
+        Significance level.
+    W: np.ndarray of dimension (n, r) or None
+        Endogenous regressors not of interest.
+
+    """
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1).")
 
@@ -640,6 +678,7 @@ def inverse_likelihood_ratio_test(Z, X, y, alpha=0.05):
 
     Z = Z - Z.mean(axis=0)
     X = X - X.mean(axis=0)
+    W = W - W.mean(axis=0)
     y = y - y.mean()
 
     X_proj = proj(Z, X)
@@ -650,8 +689,8 @@ def inverse_likelihood_ratio_test(Z, X, y, alpha=0.05):
     Xy_proj = np.concatenate([X_proj, y_proj.reshape(-1, 1)], axis=1)
     Xy = np.concatenate([X, y.reshape(-1, 1)], axis=1)
 
-    W = np.linalg.solve(Xy.T @ (Xy - Xy_proj), Xy.T @ Xy_proj)
-    kappa_liml = min(np.abs(np.linalg.eigvals(W)))
+    matrix = np.linalg.solve(Xy.T @ (Xy - Xy_proj), Xy.T @ Xy_proj)
+    kappa_liml = min(np.abs(np.linalg.eigvals(matrix)))
 
     quantile = scipy.stats.chi2.ppf(1 - alpha, df=p) + (n - q) * kappa_liml
 
