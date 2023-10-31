@@ -273,7 +273,7 @@ def anderson_rubin_test(Z, X, y, beta, W=None):
     p_value: float
         The p-value of the test. Equal to :math:`1 - F_{F_{q - r, n - q}}(AR)`, where
         :math:`F_{F_{q - r, n - q}}` is the cumulative distribution function of the
-        :math:`F_{q - r, n - q}` distribution and `r = 0` if `W` is `None`.
+        :math:`F_{q - r, n - q}` distribution and ``r = 0`` if ``W`` is ``None``.
 
     Raises
     ------
@@ -574,7 +574,9 @@ def inverse_wald_test(Z, X, y, alpha=0.05, W=None, estimator="tsls"):
 
     If ``W != None``, the quadric is defined as
 
-    (\\beta - B \\hat{\\beta})^T (B ((X W)^T P_Z (X W))^{-1} B^T)^{-1} (\\beta - B \\hat{\\beta}) \\leq \\hat{\\sigma}^2 F_{\\chi^2(p)}(1 - \\alpha).
+    .. math::
+
+       (\\beta - B \\hat{\\beta})^T (B ((X W)^T P_Z (X W))^{-1} B^T)^{-1} (\\beta - B \\hat{\\beta}) \\leq \\hat{\\sigma}^2 F_{\\chi^2(p)}(1 - \\alpha).
 
     Parameters
     ----------
