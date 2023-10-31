@@ -490,7 +490,33 @@ def inverse_pulse_test(Z, X, y, alpha=0.05):
 
 
 def inverse_anderson_rubin_test(Z, X, y, alpha=0.05, W=None):
-    """Return the quadric for to the inverse Anderson-Rubin test's acceptance region."""
+    """
+    Return the quadric for to the inverse Anderson-Rubin test's acceptance region.
+
+    The returned quadric satisfies ``quadric(x) <= 0`` if and only if
+    ``anderson_rubin_test(Z, X, y, W=W)[1] > alpha``. It is thus a confidence region
+    for the causal parameter corresponding to the endogenous regressors of interest
+    ``X``.
+
+    Parameters
+    ----------
+    Z: np.ndarray of dimension (n, q)
+        Instruments.
+    X: np.ndarray of dimension (n, p)
+        Regressors.
+    y: np.ndarray of dimension (n,)
+        Outcomes.
+    alpha: float
+        Significance level.
+    W: np.ndarray of dimension (n, r) or None
+        Endogenous regressors not of interest.
+
+    Returns
+    -------
+    Quadric
+        The quadric for the acceptance region.
+
+    """
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1).")
 
@@ -533,7 +559,7 @@ def inverse_wald_test(Z, X, y, alpha=0.05, W=None, estimator="tsls"):
     """
     Return the quadric for the acceptance region based on asymptotic normality.
 
-    The quadric is defined as
+    If ``W = None``, the quadric is defined as
 
     .. math::
 
@@ -545,6 +571,10 @@ def inverse_wald_test(Z, X, y, alpha=0.05, W=None, estimator="tsls"):
     :math:`P_Z` is the projection matrix onto the column space of :math:`Z`,
     and :math:`F_{\\chi^2(p)}` is the cumulative distribution function of the
     :math:`\\chi^2(p)` distribution.
+
+    If ``W != None``, the quadric is defined as
+
+    (\\beta - B \\hat{\\beta})^T (B ((X W)^T P_Z (X W))^{-1} B^T)^{-1} (\\beta - B \\hat{\\beta}) \\leq \\hat{\\sigma}^2 F_{\\chi^2(p)}(1 - \\alpha).
 
     Parameters
     ----------
