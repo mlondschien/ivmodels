@@ -529,7 +529,7 @@ def inverse_anderson_rubin_test(Z, X, y, alpha=0.05, W=None):
         return Quadric(A, b, c)
 
 
-def inverse_wald_test(Z, X, y, alpha=0.05, estimator="tsls"):
+def inverse_wald_test(Z, X, y, alpha=0.05, W=None, estimator="tsls"):
     """
     Return the quadric for the acceptance region based on asymptotic normality.
 
@@ -556,15 +556,20 @@ def inverse_wald_test(Z, X, y, alpha=0.05, estimator="tsls"):
         Outcomes.
     alpha: float
         Significance level.
+    W: np.ndarray of dimension (n, r) or None
+        Endogenous regressors not of interest.
     estimator: float or str, optional, default = "tsls"
         Estimator to use. Passed as ``kappa`` parameter to ``KClass``.
     """
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1).")
 
-    Z, X, y, _, _ = _check_test_inputs(Z, X, y)
+    Z, X, y, W, _ = _check_test_inputs(Z, X, y, W)
 
     z_alpha = scipy.stats.chi2.ppf(1 - alpha, df=X.shape[1])
+
+    if W is not None:
+        X = np.concatenate([X, W], axis=1)
 
     Z = Z - Z.mean(axis=0)
     X = X - X.mean(axis=0)
@@ -586,7 +591,10 @@ def inverse_wald_test(Z, X, y, alpha=0.05, estimator="tsls"):
     if isinstance(c, np.ndarray):
         c = c.item()
 
-    return Quadric(A, b, c)
+    if W is not None:
+        return Quadric(A, b, c).project(range(X.shape[1] - W.shape[1]))
+    else:
+        return Quadric(A, b, c)
 
 
 def inverse_likelihood_ratio_test(Z, X, y, alpha=0.05):

@@ -21,8 +21,8 @@ TEST_PAIRS = [
     (pulse_test, inverse_pulse_test),
     (lagrange_multiplier_test, None),
     (anderson_rubin_test, inverse_anderson_rubin_test),
-    (likelihood_ratio_test, inverse_likelihood_ratio_test),
     (wald_test, inverse_wald_test),
+    (likelihood_ratio_test, inverse_likelihood_ratio_test),
 ]
 
 
@@ -214,7 +214,7 @@ def test_test_round_trip(test, inverse_test, n, p, q, u, p_value):
 
 
 @pytest.mark.parametrize(
-    "test, inverse_test", [(p[0], p[1]) for p in TEST_PAIRS[2:3] if p[1] is not None]
+    "test, inverse_test", [(p[0], p[1]) for p in TEST_PAIRS[2:4] if p[1] is not None]
 )
 @pytest.mark.parametrize("n, p, q, r, u", [(100, 2, 3, 1, 2), (100, 2, 5, 2, 3)])
 @pytest.mark.parametrize("p_value", [0.1, 0.01])
