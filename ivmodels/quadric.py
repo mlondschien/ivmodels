@@ -9,7 +9,7 @@ class Quadric:
 
     Internally, works with a standardized form of the quadric. If :math:`V^T D V = A`
     with :math:`D` diagonal and :math:`V` orthonormal, define
-    :math:`x_\\mathrm{center} :=-A^{-1} b / 2`,
+    :math:`x_\\mathrm{center} := -A^{-1} b / 2`,
     :math:`\\tilde x = V^T (x - x_\\mathrm{center})` and
     :math:`\\tilde c = c - x_\\mathrm{center}^T A x_\\mathrm{center}`. Then, the
     standardized form is given by :math:`\\tilde x^T D \\tilde x + \\tilde c <= 0`.
@@ -195,3 +195,58 @@ class Quadric:
         solution = np.linalg.solve(self.A, one_hot)
         solution *= np.sqrt(-self.c_standardized / solution[coordinate])
         return (self.center - solution, self.center + solution)
+
+    def project(self, coordinates):
+        """
+        Return the projection of the quadric onto ``coordinates``.
+
+        For a quadric
+        :math:`(x - x_\\mathrm{center})^T A (x - x_\\mathrm{center}) + c \\leq 0` and
+        any matrix :math:`B \\in \\mathbb{R}^{q \\times p}` of rank :math:`q`, the
+        projection of the quadric onto the coordinates given by the columns of :math:`B`
+        is given by
+
+        .. math::
+           (Bx - Bx_\\mathrm{center})^T (B^T A^{-1} B)^{-1} (Bx - Bx_\\mathrm{center}) + c \\leq 0.
+
+        Here, :math:`B` is given by ``coordinates``, with :math:`B_{i, j} = 1` if
+        ``coordinates[i-1] == j`` and :math:`B_{i, j} = 0` otherwise for
+        :math:`i = 1, \\ldots, q` and :math:`j = 1, \\ldots, p`.
+
+        Parameters
+        ----------
+        coordinates: list of int
+            The coordinates onto which to project the quadric. Entries must be unique
+            and be between 0 and p - 1.
+
+        Returns
+        -------
+        Quadric
+            The projection of the quadric onto the coordinates.
+
+        """
+        if isinstance(coordinates, int):
+            coordinates = [coordinates]
+
+        if len(coordinates) == 0:
+            raise ValueError("No coordinates specified.")
+
+        if len(np.unique(coordinates)) != len(coordinates):
+            raise ValueError("Coordinates must be unique.")
+
+        if any([c < 0 or c >= self.A.shape[0] for c in coordinates]):
+            raise ValueError("Coordinates must be between 0 and p - 1.")
+
+        B = np.zeros((self.A.shape[0], len(coordinates)))
+        for i, c in enumerate(coordinates):
+            B[c, i] = 1
+
+        A_inv = np.linalg.inv(self.A)
+        A_new = np.linalg.inv(B.T @ A_inv @ B)
+        b_new = A_new @ B.T @ A_inv @ self.b
+        c_new = (
+            self.c_standardized
+            + 1.0 / 4.0 * self.b.T @ A_inv @ B @ A_new @ B.T @ A_inv @ self.b
+        )
+
+        return Quadric(A_new, b_new, c_new)

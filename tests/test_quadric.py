@@ -121,3 +121,39 @@ def test_quadric_projection(n, p, seed):
 
         assert np.allclose(grad0, 0, atol=1e-3)
         assert np.allclose(grad1, 0, atol=1e-3)
+
+
+@pytest.mark.parametrize("dim_before, dim_after", [(2, 2), (5, 5), (5, 2), (2, 1)])
+def test_quadric_projected_sphere_is_sphere(dim_before, dim_after):
+    rng = np.random.RandomState(0)
+    sphere = Quadric(np.eye(dim_before), np.zeros(dim_before), -1)
+    coordinates = rng.choice(dim_before, dim_after, replace=False)
+    projected_sphere = sphere.project(coordinates)
+
+    assert np.allclose(projected_sphere.A, np.eye(dim_after))
+    assert np.allclose(projected_sphere.b, np.zeros(dim_after))
+    assert np.allclose(projected_sphere.c, -1)
+
+
+@pytest.mark.parametrize("n", [1, 2, 5, 10])
+@pytest.mark.parametrize("seed", [0, 1])
+def test_quadric_trivial_projection_does_not_change_standardization(n, seed):
+    rng = np.random.RandomState(seed)
+
+    A = rng.normal(0, 1, (n, n))
+    A = A / 2 + A.T / 2
+    b = rng.normal(0, 1, n)
+    c = rng.normal(0, 1)
+
+    quadric = Quadric(A, b, c)
+    coordinates = np.arange(n)
+
+    projected_quadric = quadric.project(coordinates)
+
+    assert np.allclose(quadric.A, projected_quadric.A)
+    assert np.allclose(quadric.b, projected_quadric.b)
+    assert np.allclose(quadric.c, projected_quadric.c)
+
+    assert np.allclose(quadric.D, projected_quadric.D)
+    assert np.allclose(quadric.c_standardized, projected_quadric.c_standardized)
+    assert np.allclose(quadric.center, projected_quadric.center)
