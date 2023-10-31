@@ -298,14 +298,12 @@ def anderson_rubin_test(Z, X, y, beta, W=None):
             np.square(proj_residuals).sum()
             / np.square(residuals - proj_residuals).sum()
         )
-        ar *= (n - q) / q
-        r = 0
+        dfn = q
     else:
-        liml = KClass(kappa="liml").fit(X=W, y=y - X @ beta, Z=Z)
-        ar = (liml.kappa_ - 1) * (n - q) / q
-        r = W.shape[1]
+        ar = KClass(kappa="liml").fit(X=W, y=y - X @ beta, Z=Z).kappa_ - 1
+        dfn = q - W.shape[1]
 
-    p_value = 1 - scipy.stats.f.cdf(ar, dfn=q - r, dfd=n - q)
+    p_value = 1 - scipy.stats.f.cdf(ar * (n - q) / dfn, dfn=dfn, dfd=n - q)
 
     return ar, p_value
 
@@ -491,16 +489,22 @@ def inverse_pulse_test(Z, X, y, alpha=0.05):
     return Quadric(A, b, c)
 
 
-def inverse_anderson_rubin_test(Z, X, y, alpha=0.05):
+def inverse_anderson_rubin_test(Z, X, y, alpha=0.05, W=None):
     """Return the quadric for to the inverse Anderson-Rubin test's acceptance region."""
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1).")
 
-    Z, X, y, _, _ = _check_test_inputs(Z, X, y)
+    Z, X, y, W, _ = _check_test_inputs(Z, X, y, W=W)
 
     n, q = Z.shape
 
-    quantile = scipy.stats.f.ppf(1 - alpha, dfn=q, dfd=n - q)
+    if W is not None:
+        X = np.concatenate([X, W], axis=1)
+        dfn = q - W.shape[1]
+    else:
+        dfn = q
+
+    quantile = scipy.stats.f.ppf(1 - alpha, dfn=dfn, dfd=n - q) * dfn / (n - q)
 
     Z = Z - Z.mean(axis=0)
     X = X - X.mean(axis=0)
@@ -511,14 +515,18 @@ def inverse_anderson_rubin_test(Z, X, y, alpha=0.05):
     y_proj = proj(Z, y)
     y_orth = y - y_proj
 
-    A = X.T @ (X_proj - q / (n - q) * quantile * X_orth)
-    b = -2 * (X_proj - q / (n - q) * quantile * X_orth).T @ y
-    c = y.T @ (y_proj - q / (n - q) * quantile * y_orth)
+    A = X.T @ (X_proj - quantile * X_orth)
+    b = -2 * (X_proj - quantile * X_orth).T @ y
+    c = y.T @ (y_proj - quantile * y_orth)
 
     if isinstance(c, np.ndarray):
         c = c.item()
 
-    return Quadric(A, b, c)
+    if W is not None:
+        return Quadric(A, b, c).project(range(X.shape[1] - W.shape[1]))
+
+    else:
+        return Quadric(A, b, c)
 
 
 def inverse_wald_test(Z, X, y, alpha=0.05, estimator="tsls"):
