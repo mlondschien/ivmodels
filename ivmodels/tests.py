@@ -232,7 +232,7 @@ def anderson_rubin_test(Z, X, y, beta, W=None):
     Perform the Anderson Rubin test :cite:p:`anderson1949estimation`.
 
     Test the null hypothesis that the residuals are uncorrelated with the instruments.
-    If `W` is `None`, the test statistic is defined as
+    If ``W`` is ``None``, the test statistic is defined as
 
     .. math:: AR := \\frac{n - q}{q} \\frac{\\| P_Z (y - X \\beta) \\|_2^2}{\\| M_Z  (y - X \\beta) \\|_2^2},
 
@@ -245,10 +245,13 @@ def anderson_rubin_test(Z, X, y, beta, W=None):
     :math:`\\chi^2(q) / q` under the null and non-normally distributed errors, even for
     weak instruments.
 
-    If ``W`` is not ``None``, the test statistic is defined as
+    If ``W`` is not ``None``, the test statistic is
 
-    .. math:: AR := \\max_\\gamma \\frac{n - q}{q - r} \\frac{\\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2},
+    .. math:: AR &:= \\min_\\gamma \\frac{n - q}{q - r} \\frac{\\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2} \\\\
+    &= \frac{n - q}{q - r} \\frac{\\| P_Z (y - X \\beta - W \\hat\\gamma_\\mathrm{LIML}) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\hat\\gamma_\\mathrm{LIML}) \\|_2^2},
 
+    where :math:`\\hat\\gamma_\\mathrm{LIML}` is the LIML estimate using instruments
+    :math:`Z`, covariates :math:`W` and outcomes :math:`y - X \\beta`.
     Under the null, this test statistic is asymptotically distributed as
     :math:`\\frac{1}{q - r} \\chi^2(q - r)`, where :math:`r = \\mathrm{dim}(W)`. See
     :cite:p:`guggenberger2012asymptotic`.
@@ -511,7 +514,7 @@ def inverse_anderson_rubin_test(Z, X, y, alpha=0.05, W=None):
     The quadric is defined as
 
     .. math::
-        AR(\\beta) = \\max_\\gamma \\frac{n - q}{q - r} \\frac{\\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2} \\leq F_(q - r, n-q)}(1 - \\alpha).
+        AR(\\beta) = \\min_\\gamma \\frac{n - q}{q - r} \\frac{\\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2} \\leq F_(q - r, n-q)}(1 - \\alpha).
 
 
     Parameters
