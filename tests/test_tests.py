@@ -7,6 +7,7 @@ from ivmodels.simulate import simulate_gaussian_iv
 from ivmodels.tests import (
     anderson_rubin_test,
     bounded_inverse_anderson_rubin,
+    conditional_likelihood_ratio_test,
     inverse_anderson_rubin_test,
     inverse_likelihood_ratio_test,
     inverse_pulse_test,
@@ -18,6 +19,7 @@ from ivmodels.tests import (
 )
 
 TEST_PAIRS = [
+    (conditional_likelihood_ratio_test, None),
     (pulse_test, inverse_pulse_test),
     (lagrange_multiplier_test, None),
     (anderson_rubin_test, inverse_anderson_rubin_test),
@@ -28,7 +30,13 @@ TEST_PAIRS = [
 
 # The Pulse and the LM tests don't have subvector versions.
 @pytest.mark.parametrize(
-    "test", [anderson_rubin_test, wald_test, likelihood_ratio_test]
+    "test",
+    [
+        anderson_rubin_test,
+        wald_test,
+        likelihood_ratio_test,
+        conditional_likelihood_ratio_test,
+    ],
 )
 @pytest.mark.parametrize("n, p, r, q, u", [(100, 1, 1, 2, 1), (100, 1, 2, 5, 2)])
 def test_subvector_test_equal_to_original(test, n, p, r, q, u):
@@ -54,7 +62,13 @@ def test_subvector_test_equal_to_original(test, n, p, r, q, u):
 
 # The Pulse and the LM tests don't have subvector versions.
 @pytest.mark.parametrize(
-    "test", [anderson_rubin_test, wald_test, likelihood_ratio_test]
+    "test",
+    [
+        anderson_rubin_test,
+        wald_test,
+        likelihood_ratio_test,
+        conditional_likelihood_ratio_test,
+    ],
 )
 @pytest.mark.parametrize("n, p, r, q, u", [(100, 1, 1, 2, 1), (100, 1, 2, 5, 2)])
 def test_subvector_test_size(test, n, p, r, q, u):
@@ -88,7 +102,9 @@ def test_subvector_test_size(test, n, p, r, q, u):
 
 # The Pulse and the LM tests don't have subvector versions. The Wald and LR tests are
 # not valid for weak instruments.
-@pytest.mark.parametrize("test", [anderson_rubin_test])
+@pytest.mark.parametrize(
+    "test", [anderson_rubin_test, conditional_likelihood_ratio_test]
+)
 @pytest.mark.parametrize("n, q", [(100, 5), (100, 30)])
 def test_subvector_test_size_weak_instruments(test, n, q):
     """
@@ -145,6 +161,7 @@ def test_subvector_test_size_weak_instruments(test, n, q):
         anderson_rubin_test,
         wald_test,
         likelihood_ratio_test,
+        conditional_likelihood_ratio_test,
     ],
 )
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
@@ -175,7 +192,13 @@ def test_test_size(test, n, p, q, u):
 
 # The wald and likelihood ratio tests are not valid for weak instruments
 @pytest.mark.parametrize(
-    "test", [pulse_test, lagrange_multiplier_test, anderson_rubin_test]
+    "test",
+    [
+        pulse_test,
+        lagrange_multiplier_test,
+        anderson_rubin_test,
+        conditional_likelihood_ratio_test,
+    ],
 )
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (1000, 2, 5, 2)])
 def test_test_size_weak_ivs(test, n, p, q, u):
@@ -277,6 +300,7 @@ def test_subvector_round_trip(test, inverse_test, n, p, q, u, r, p_value):
         anderson_rubin_test,
         wald_test,
         likelihood_ratio_test,
+        conditional_likelihood_ratio_test,
     ],
 )
 @pytest.mark.parametrize("kappa", ["liml", "tsls"])
