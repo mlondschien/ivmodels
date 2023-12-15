@@ -482,25 +482,30 @@ def conditional_likelihood_ratio_test(Z, X, y, beta, W=None):  # noqa D
     if q == p:
         return anderson_rubin_test(Z, X, y, beta, W=W)
 
-    X_proj = proj(Z, X)
+    if W is None:
+        XW = X
+    else:
+        XW = np.concatenate([X, W], axis=1)
+
+    XW_proj = proj(Z, XW)
     y_proj = proj(Z, y)
 
     residuals = y - X @ beta
-    residuals_proj = y_proj - X_proj @ beta
+    residuals_proj = y_proj - XW_proj[:, :p] @ beta
     residuals_orth = residuals - residuals_proj
 
-    Sigma = (residuals_orth.T @ X) / (residuals_orth.T @ residuals_orth)
-    Xt = X - np.outer(residuals, Sigma)
-    Xt_proj = X_proj - np.outer(residuals_proj, Sigma)
-    Xt_orth = Xt - Xt_proj
-    mat_X = np.linalg.solve(Xt_orth.T @ Xt_orth, Xt_proj.T @ Xt_proj)
-    s_min = min(np.real(np.linalg.eigvals(mat_X)))
+    Sigma = (residuals_orth.T @ XW) / (residuals_orth.T @ residuals_orth)
+    XWt = XW - np.outer(residuals, Sigma)
+    XWt_proj = XW_proj - np.outer(residuals_proj, Sigma)
+    XWt_orth = XWt - XWt_proj
+    mat_XWt = np.linalg.solve(XWt_orth.T @ XWt_orth, XWt_proj.T @ XWt_proj)
+    s_min = min(np.real(np.linalg.eigvals(mat_XWt)))
 
     # TODO: This can be done with efficient rank-1 updates.
-    Xy = np.concatenate([X, y.reshape(-1, 1)], axis=1)
-    Xy_proj = np.concatenate([X_proj, y_proj.reshape(-1, 1)], axis=1)
-    mat_Xy = np.linalg.solve((Xy - Xy_proj).T @ Xy, Xy_proj.T @ Xy_proj)
-    ar_min = min(np.real(np.linalg.eigvals(mat_Xy)))
+    XWy = np.concatenate([XW, y.reshape(-1, 1)], axis=1)
+    XWy_proj = np.concatenate([XW_proj, y_proj.reshape(-1, 1)], axis=1)
+    mat_XWy = np.linalg.solve((XWy - XWy_proj).T @ XWy, XWy_proj.T @ XWy_proj)
+    ar_min = min(np.real(np.linalg.eigvals(mat_XWy)))
 
     if r == 0:
         ar = residuals_proj.T @ residuals_proj / (residuals_orth.T @ residuals_orth)
@@ -514,7 +519,7 @@ def conditional_likelihood_ratio_test(Z, X, y, beta, W=None):  # noqa D
     chi2r = scipy.stats.chi2.rvs(size=1000, df=r, random_state=1) if r > 0 else 0
     chi2q = scipy.stats.chi2.rvs(size=1000, df=q - p, random_state=2)
     D = np.sqrt((chi2q + chi2p + s_min) ** 2 - 4 * chi2q * s_min)
-    Q = (n - q) / 2 * (chi2q - chi2r + chi2p + s_min + D)
+    Q = 1 / 2 * (chi2q - chi2r + chi2p + s_min + D)
     p_value = np.mean(Q > statistic)
 
     return statistic, p_value
