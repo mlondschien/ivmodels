@@ -176,8 +176,20 @@ class KClassMixin:
         else:
             return 0.0
 
-    def _kappa_liml(self, X, y, Z=None, X_proj=None, y_proj=None):
-        """Compute the kappa parameter of the LIML estimator.
+    @staticmethod
+    def ar_min(X, y, Z=None, X_proj=None, y_proj=None):
+        """
+        Compute the minimum of the unnormalized Anderson Rubin statistic.
+
+        Computes
+
+        .. math::
+
+           &\\min_{\\beta} \\frac{(y - X \\beta)^T P_Z (y - X \\beta)}{(y - X \\beta)^T M_Z (y - X \\beta)} \\\\
+           &=\\lambda_\\mathrm{min}(((X y)^T M_Z (X y))^{-1} (X y)^T P_Z (X y)),
+
+        where :math:`P_Z` is the projection matrix onto the subspace spanned by
+        :math:`Z` and :math:`M_Z = Id - P_Z`.
 
         Either ``Z`` or both ``X_proj`` and ``y_proj`` must be specified.
 
@@ -196,10 +208,10 @@ class KClassMixin:
 
         Returns
         -------
-        kappa_liml: float
-            One plus the smallest eigenvalue of
-            ``((X y)^T M_Z (X y))^{-1} (X y)^T P_Z (X y)``, where
-            ``P_Z`` is the projection matrix onto the subspace spanned by Z.
+        ar_min: float
+            The smallest eigenvalue of
+            :math:`((X y)^T M_Z (X y))^{-1} (X y)^T P_Z (X y)`.,
+            where :math:`P_Z` is the projection matrix onto the subspace spanned by `Z`.
         """
         if X_proj is None:
             X_proj = proj(Z, X)
@@ -209,7 +221,7 @@ class KClassMixin:
         Xy = np.concatenate([X, y.reshape(-1, 1)], axis=1)
         Xy_proj = np.concatenate([X_proj, y_proj.reshape(-1, 1)], axis=1)
         W = np.linalg.solve((Xy - Xy_proj).T @ Xy, Xy.T @ Xy_proj)
-        return 1 + min(np.linalg.eigvals(W))
+        return min(np.real(np.linalg.eigvals(W)))
 
     def _solve_normal_equations(self, X, y, X_proj, y_proj, alpha=0):
         if alpha != 0:
@@ -262,7 +274,8 @@ class KClassMixin:
                 self.kappa_ = 0
             else:
                 self.fuller_alpha_ = self._fuller_alpha(self.kappa)
-                self.kappa_liml_ = self._kappa_liml(X, y, X_proj=X_proj, y_proj=y_proj)
+                self.ar_min_ = self.ar_min(X, y, X_proj=X_proj, y_proj=y_proj)
+                self.kappa_liml_ = 1 + self.ar_min_
                 self.kappa_ = self.kappa_liml_ - self.fuller_alpha_ / (n - q)
 
         else:
@@ -368,9 +381,13 @@ class KClass(KClassMixin, GeneralizedLinearRegressor):
     fuller_alpha_: float
         If ``kappa`` is one of ``{"fuller", "fuller(a)", "liml"}`` for some numeric
         value ``a``, the alpha parameter of the Fuller estimator.
+    ar_min_: float
+        If ``kappa`` is one of ``{"fuller", "fuller(a)", "liml"}`` for some numeric
+        value ``a``, the minimum of the unnormalized Anderson Rubin statistic.
     kappa_liml_: float
         If ``kappa`` is one of ``{"fuller", "fuller(a)", "liml"}`` for some numeric
-        value ``a``, the kappa parameter of the LIML estimator.
+        value ``a``, the kappa parameter of the LIML estimator, equal to
+        ``1 + ar_min_``.
 
     References
     ----------
