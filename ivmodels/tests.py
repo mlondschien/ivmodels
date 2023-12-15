@@ -303,12 +303,13 @@ def anderson_rubin_test(Z, X, y, beta, W=None):
         )
         dfn = q
     else:
-        ar = KClass(kappa="liml").fit(X=W, y=y - X @ beta, Z=Z).kappa_ - 1
+        ar = KClass.ar_min(X=W, y=y - X @ beta, Z=Z)
         dfn = q - W.shape[1]
 
-    p_value = 1 - scipy.stats.f.cdf(ar * (n - q) / dfn, dfn=dfn, dfd=n - q)
+    statistic = ar * (n - q)
+    p_value = 1 - scipy.stats.f.cdf(statistic / dfn, dfn=dfn, dfd=n - q)
 
-    return ar, p_value
+    return statistic, p_value
 
 
 def likelihood_ratio_test(Z, X, y, beta, W=None):
@@ -405,7 +406,7 @@ def likelihood_ratio_test(Z, X, y, beta, W=None):
     return statistic, p_value
 
 
-def lagrange_multiplier_test(Z, X, y, beta):
+def lagrange_multiplier_test(Z, X, y, beta, W=None):
     """
     Perform the Lagrange multiplier test for ``beta`` by :cite:t:`kleibergen2002pivotal`.
 
@@ -446,7 +447,11 @@ def lagrange_multiplier_test(Z, X, y, beta):
     ValueError:
         If the dimensions of the inputs are incorrect.
     """
-    Z, X, y, _, beta = _check_test_inputs(Z, X, y, beta=beta)
+    Z, X, y, W, beta = _check_test_inputs(Z, X, y, beta=beta, W=W)
+
+    if W is not None:
+        raise ValueError
+
     n, q = Z.shape
     p = X.shape[1]
 
@@ -463,6 +468,56 @@ def lagrange_multiplier_test(Z, X, y, beta):
     statistic *= n - q
 
     p_value = 1 - scipy.stats.chi2.cdf(statistic, df=p)
+
+    return statistic, p_value
+
+
+def conditional_likelihood_ratio_test(Z, X, y, beta, W=None):  # noqa D
+    Z, X, y, W, beta = _check_test_inputs(Z, X, y, beta=beta, W=W)
+
+    n, q = Z.shape
+    p = X.shape[1]
+
+    if q == p:
+        return anderson_rubin_test(Z, X, y, beta, W=W)
+
+    X_proj = proj(Z, X)
+    y_proj = proj(Z, y)
+
+    residuals = y - X @ beta
+    residuals_proj = y_proj - X_proj @ beta
+    residuals_orth = residuals - residuals_proj
+
+    Sigma = (residuals_orth.T @ X) / (residuals_orth.T @ residuals_orth)
+    Xt = X - np.outer(residuals, Sigma)
+    Xt_proj = X_proj - np.outer(residuals_proj, Sigma)
+    Xt_orth = Xt - Xt_proj
+    mat_X = (n - q) * np.linalg.solve(Xt_orth.T @ Xt_orth, Xt_proj.T @ Xt_proj)
+    s_min = min(np.real(np.linalg.eigvals(mat_X)))
+
+    # TODO: This can be done with efficient rank-1 updates.
+    Xy = np.concatenate([X, y.reshape(-1, 1)], axis=1)
+    Xy_proj = np.concatenate([X_proj, y_proj.reshape(-1, 1)], axis=1)
+    mat_Xy = np.linalg.solve((Xy - Xy_proj).T @ Xy, Xy_proj.T @ Xy_proj)
+    ar_min = (n - q) * min(np.real(np.linalg.eigvals(mat_Xy)))
+
+    ar = (
+        (n - q)
+        * residuals_proj.T
+        @ residuals_proj
+        / (residuals_orth.T @ residuals_orth)
+    )
+    statistic = ar - ar_min
+
+    chi2p = scipy.stats.chi2.rvs(size=1000, df=p, random_state=0)
+    chi2qmp = scipy.stats.chi2.rvs(size=1000, df=q - p, random_state=1)
+    Q = 0.5 * (
+        chi2qmp
+        + chi2p
+        + s_min
+        + np.sqrt((chi2qmp + chi2p + s_min) ** 2 - 4 * chi2qmp * s_min)
+    )
+    p_value = np.mean(Q > statistic)
 
     return statistic, p_value
 
