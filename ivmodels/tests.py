@@ -488,7 +488,8 @@ def conditional_likelihood_ratio_test(Z, X, y, beta, W=None):
     estimator of :math:`\\beta` (see :py:class:`ivmodels.kclass.KClass`), minimizing the
     Anderson-Rubin test statistic :math:`\\mathrm{AR}(\\beta)`
     (see :py:func:`ivmodels.tests.anderson_rubin_test`) at
-    :math:`\\mathrm{AR}(\\hat\\beta_\\mathrm{LIML}) = \\frac{n - q}{q} (\\hat\\kappa_\\mathrm{LIML} - 1)`.
+
+    .. math:: \\mathrm{AR}(\\hat\\beta_\\mathrm{LIML}) = \\frac{n - q}{q} \\lambda_\\mathrm{min}( (X \\ y)^T M_Z (X \\ y))^{-1} (X \\ y)^T P_Z (X \\ y) ).
 
     If ``W`` is not ``None``, the test statistic is defined as
 
@@ -519,7 +520,11 @@ def conditional_likelihood_ratio_test(Z, X, y, beta, W=None):
 
     where :math:`Q_p \\sim \\chi^2(p)`, :math:`Q_r \\sim \\chi^2(r)`, and
     :math:`Q_{q - p - r} \\sim \\chi^2(q - p - r)` are independent chi-squared random
-    variables. See :cite:p:`moreira2003conditional` for details.
+    variables. This is robust to weak instruments. If identification is strong, that is
+    :math:`s_\\mathrm{min}(\\beta_0) \\to \\infty`, the conditional likelihood ratio
+    test is equivalent to the likelihood ratio test
+    (see :py:func:`ivmodels.tests.likelihood_ratio_test`).
+    See :cite:p:`moreira2003conditional` for details.
 
     Parameters
     ----------
