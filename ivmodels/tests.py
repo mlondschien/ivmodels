@@ -515,7 +515,7 @@ def conditional_likelihood_ratio_test(Z, X, y, beta, W=None):
     :math:`\\mathrm{CLR(\\beta_0)}` is asymptotically bounded from above by a random
     variable that is distributed as
 
-    .. math:: \\frac{1}{2} \\left( Q_p + Q_{q - p - r} - Q_r - s_\\mathrm{min} + \\sqrt{ (Q_p + Q_r + Q_{q - p - r}^2 - 4 Q_{q - p - r} s_\\textrm{min} ) \\right),
+    .. math:: \\frac{1}{2} ( Q_p + Q_{q - p - r} - Q_r - s_\\mathrm{min} + \\sqrt{ (Q_p + Q_r + Q_{q - p - r}^2 - 4 Q_{q - p - r} s_\\textrm{min} ) ),
 
     where :math:`Q_p \\sim \\chi^2(p)`, :math:`Q_r \\sim \\chi^2(r)`, and
     :math:`Q_{q - p - r} \\sim \\chi^2(q - p - r)` are independent chi-squared random
