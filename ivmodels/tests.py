@@ -472,7 +472,76 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None):
     return statistic, p_value
 
 
-def conditional_likelihood_ratio_test(Z, X, y, beta, W=None):  # noqa D
+def conditional_likelihood_ratio_test(Z, X, y, beta, W=None):
+    """
+    Perform the conditional likelihood ratio test for ``beta``.
+
+    If ``W`` is ``None``, the test statistic is defined as
+
+    .. math::
+
+       \\mathrm{CLR(\\beta)} &:= (n - q) \\frac{ \\| P_Z (y - X \\beta) \\|_2^2}{ \\| M_Z (y - X \\beta) \\|_2^2} - (n - q) \\frac{ \\| P_Z (y - X \\hat\\beta_\\mathrm{LIML}) \\|_2^2 }{ \\| M_Z (y - X \\hat\\beta_\\mathrm{LIML}) \\|_2^2 } \\\\
+       &= q \\ \\mathrm{AR}(\\beta)) - q \\ \\min_\\beta \\mathrm{AR}(\\beta),
+
+    where :math:`P_Z` is the projection matrix onto the column space of :math:`Z`,
+    :math:`M_Z = \\mathrm{Id} - P_Z`, and :math:`\\hat\\beta_\\mathrm{LIML}` is the LIML
+    estimator of :math:`\\beta` (see :py:class:`ivmodels.kclass.KClass`), minimizing the
+    Anderson-Rubin test statistic :math:`\\mathrm{AR}(\\beta)`
+    (see :py:func:`ivmodels.tests.anderson_rubin_test`) at
+    :math:`\\mathrm{AR}(\\hat\\beta_\\mathrm{LIML}) = \\frac{n - q}{q} (\\hat\\kappa_\\mathrm{LIML} - 1)`.
+
+    If ``W`` is not ``None``, the test statistic is defined as
+
+    .. math::
+       \\mathrm{CLR(\\beta)} &:= (n - q) \\min_\\gamma \\frac{ \\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{ \\| M_Z (y - X \\beta - W \\gamma) \\|_2^2} - (n - q) \\min_{\\beta, \\gamma} \\frac{ \\| P_Z (y - X \\beta - W \\gamma) \\|_2^2 }{ \\| M_Z (y - X \\beta - W \\gamma) \\|_2^2 } \\\\
+       &= (n - q) \\frac{ \\| P_Z (y - X \\beta - W \\hat\\gamma_\\textrm{liml}) \\|_2^2}{ \\| M_Z (y - X \\beta - W \\hat\\gamma_\\textrm{liml}) \\|_2^2} - (n - q) \\frac{ \\| P_Z (y - (X \\ W) \\hat\\delta_\\mathrm{liml}) \\|_2^2 }{ \\| M_Z (y - (X \\ W) \\hat\\delta_\\mathrm{liml}) \\|_2^2 },
+
+    where :math:`\\hat\\gamma_\\mathrm{LIML}` is the LIML estimator of :math:`\\gamma`
+    (see :py:class:`ivmodels.kclass.KClass`) using instruments :math:`Z`, endogenous
+    covariates :math:`W`, and outcomes :math:`y - X \\beta` and
+    :math:`\\hat\\delta_\\mathrm{LIML}` is the LIML estimator of
+    :math:`(\\beta, \\gamma)` using instruments :math:`Z`, endogenous covariates
+    :math:`(X \\ W)`, and outcomes :math:`y`.
+
+    Let :math:`\\tilde X(\\beta) := X - (y - X \\beta) \\cdot \\frac{(y - X \\beta)^T M_Z X}{(y - X \\beta)^T M_Z (y - X \\beta)}`
+    and :math:`s_\\textrm{min}(\\beta) := (n - q) \\cdot \\lambda_\\textrm{min}((\\tilde X(\\beta)^T M_Z \\tilde X(\\beta))^{-1} \\tilde X(\\beta)^T P_Z \\tilde X(\\beta))`.
+    Then, under :math:`H_0: \\beta = \\beta_0`, conditionally on :math:`s_\\textrm{\\beta}`,
+    the test statistic :math:`\\mathrm{CLR(\\beta)}` is asymptotically bounded from
+    above by a random variable that is distributed as
+
+    .. math::
+
+       \\frac{1}{2} \\left( Q_p + Q_{q - p - r} - Q_r - s_\\textrm{min} + \\sqrt{ (Q_p + Q_r + Q_{q - p - r}^2 - 4 Q_{q - p - r} s_\\textrm{min} ) \\right),
+
+    where :math:`Q_p \\sim \\chi^2(p)`, :math:`Q_r \\sim \\chi^2(r)`, and
+    :math:`Q_{q - p - r} \\sim \\chi^2(q - p - r)` are independent chi-squared random
+    variables. See :cite:p:`moreira2003conditional` for details.
+
+    Parameters
+    ----------
+    Z: np.ndarray of dimension (n, q)
+        Instruments.
+    X: np.ndarray of dimension (n, p)
+        Regressors.
+    y: np.ndarray of dimension (n,)
+        Outcomes.
+    beta: np.ndarray of dimension (p,)
+        Coefficients to test.
+    W: np.ndarray of dimension (n, r) or None
+        Endogenous regressors not of interest.
+
+    Returns
+    -------
+    statistic: float
+        The test statistic :math:`CLR`.
+    p_value: float
+        The p-value of the test, computed using a Monte Carlo simulation.
+
+    Raises
+    ------
+    ValueError:
+        If the dimensions of the inputs are incorrect.
+    """
     Z, X, y, W, beta = _check_test_inputs(Z, X, y, beta=beta, W=W)
 
     n, q = Z.shape
