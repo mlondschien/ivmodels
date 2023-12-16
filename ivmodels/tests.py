@@ -303,12 +303,13 @@ def anderson_rubin_test(Z, X, y, beta, W=None):
         )
         dfn = q
     else:
-        ar = KClass(kappa="liml").fit(X=W, y=y - X @ beta, Z=Z).kappa_ - 1
+        ar = KClass.ar_min(X=W, y=y - X @ beta, Z=Z)
         dfn = q - W.shape[1]
 
-    p_value = 1 - scipy.stats.f.cdf(ar * (n - q) / dfn, dfn=dfn, dfd=n - q)
+    statistic = ar * (n - q)
+    p_value = 1 - scipy.stats.f.cdf(statistic / dfn, dfn=dfn, dfd=n - q)
 
-    return ar, p_value
+    return statistic, p_value
 
 
 def likelihood_ratio_test(Z, X, y, beta, W=None):
@@ -405,7 +406,7 @@ def likelihood_ratio_test(Z, X, y, beta, W=None):
     return statistic, p_value
 
 
-def lagrange_multiplier_test(Z, X, y, beta):
+def lagrange_multiplier_test(Z, X, y, beta, W=None):
     """
     Perform the Lagrange multiplier test for ``beta`` by :cite:t:`kleibergen2002pivotal`.
 
@@ -446,7 +447,11 @@ def lagrange_multiplier_test(Z, X, y, beta):
     ValueError:
         If the dimensions of the inputs are incorrect.
     """
-    Z, X, y, _, beta = _check_test_inputs(Z, X, y, beta=beta)
+    Z, X, y, W, beta = _check_test_inputs(Z, X, y, beta=beta, W=W)
+
+    if W is not None:
+        raise ValueError
+
     n, q = Z.shape
     p = X.shape[1]
 
@@ -463,6 +468,135 @@ def lagrange_multiplier_test(Z, X, y, beta):
     statistic *= n - q
 
     p_value = 1 - scipy.stats.chi2.cdf(statistic, df=p)
+
+    return statistic, p_value
+
+
+def conditional_likelihood_ratio_test(Z, X, y, beta, W=None):
+    """
+    Perform the conditional likelihood ratio test for ``beta``.
+
+    If ``W`` is ``None``, the test statistic is defined as
+
+    .. math::
+
+       \\mathrm{CLR(\\beta)} &:= (n - q) \\frac{ \\| P_Z (y - X \\beta) \\|_2^2}{ \\| M_Z (y - X \\beta) \\|_2^2} - (n - q) \\frac{ \\| P_Z (y - X \\hat\\beta_\\mathrm{LIML}) \\|_2^2 }{ \\| M_Z (y - X \\hat\\beta_\\mathrm{LIML}) \\|_2^2 } \\\\
+       &= q \\ \\mathrm{AR}(\\beta) - q \\ \\min_\\beta \\mathrm{AR}(\\beta),
+
+    where :math:`P_Z` is the projection matrix onto the column space of :math:`Z`,
+    :math:`M_Z = \\mathrm{Id} - P_Z`, and :math:`\\hat\\beta_\\mathrm{LIML}` is the LIML
+    estimator of :math:`\\beta` (see :py:class:`ivmodels.kclass.KClass`), minimizing the
+    Anderson-Rubin test statistic :math:`\\mathrm{AR}(\\beta)`
+    (see :py:func:`ivmodels.tests.anderson_rubin_test`) at
+
+    .. math:: \\mathrm{AR}(\\hat\\beta_\\mathrm{LIML}) = \\frac{n - q}{q} \\lambda_\\mathrm{min}( (X \\ y)^T M_Z (X \\ y))^{-1} (X \\ y)^T P_Z (X \\ y) ).
+
+    If ``W`` is not ``None``, the test statistic is defined as
+
+    .. math::
+       \\mathrm{CLR(\\beta)} &:= (n - q) \\min_\\gamma \\frac{ \\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{ \\| M_Z (y - X \\beta - W \\gamma) \\|_2^2} - (n - q) \\min_{\\beta, \\gamma} \\frac{ \\| P_Z (y - X \\beta - W \\gamma) \\|_2^2 }{ \\| M_Z (y - X \\beta - W \\gamma) \\|_2^2 } \\\\
+       &= (n - q) \\frac{ \\| P_Z (y - X \\beta - W \\hat\\gamma_\\textrm{liml}) \\|_2^2}{ \\| M_Z (y - X \\beta - W \\hat\\gamma_\\textrm{liml}) \\|_2^2} - (n - q) \\frac{ \\| P_Z (y - (X \\ W) \\hat\\delta_\\mathrm{liml}) \\|_2^2 }{ \\| M_Z (y - (X \\ W) \\hat\\delta_\\mathrm{liml}) \\|_2^2 },
+
+    where :math:`\\hat\\gamma_\\mathrm{LIML}` is the LIML estimator of :math:`\\gamma`
+    (see :py:class:`ivmodels.kclass.KClass`) using instruments :math:`Z`, endogenous
+    covariates :math:`W`, and outcomes :math:`y - X \\beta` and
+    :math:`\\hat\\delta_\\mathrm{LIML}` is the LIML estimator of
+    :math:`(\\beta, \\gamma)` using instruments :math:`Z`, endogenous covariates
+    :math:`(X \\ W)`, and outcomes :math:`y`.
+
+    Let
+
+    .. math:: \\tilde X(\\beta) := X - (y - X \\beta) \\cdot \\frac{(y - X \\beta)^T M_Z X}{(y - X \\beta)^T M_Z (y - X \\beta)}
+
+    and
+
+    .. math:: s_\\mathrm{min}(\\beta) := (n - q) \\cdot \\lambda_\\mathrm{min}((\\tilde X(\\beta)^T M_Z \\tilde X(\\beta))^{-1} \\tilde X(\\beta)^T P_Z \\tilde X(\\beta)).
+
+    Then, conditionally on :math:`s_\\mathrm{min}(\\beta_0)`, the statistic
+    :math:`\\mathrm{CLR(\\beta_0)}` is asymptotically bounded from above by a random
+    variable that is distributed as
+
+    .. math:: \\frac{1}{2} \\left( Q_p + Q_{q - p - r} - Q_r - s_\\mathrm{min} + \\sqrt{ (Q_p + Q_r + Q_{q - p - r})^2 - 4 Q_{q - p - r} s_\\textrm{min} } \\right),
+
+    where :math:`Q_p \\sim \\chi^2(p)`, :math:`Q_r \\sim \\chi^2(r)`, and
+    :math:`Q_{q - p - r} \\sim \\chi^2(q - p - r)` are independent chi-squared random
+    variables. This is robust to weak instruments. If identification is strong, that is
+    :math:`s_\\mathrm{min}(\\beta_0) \\to \\infty`, the conditional likelihood ratio
+    test is equivalent to the likelihood ratio test
+    (see :py:func:`ivmodels.tests.likelihood_ratio_test`).
+    See :cite:p:`moreira2003conditional` for details.
+
+    Parameters
+    ----------
+    Z: np.ndarray of dimension (n, q)
+        Instruments.
+    X: np.ndarray of dimension (n, p)
+        Regressors.
+    y: np.ndarray of dimension (n,)
+        Outcomes.
+    beta: np.ndarray of dimension (p,)
+        Coefficients to test.
+    W: np.ndarray of dimension (n, r) or None
+        Endogenous regressors not of interest.
+
+    Returns
+    -------
+    statistic: float
+        The test statistic :math:`CLR`.
+    p_value: float
+        The p-value of the test, computed using a Monte Carlo simulation.
+
+    Raises
+    ------
+    ValueError:
+        If the dimensions of the inputs are incorrect.
+    """
+    Z, X, y, W, beta = _check_test_inputs(Z, X, y, beta=beta, W=W)
+
+    n, q = Z.shape
+    p = X.shape[1]
+    r = W.shape[1] if W is not None else 0
+
+    if W is None:
+        XW = X
+    else:
+        XW = np.concatenate([X, W], axis=1)
+
+    XW_proj = proj(Z, XW)
+    y_proj = proj(Z, y)
+
+    residuals = y - X @ beta
+    residuals_proj = y_proj - XW_proj[:, :p] @ beta
+    residuals_orth = residuals - residuals_proj
+
+    Sigma = (residuals_orth.T @ XW) / (residuals_orth.T @ residuals_orth)
+    XWt = XW - np.outer(residuals, Sigma)
+    XWt_proj = XW_proj - np.outer(residuals_proj, Sigma)
+    XWt_orth = XWt - XWt_proj
+    mat_XWt = np.linalg.solve(XWt_orth.T @ XWt_orth, XWt_proj.T @ XWt_proj)
+    s_min = min(np.real(np.linalg.eigvals(mat_XWt))) * (n - q)
+
+    # TODO: This can be done with efficient rank-1 updates.
+    ar_min = KClass.ar_min(X=XW, y=y, Z=Z)
+
+    if r == 0:
+        ar = residuals_proj.T @ residuals_proj / (residuals_orth.T @ residuals_orth)
+
+    else:
+        ar = KClass.ar_min(X=W, y=y - X @ beta, Z=Z)
+
+    statistic = (n - q) * (ar - ar_min)
+
+    chi2p = scipy.stats.chi2.rvs(size=1000, df=p, random_state=0)
+    chi2r = scipy.stats.chi2.rvs(size=1000, df=r, random_state=1) if r > 0 else 0
+    chi2q = (
+        scipy.stats.chi2.rvs(size=1000, df=q - p - r, random_state=2)
+        if q - p - r > 0
+        else 0
+    )
+    D = np.sqrt((chi2q + chi2p + chi2r + s_min) ** 2 - 4 * (chi2q) * s_min)
+    Q = 1 / 2 * (chi2q + chi2p - chi2r - s_min + D)
+    p_value = np.mean(Q > statistic)
 
     return statistic, p_value
 
@@ -514,7 +648,7 @@ def inverse_anderson_rubin_test(Z, X, y, alpha=0.05, W=None):
     The quadric is defined as
 
     .. math::
-        AR(\\beta) = \\min_\\gamma \\frac{n - q}{q - r} \\frac{\\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2} \\leq F_(q - r, n-q)}(1 - \\alpha).
+        AR(\\beta) = \\min_\\gamma \\frac{n - q}{q - r} \\frac{\\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2} \\leq F_{q - r, n-q}(1 - \\alpha).
 
 
     Parameters

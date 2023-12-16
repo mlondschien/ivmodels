@@ -26,7 +26,7 @@ def test__fuller_alpha(kappa, expected):
 
 
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
-def test__kappa_liml_same_with_shortcut(n, p, q, u):
+def test_ar_min_same_with_shortcut(n, p, q, u):
     Z, X, y = simulate_gaussian_iv(n, p, q, u)
 
     X = X - X.mean(axis=0)
@@ -35,26 +35,23 @@ def test__kappa_liml_same_with_shortcut(n, p, q, u):
     X_proj = proj(Z, X)
     y_proj = proj(Z, y)
 
-    k_class = KClass(kappa="liml")
-
-    lbda = k_class.fit(X, y, Z).kappa_liml_
-    assert np.allclose(lbda, k_class._kappa_liml(X, y, X_proj=X_proj, y_proj=y_proj))
-    assert np.allclose(lbda, k_class._kappa_liml(X, y, Z=Z, X_proj=X_proj))
-    assert np.allclose(lbda, k_class._kappa_liml(X, y, Z=Z, y_proj=y_proj))
-    assert np.allclose(lbda, k_class._kappa_liml(X, y, Z=Z))
+    ar_min = KClass.ar_min(X, y, Z)
+    assert np.allclose(ar_min, KClass.ar_min(X, y, X_proj=X_proj, y_proj=y_proj))
+    assert np.allclose(ar_min, KClass.ar_min(X, y, Z=Z, X_proj=X_proj))
+    assert np.allclose(ar_min, KClass.ar_min(X, y, Z=Z, y_proj=y_proj))
+    assert np.allclose(ar_min, KClass.ar_min(X, y, Z=Z))
 
 
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
-def test__kappa_liml_positive(n, p, q, u):
+def test_ar_min_positive(n, p, q, u):
     Z, X, y = simulate_gaussian_iv(n, p, q, u)
 
-    k_class = KClass(kappa="liml")
-    k_class.fit(X, y.flatten(), Z)
+    ar_min = KClass.ar_min(X, y, Z)
 
     if Z.shape[1] > X.shape[1]:
-        assert k_class.kappa_liml_ > 1
+        assert ar_min > 0
     else:
-        assert np.allclose(k_class.kappa_liml_, 1)
+        assert np.allclose(ar_min, 0)
 
 
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
@@ -108,7 +105,7 @@ def test_liml_equal_to_tsls_in_just_identified_setting(n, p, q, u):
 
 
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 4, 4, 2)])
-def test_anderson_rubin_at_liml_is_equal_to_kappa_liml(n, p, q, u):
+def test_anderson_rubin_at_liml_is_equal_to_ar_min(n, p, q, u):
     Z, X, y = simulate_gaussian_iv(n, p, q, u)
     y = y.flatten()
 
@@ -117,7 +114,7 @@ def test_anderson_rubin_at_liml_is_equal_to_kappa_liml(n, p, q, u):
 
     assert np.allclose(
         anderson_rubin_test(Z, X, y, liml.coef_)[0],
-        (n - q) / q * (liml.kappa_liml_ - 1),
+        (n - q) / q * liml.ar_min_,
         atol=1e-8,
     )
 
