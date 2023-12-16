@@ -479,9 +479,6 @@ def conditional_likelihood_ratio_test(Z, X, y, beta, W=None):  # noqa D
     p = X.shape[1]
     r = W.shape[1] if W is not None else 0
 
-    if q == p:
-        return anderson_rubin_test(Z, X, y, beta, W=W)
-
     if W is None:
         XW = X
     else:
@@ -499,13 +496,10 @@ def conditional_likelihood_ratio_test(Z, X, y, beta, W=None):  # noqa D
     XWt_proj = XW_proj - np.outer(residuals_proj, Sigma)
     XWt_orth = XWt - XWt_proj
     mat_XWt = np.linalg.solve(XWt_orth.T @ XWt_orth, XWt_proj.T @ XWt_proj)
-    s_min = min(np.real(np.linalg.eigvals(mat_XWt)))
+    s_min = min(np.real(np.linalg.eigvals(mat_XWt))) * (n - q)
 
     # TODO: This can be done with efficient rank-1 updates.
-    XWy = np.concatenate([XW, y.reshape(-1, 1)], axis=1)
-    XWy_proj = np.concatenate([XW_proj, y_proj.reshape(-1, 1)], axis=1)
-    mat_XWy = np.linalg.solve((XWy - XWy_proj).T @ XWy, XWy_proj.T @ XWy_proj)
-    ar_min = min(np.real(np.linalg.eigvals(mat_XWy)))
+    ar_min = KClass.ar_min(X=XW, y=y, Z=Z)
 
     if r == 0:
         ar = residuals_proj.T @ residuals_proj / (residuals_orth.T @ residuals_orth)
@@ -517,9 +511,13 @@ def conditional_likelihood_ratio_test(Z, X, y, beta, W=None):  # noqa D
 
     chi2p = scipy.stats.chi2.rvs(size=1000, df=p, random_state=0)
     chi2r = scipy.stats.chi2.rvs(size=1000, df=r, random_state=1) if r > 0 else 0
-    chi2q = scipy.stats.chi2.rvs(size=1000, df=q - p, random_state=2)
-    D = np.sqrt((chi2q + chi2p + s_min) ** 2 - 4 * chi2q * s_min)
-    Q = 1 / 2 * (chi2q - chi2r + chi2p + s_min + D)
+    chi2q = (
+        scipy.stats.chi2.rvs(size=1000, df=q - p - r, random_state=2)
+        if q - p - r > 0
+        else 0
+    )
+    D = np.sqrt((chi2q + chi2p + chi2r + s_min) ** 2 - 4 * (chi2q) * s_min)
+    Q = 1 / 2 * (chi2q + chi2p - chi2r - s_min + D)
     p_value = np.mean(Q > statistic)
 
     return statistic, p_value

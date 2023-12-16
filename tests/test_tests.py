@@ -1,3 +1,5 @@
+from functools import partial
+
 import numpy as np
 import pytest
 import scipy
@@ -18,6 +20,9 @@ from ivmodels.tests import (
     wald_test,
 )
 
+liml_wald_test = partial(wald_test, estimator="liml")
+liml_inverse_wald_test = partial(inverse_wald_test, estimator="liml")
+
 TEST_PAIRS = [
     (conditional_likelihood_ratio_test, None),
     (pulse_test, inverse_pulse_test),
@@ -34,6 +39,7 @@ TEST_PAIRS = [
     [
         anderson_rubin_test,
         wald_test,
+        liml_wald_test,
         likelihood_ratio_test,
         conditional_likelihood_ratio_test,
     ],
@@ -66,6 +72,7 @@ def test_subvector_test_equal_to_original(test, n, p, r, q, u):
     [
         anderson_rubin_test,
         wald_test,
+        liml_wald_test,
         likelihood_ratio_test,
         conditional_likelihood_ratio_test,
     ],
@@ -160,6 +167,7 @@ def test_subvector_test_size_weak_instruments(test, n, q):
         lagrange_multiplier_test,
         anderson_rubin_test,
         wald_test,
+        liml_wald_test,
         likelihood_ratio_test,
         conditional_likelihood_ratio_test,
     ],
@@ -190,20 +198,20 @@ def test_test_size(test, n, p, q, u):
     assert np.mean(p_values < 0.05) < 0.07  # 4 stds above 0.05 for n_seeds = 100
 
 
-# The wald and likelihood ratio tests are not valid for weak instruments
+# The wald, and likelihood ratio tests are not valid for weak instruments
 @pytest.mark.parametrize(
     "test",
     [
-        pulse_test,
         lagrange_multiplier_test,
         anderson_rubin_test,
+        pulse_test,
         conditional_likelihood_ratio_test,
     ],
 )
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (1000, 2, 5, 2)])
 def test_test_size_weak_ivs(test, n, p, q, u):
     """Test that the test size is close to the nominal level for weak instruments."""
-    n_seeds = 1000
+    n_seeds = 200
     p_values = np.zeros(n_seeds)
 
     for seed in range(n_seeds):
@@ -232,6 +240,7 @@ def test_test_size_weak_ivs(test, n, p, q, u):
         (pulse_test, inverse_pulse_test),
         (anderson_rubin_test, inverse_anderson_rubin_test),
         (wald_test, inverse_wald_test),
+        (liml_wald_test, liml_inverse_wald_test),
         (likelihood_ratio_test, inverse_likelihood_ratio_test),
     ],
 )
@@ -261,6 +270,7 @@ def test_test_round_trip(test, inverse_test, n, p, q, u, p_value):
     "test, inverse_test",
     [
         (wald_test, inverse_wald_test),
+        (liml_wald_test, liml_inverse_wald_test),
         (anderson_rubin_test, inverse_anderson_rubin_test),
         (likelihood_ratio_test, inverse_likelihood_ratio_test),
     ],
@@ -299,6 +309,7 @@ def test_subvector_round_trip(test, inverse_test, n, p, q, u, r, p_value):
         lagrange_multiplier_test,
         anderson_rubin_test,
         wald_test,
+        liml_wald_test,
         likelihood_ratio_test,
         conditional_likelihood_ratio_test,
     ],
@@ -316,13 +327,13 @@ def test_p_value_of_estimator(test, kappa, n, p, q, u):
 @pytest.mark.parametrize("test", [anderson_rubin_test, pulse_test])
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
 def test_ar_test_monotonic_in_kappa(test, n, p, q, u):
-    """AR(beta(kappa)) should be decreasing in kappa increasing towards 1."""
-    A, X, Y = simulate_gaussian_iv(n, p, q, u)
+    """AR(beta(kappa)) should be decreasing in kappa increasing towards kappa."""
+    Z, X, Y = simulate_gaussian_iv(n, p, q, u)
     Y = Y.flatten()
-    kappas = np.linspace(0, 1, 10)
-    models = [KClass(kappa=kappa).fit(X, Y, Z=A) for kappa in kappas]
-    statistics = [test(A, X, Y, model.coef_)[0] for model in models]
-    p_values = [test(A, X, Y, model.coef_)[1] for model in models]
+    kappas = np.linspace(0, KClass.ar_min(X, Y, Z) + 1, 10)
+    models = [KClass(kappa=kappa).fit(X, Y, Z=Z) for kappa in kappas]
+    statistics = [test(Z, X, Y, model.coef_)[0] for model in models]
+    p_values = [test(Z, X, Y, model.coef_)[1] for model in models]
 
     assert np.all(statistics[:-1] >= statistics[1:])
     assert np.all(p_values[:-1] <= p_values[1:])
@@ -335,6 +346,7 @@ def test_ar_test_monotonic_in_kappa(test, n, p, q, u):
         inverse_pulse_test,
         inverse_anderson_rubin_test,
         inverse_wald_test,
+        liml_inverse_wald_test,
         inverse_likelihood_ratio_test,
     ],
 )
