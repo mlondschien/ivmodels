@@ -648,7 +648,7 @@ def inverse_anderson_rubin_test(Z, X, y, alpha=0.05, W=None):
     The quadric is defined as
 
     .. math::
-        AR(\\beta) = \\min_\\gamma \\frac{n - q}{q - r} \\frac{\\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2} \\leq F_(q - r, n-q)}(1 - \\alpha).
+        AR(\\beta) = \\min_\\gamma \\frac{n - q}{q - r} \\frac{\\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2} \\leq F_{q - r, n-q}(1 - \\alpha).
 
 
     Parameters
