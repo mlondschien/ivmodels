@@ -795,9 +795,9 @@ def inverse_anderson_rubin_test(Z, X, y, alpha=0.05, W=None):
     Return the quadric for to the inverse Anderson-Rubin test's acceptance region.
 
     The returned quadric satisfies ``quadric(x) <= 0`` if and only if
-    ``anderson_rubin_test(Z, X, y, W=W)[1] > alpha``. It is thus a confidence region
-    for the causal parameter corresponding to the endogenous regressors of interest
-    ``X``.
+    ``anderson_rubin_test(Z, X, y, beta=x, W=W)[1] > alpha``. It is thus a confidence
+    region for the causal parameter corresponding to the endogenous regressors of
+    interest ``X``.
 
     If ``W`` is ``None``, let :math:`q := \\frac{q}{n-q}F_{F(q, n-q)}(1 - \\alpha)`, where
     :math:`F_{F(q, n-q)}` is the cumulative distribution function of the
