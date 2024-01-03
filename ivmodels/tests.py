@@ -619,10 +619,11 @@ def conditional_likelihood_ratio_test(Z, X, y, beta, W=None):
     variables. This is robust to weak instruments. If identification is strong, that is
     :math:`s_\\mathrm{min}(\\beta_0) \\to \\infty`, the conditional likelihood ratio
     test is equivalent to the likelihood ratio test
-    (see :py:func:`ivmodels.tests.likelihood_ratio_test`).
+    (see :py:func:`ivmodels.tests.likelihood_ratio_test`), with :math:`\\chi^2(p)`
     If identification is weak, that is :math:`s_\\mathrm{min}(\\beta_0) \\to 0`, the
     conditional likelihood ratio test is equivalent to the Anderson-Rubin test
-    (see :py:func:`ivmodels.tests.anderson_rubin_test`).
+    (see :py:func:`ivmodels.tests.anderson_rubin_test`) with :math:`\\chi^2(q)` limiting
+    distribution.
     See :cite:p:`moreira2003conditional` for details.
 
     If ``W`` is not ``None``, the test statistic is defined as
@@ -667,7 +668,11 @@ def conditional_likelihood_ratio_test(Z, X, y, beta, W=None):
     variables. This is robust to weak instruments. If identification is strong, that is
     :math:`s_\\mathrm{min}(\\beta_0) \\to \\infty`, the conditional likelihood ratio
     test is equivalent to the likelihood ratio test
-    (see :py:func:`ivmodels.tests.likelihood_ratio_test`).
+    (see :py:func:`ivmodels.tests.likelihood_ratio_test`), with :math:`\\chi^2(p)`
+    If identification is weak, that is :math:`s_\\mathrm{min}(\\beta_0) \\to 0`, the
+    conditional likelihood ratio test is equivalent to the Anderson-Rubin test
+    (see :py:func:`ivmodels.tests.anderson_rubin_test`) with :math:`\\chi^2(q - r)`
+    limiting distribution.
     See :cite:p:`kleibergen2021efficient` for details.
 
     Parameters
