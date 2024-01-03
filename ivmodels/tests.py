@@ -247,8 +247,10 @@ def anderson_rubin_test(Z, X, y, beta, W=None):
 
     If ``W`` is not ``None``, the test statistic is
 
-    .. math:: AR &:= \\min_\\gamma \\frac{n - q}{q - r} \\frac{\\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2} \\\\
-    &= \frac{n - q}{q - r} \\frac{\\| P_Z (y - X \\beta - W \\hat\\gamma_\\mathrm{LIML}) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\hat\\gamma_\\mathrm{LIML}) \\|_2^2},
+    .. math::
+
+       AR &:= \\min_\\gamma \\frac{n - q}{q - r} \\frac{\\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2} \\\\
+       &= \frac{n - q}{q - r} \\frac{\\| P_Z (y - X \\beta - W \\hat\\gamma_\\mathrm{LIML}) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\hat\\gamma_\\mathrm{LIML}) \\|_2^2},
 
     where :math:`\\hat\\gamma_\\mathrm{LIML}` is the LIML estimate using instruments
     :math:`Z`, covariates :math:`W` and outcomes :math:`y - X \\beta`.
