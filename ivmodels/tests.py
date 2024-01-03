@@ -406,6 +406,66 @@ def likelihood_ratio_test(Z, X, y, beta, W=None):
     return statistic, p_value
 
 
+def _LM(X, X_proj, Y, Y_proj, W, W_proj, beta):
+    """
+    Compute the Lagrange multiplier test statistic and its derivative at ``beta``.
+
+    Parameters
+    ----------
+    X: np.ndarray of dimension (n, p)
+        Regressors.
+    X_proj: np.ndarray of dimension (n, p)
+        Projection of ``X`` onto the column space of ``Z``.
+    Y: np.ndarray of dimension (n,)
+        Outcomes.
+    Y_proj: np.ndarray of dimension (n,)
+        Projection of ``Y`` onto the column space of ``Z``.
+    W: np.ndarray of dimension (n, r)
+        Regressors.
+    W_proj: np.ndarray of dimension (n, r)
+        Projection of ``W`` onto the column space of ``Z``.
+    beta: np.ndarray of dimension (p,)
+        Coefficients to test.
+
+    Returns
+    -------
+    lm: float
+        The Lagrange multiplier test statistic.
+    d_lm: float
+        The derivative of the Lagrange multiplier test statistic at ``beta``.
+    """
+    n = X.shape[0]
+
+    residuals = Y - X @ beta
+    residuals_proj = Y_proj - X_proj @ beta
+    residuals_orth = residuals - residuals_proj
+
+    sigma_hat = residuals_orth.T @ residuals_orth
+
+    XW_proj = np.hstack((X_proj, W_proj))
+    XW = np.hstack((X, W))
+    Sigma = residuals_orth.T @ XW / sigma_hat
+    St = XW - np.outer(residuals, Sigma)
+    St_proj = XW_proj - np.outer(residuals_proj, Sigma)
+
+    solved = np.linalg.solve(St_proj.T @ St_proj, St_proj.T @ residuals_proj)
+    residuals_proj_St = St_proj @ solved
+
+    lm = residuals_proj_St.T @ residuals_proj_St / sigma_hat
+
+    first_term = -2 * residuals_proj.T @ St_proj[:, : X.shape[1]] * sigma_hat
+    second_term = (
+        2
+        * residuals_proj.T
+        @ (residuals_proj - residuals_proj_St)
+        * (X - X_proj).T
+        @ St
+        @ solved
+    )
+    d_lm = (first_term + second_term) / (sigma_hat**2)
+    return (n * lm, n * d_lm)
+
+
 def lagrange_multiplier_test(Z, X, y, beta, W=None):
     """
     Perform the Lagrange multiplier test for ``beta`` by :cite:t:`kleibergen2002pivotal`.
@@ -449,25 +509,64 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None):
     """
     Z, X, y, W, beta = _check_test_inputs(Z, X, y, beta=beta, W=W)
 
-    if W is not None:
-        raise ValueError
-
     n, q = Z.shape
     p = X.shape[1]
 
-    residuals = (y - X @ beta).reshape(-1, 1)
-    proj_residuals = proj(Z, residuals)
-    orth_residuals = residuals - proj_residuals
+    if W is not None and W.shape[1] > 0:
+        gamma_hat = KClass(kappa="liml").fit(X=W, y=y - X @ beta, Z=Z).coef_
+        res = scipy.optimize.minimize(
+            lambda gamma: _LM(
+                X=W,
+                X_proj=proj(Z, W),
+                Y=y - X @ beta,
+                Y_proj=proj(Z, y - X @ beta),
+                W=X,
+                W_proj=proj(Z, X),
+                beta=gamma,
+            ),
+            jac=True,
+            x0=gamma_hat,
+        )
 
-    # X - (y - X beta) * (y - X beta)^T M_Z X / (y - X beta)^T M_Z (y - X beta)
-    X_tilde = X - residuals @ (orth_residuals.T @ X) / (residuals.T @ orth_residuals)
-    proj_X_tilde = proj(Z, X_tilde)
-    X_tilde_proj_residuals = proj(proj_X_tilde, residuals)
-    # (y - X beta) P_{P_Z X_tilde} (y - X beta) / (y - X_beta) M_Z (y - X beta)
-    statistic = np.square(X_tilde_proj_residuals).sum() / (residuals.T @ orth_residuals)
-    statistic *= n - q
+        res2 = scipy.optimize.minimize(
+            lambda gamma: _LM(
+                X=W,
+                X_proj=proj(Z, W),
+                Y=y - X @ beta,
+                Y_proj=proj(Z, y - X @ beta),
+                W=X,
+                W_proj=proj(Z, X),
+                beta=gamma,
+            ),
+            jac=True,
+            x0=np.zeros_like(gamma_hat),
+        )
 
-    p_value = 1 - scipy.stats.chi2.cdf(statistic, df=p)
+        statistic = min(res.fun, res2.fun) / n
+
+        statistic *= n - q
+
+        p_value = 1 - scipy.stats.chi2.cdf(statistic, df=p)
+
+    else:
+        residuals = (y - X @ beta).reshape(-1, 1)
+        proj_residuals = proj(Z, residuals)
+        orth_residuals = residuals - proj_residuals
+
+        # X - (y - X beta) * (y - X beta)^T M_Z X / (y - X beta)^T M_Z (y - X beta)
+        X_tilde = X - residuals @ (orth_residuals.T @ X) / (
+            residuals.T @ orth_residuals
+        )
+        proj_X_tilde = proj(Z, X_tilde)
+        X_tilde_proj_residuals = proj(proj_X_tilde, residuals)
+        # (y - X beta) P_{P_Z X_tilde} (y - X beta) / (y - X_beta) M_Z (y - X beta)
+        statistic = np.square(X_tilde_proj_residuals).sum() / (
+            residuals.T @ orth_residuals
+        )
+
+        statistic *= n - q
+
+        p_value = 1 - scipy.stats.chi2.cdf(statistic, df=p)
 
     return statistic, p_value
 
@@ -557,45 +656,56 @@ def conditional_likelihood_ratio_test(Z, X, y, beta, W=None):
     p = X.shape[1]
     r = W.shape[1] if W is not None else 0
 
-    if W is None:
-        XW = X
-    else:
-        XW = np.concatenate([X, W], axis=1)
-
-    XW_proj = proj(Z, XW)
+    X_proj = proj(Z, X)
     y_proj = proj(Z, y)
 
-    residuals = y - X @ beta
-    residuals_proj = y_proj - XW_proj[:, :p] @ beta
-    residuals_orth = residuals - residuals_proj
-
-    Sigma = (residuals_orth.T @ XW) / (residuals_orth.T @ residuals_orth)
-    XWt = XW - np.outer(residuals, Sigma)
-    XWt_proj = XW_proj - np.outer(residuals_proj, Sigma)
-    XWt_orth = XWt - XWt_proj
-    mat_XWt = np.linalg.solve(XWt_orth.T @ XWt_orth, XWt_proj.T @ XWt_proj)
-    s_min = min(np.real(np.linalg.eigvals(mat_XWt))) * (n - q)
-
-    # TODO: This can be done with efficient rank-1 updates.
-    ar_min = KClass.ar_min(X=XW, y=y, Z=Z)
-
     if r == 0:
+        residuals = y - X @ beta
+        residuals_proj = y_proj - X_proj[:, :p] @ beta
+        residuals_orth = residuals - residuals_proj
+
+        Sigma = (residuals_orth.T @ X) / (residuals_orth.T @ residuals_orth)
+        Xt = X - np.outer(residuals, Sigma)
+        Xt_proj = X_proj - np.outer(residuals_proj, Sigma)
+        Xt_orth = Xt - Xt_proj
+        mat_Xt = np.linalg.solve(Xt_orth.T @ Xt_orth, Xt_proj.T @ Xt_proj)
+        s_min = min(np.real(np.linalg.eigvals(mat_Xt))) * (n - q)
+
+        # TODO: This can be done with efficient rank-1 updates.
+        ar_min = KClass.ar_min(X=X, y=y, Z=Z)
         ar = residuals_proj.T @ residuals_proj / (residuals_orth.T @ residuals_orth)
 
-    else:
-        ar = KClass.ar_min(X=W, y=y - X @ beta, Z=Z)
+        statistic = (n - q) * (ar - ar_min)
 
-    statistic = (n - q) * (ar - ar_min)
+    elif r > 0:
+        W_proj = proj(Z, W)
+        XWy = np.concatenate([X, W, y.reshape(-1, 1)], axis=1)
+        XWy_proj = np.concatenate([X_proj, W_proj, y_proj.reshape(-1, 1)], axis=1)
+
+        XWy_eigenvals = np.sort(
+            np.real(
+                scipy.linalg.eigvals(
+                    np.linalg.solve((XWy - XWy_proj).T @ XWy, XWy_proj.T @ XWy)
+                )
+            )
+        )
+        ar = KClass().ar_min(
+            X=W, y=y - X @ beta, X_proj=W_proj, y_proj=y_proj - X_proj @ beta
+        )
+
+        statistic = (n - q) * (ar - XWy_eigenvals[0])
+
+        s_min = XWy_eigenvals[0] + XWy_eigenvals[1] - ar
 
     chi2p = scipy.stats.chi2.rvs(size=1000, df=p, random_state=0)
-    chi2r = scipy.stats.chi2.rvs(size=1000, df=r, random_state=1) if r > 0 else 0
-    chi2q = (
-        scipy.stats.chi2.rvs(size=1000, df=q - p - r, random_state=2)
-        if q - p - r > 0
-        else 0
-    )
-    D = np.sqrt((chi2q + chi2p + chi2r + s_min) ** 2 - 4 * (chi2q) * s_min)
-    Q = 1 / 2 * (chi2q + chi2p - chi2r - s_min + D)
+    if q - p > 0:
+        chi2q = scipy.stats.chi2.rvs(size=1000, df=q - p, random_state=2)
+    else:
+        chi2q = 0
+
+    chiqppms = chi2p + chi2q - s_min
+    D = np.sqrt(chiqppms**2 + 4 * chi2p * s_min)
+    Q = 1 / 2 * (chiqppms + D)
     p_value = np.mean(Q > statistic)
 
     return statistic, p_value
