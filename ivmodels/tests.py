@@ -471,13 +471,21 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None):
     Perform the Lagrange multiplier test for ``beta`` by :cite:t:`kleibergen2002pivotal`.
 
     Test the null hypothesis that the residuals are uncorrelated with the instruments.
-    Let
+    If ``W`` is ``None``, let
 
     .. math:: \\tilde X(\\beta) := X - (y - X \\beta) \\frac{(y - X \\beta) M_Z X}{(y - X \\beta) M_Z (y - X \\beta)}.
 
     The test statistic is
 
-    .. math:: LM := (n - q) \\frac{\\| P_{P_Z \\tilde X(\\beta)} (y - X \\beta) \\|_2^2}{\\| M_Z  (y - X \\beta) \\|_2^2},
+    .. math:: LM := (n - q) \\frac{\\| P_{P_Z \\tilde X(\\beta)} (y - X \\beta) \\|_2^2}{\\| M_Z  (y - X \\beta) \\|_2^2}.
+
+    If ``W`` is not ``None``, let
+
+    .. math:: \\tilde S(\\beta, \\gamma) := (X \\ W) - (y - X \\beta - W \\gamma) \\frac{(y - X \\beta - W \\gamma) M_Z (X \\ W)}{(y - X \\beta - W \\gamma) M_Z (y - X \\beta - W \\gamma)}.
+
+    The test statistic is
+
+    .. math:: LM := (n - q) \\min_{\\gamma} \\frac{\\| P_{P_Z \\tilde S(\\beta, \\gamma)} (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2}.
 
     This test statistic is asymptotically distributed as :math:`\\chi^2(p)` under the
     null, even if the instruments are weak.
@@ -487,11 +495,13 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None):
     Z: np.ndarray of dimension (n, q)
         Instruments.
     X: np.ndarray of dimension (n, p)
-        Regressors.
+        Regressors of interest.
     y: np.ndarray of dimension (n,)
         Outcomes.
     beta: np.ndarray of dimension (p,)
         Coefficients to test.
+    W: np.ndarray of dimension (n, r) or None
+        Endogenous regressors not of interest.
 
     Returns
     -------
@@ -590,19 +600,6 @@ def conditional_likelihood_ratio_test(Z, X, y, beta, W=None):
 
     .. math:: \\mathrm{AR}(\\hat\\beta_\\mathrm{LIML}) = \\frac{n - q}{q} \\lambda_\\mathrm{min}( (X \\ y)^T M_Z (X \\ y))^{-1} (X \\ y)^T P_Z (X \\ y) ).
 
-    If ``W`` is not ``None``, the test statistic is defined as
-
-    .. math::
-       \\mathrm{CLR(\\beta)} &:= (n - q) \\min_\\gamma \\frac{ \\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{ \\| M_Z (y - X \\beta - W \\gamma) \\|_2^2} - (n - q) \\min_{\\beta, \\gamma} \\frac{ \\| P_Z (y - X \\beta - W \\gamma) \\|_2^2 }{ \\| M_Z (y - X \\beta - W \\gamma) \\|_2^2 } \\\\
-       &= (n - q) \\frac{ \\| P_Z (y - X \\beta - W \\hat\\gamma_\\textrm{liml}) \\|_2^2}{ \\| M_Z (y - X \\beta - W \\hat\\gamma_\\textrm{liml}) \\|_2^2} - (n - q) \\frac{ \\| P_Z (y - (X \\ W) \\hat\\delta_\\mathrm{liml}) \\|_2^2 }{ \\| M_Z (y - (X \\ W) \\hat\\delta_\\mathrm{liml}) \\|_2^2 },
-
-    where :math:`\\hat\\gamma_\\mathrm{LIML}` is the LIML estimator of :math:`\\gamma`
-    (see :py:class:`ivmodels.kclass.KClass`) using instruments :math:`Z`, endogenous
-    covariates :math:`W`, and outcomes :math:`y - X \\beta` and
-    :math:`\\hat\\delta_\\mathrm{LIML}` is the LIML estimator of
-    :math:`(\\beta, \\gamma)` using instruments :math:`Z`, endogenous covariates
-    :math:`(X \\ W)`, and outcomes :math:`y`.
-
     Let
 
     .. math:: \\tilde X(\\beta) := X - (y - X \\beta) \\cdot \\frac{(y - X \\beta)^T M_Z X}{(y - X \\beta)^T M_Z (y - X \\beta)}
@@ -615,15 +612,63 @@ def conditional_likelihood_ratio_test(Z, X, y, beta, W=None):
     :math:`\\mathrm{CLR(\\beta_0)}` is asymptotically bounded from above by a random
     variable that is distributed as
 
-    .. math:: \\frac{1}{2} \\left( Q_p + Q_{q - p - r} - Q_r - s_\\mathrm{min} + \\sqrt{ (Q_p + Q_r + Q_{q - p - r})^2 - 4 Q_{q - p - r} s_\\textrm{min} } \\right),
+    .. math:: \\frac{1}{2} \\left( Q_p + Q_{q - p} - s_\\mathrm{min} + \\sqrt{ (Q_p + Q_{q - p}  - s_\\mathrm{min})^2 + 4 Q_{p} s_\\textrm{min} } \\right),
 
-    where :math:`Q_p \\sim \\chi^2(p)`, :math:`Q_r \\sim \\chi^2(r)`, and
+    where :math:`Q_p \\sim \\chi^2(p)` and
+    :math:`Q_{q - p} \\sim \\chi^2(q - p)` are independent chi-squared random
+    variables. This is robust to weak instruments. If identification is strong, that is
+    :math:`s_\\mathrm{min}(\\beta_0) \\to \\infty`, the conditional likelihood ratio
+    test is equivalent to the likelihood ratio test
+    (see :py:func:`ivmodels.tests.likelihood_ratio_test`).
+    If identification is weak, that is :math:`s_\\mathrm{min}(\\beta_0) \\to 0`, the
+    conditional likelihood ratio test is equivalent to the Anderson-Rubin test
+    (see :py:func:`ivmodels.tests.anderson_rubin_test`).
+    See :cite:p:`moreira2003conditional` for details.
+
+    If ``W`` is not ``None``, the test statistic is defined as
+
+    .. math::
+       \\mathrm{CLR(\\beta)} &:= (n - q) \\min_\\gamma \\frac{ \\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{ \\| M_Z (y - X \\beta - W \\gamma) \\|_2^2} - (n - q) \\min_{\\beta, \\gamma} \\frac{ \\| P_Z (y - X \\beta - W \\gamma) \\|_2^2 }{ \\| M_Z (y - X \\beta - W \\gamma) \\|_2^2 } \\\\
+       &= (n - q) \\frac{ \\| P_Z (y - X \\beta - W \\hat\\gamma_\\textrm{liml}) \\|_2^2}{ \\| M_Z (y - X \\beta - W \\hat\\gamma_\\textrm{liml}) \\|_2^2} - (n - q) \\frac{ \\| P_Z (y - (X \\ W) \\hat\\delta_\\mathrm{liml}) \\|_2^2 }{ \\| M_Z (y - (X \\ W) \\hat\\delta_\\mathrm{liml}) \\|_2^2 },
+
+    where :math:`\\hat\\gamma_\\mathrm{LIML}` is the LIML estimator of :math:`\\gamma`
+    (see :py:class:`ivmodels.kclass.KClass`) using instruments :math:`Z`, endogenous
+    covariates :math:`W`, and outcomes :math:`y - X \\beta` and
+    :math:`\\hat\\delta_\\mathrm{LIML}` is the LIML estimator of
+    :math:`(\\beta, \\gamma)` using instruments :math:`Z`, endogenous covariates
+    :math:`(X \\ W)`, and outcomes :math:`y`.
+    Let
+
+    .. math:: \\Sigma_{X, W, y} := ((X \\ W \\ y)^T M_Z (X \\ W \\ y))^{-1} (X \\ W \\ y)^T P_Z (X \\ W \\ y)
+
+    and
+
+    .. math:: \\Sigma_{W, y - X \\beta} := ((W \\ y - X \\beta)^T M_Z (W \\ y - X \\beta))^{-1} (W \\ y - X \\beta)^T P_Z (W \\ y - X \\beta)
+
+    and
+
+    .. math:: s_\\mathrm{min} := \\lambda_1(\\Sigma_{X, W, y}) \\lambda_2(\\Sigma_{X, W, y}) - \\lambda_1(\\Sigma_{W, y - X \\beta}),
+
+    where :math:`\\lambda_1` and :math:`\\lambda_2` are the smallest and second smallest
+    eigenvalues, respectively.
+    Note that
+    :math:`\\lambda_1(\\Sigma_{X, W, y}) = \\min_{\\beta, \\gamma} \\frac{ \\| P_Z (y - X \\beta - W \\gamma) \\|_2^2 }{ \\| M_Z (y - X \\beta - W \\gamma) \\|_2^2 }`
+    and
+    :math:`\\lambda_1(\\Sigma_{W, y - X \\beta}) = \\min_\\gamma \\frac{ \\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{ \\| M_Z (y - X \\beta - W \\gamma) \\|_2^2}`.
+
+    Then, conditionally on :math:`s_\\mathrm{min}`, the statistic
+    :math:`\\mathrm{CLR(\\beta_0)}` is asymptotically bounded from above by a random
+    variable that is distributed as
+
+    .. math:: \\frac{1}{2} \\left( Q_p + Q_{q - p - r} - s_\\mathrm{min} + \\sqrt{ (Q_p + Q_{q - p - r}  - s_\\mathrm{min})^2 + 4 Q_{p} s_\\textrm{min} } \\right),
+
+    where :math:`Q_p \\sim \\chi^2(p)` and
     :math:`Q_{q - p - r} \\sim \\chi^2(q - p - r)` are independent chi-squared random
     variables. This is robust to weak instruments. If identification is strong, that is
     :math:`s_\\mathrm{min}(\\beta_0) \\to \\infty`, the conditional likelihood ratio
     test is equivalent to the likelihood ratio test
     (see :py:func:`ivmodels.tests.likelihood_ratio_test`).
-    See :cite:p:`moreira2003conditional` for details.
+    See :cite:p:`kleibergen2021efficient` for details.
 
     Parameters
     ----------
