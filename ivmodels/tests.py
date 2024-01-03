@@ -583,7 +583,53 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None):
     return statistic, p_value
 
 
-def conditional_likelihood_ratio_test(Z, X, y, beta, W=None):
+def _conditional_likelihood_ratio_critical_value_function(p, q, s_min, z, tol=1e-6):
+    """
+    Approximate the critical value function of the conditional likelihood ratio test.
+
+    Uses a formualtion by :cite:p:`hillier2009conditional` to approximate the critical
+    value function of the conditional likelihood ratio test. In particular, computes the
+    first terms of Equation (28) of :cite:p:`hillier2009conditional` which is equal to
+    Equation (41) of :cite:p:`hillier2009exact`.
+
+    .. math: Q_{k, p} = (1 - a)^{p / 2} \\sum_{j = 0}^\\infty a^j \\frac{(p / 2)_j}{j!} \\F_{k + 2 j}(z + s_{\\min}),
+
+    where :math:`(x)_j` is the Pochhammer symbol, defined as
+    :math:`(x)_j = x (x + 1) ... (x + j - 1)`, :math:`\\F_k` is the cumulative distribution function of the :math:`\\chi^2(k)` distribution, and :math:`a = s_{\\min} / (z + s_{\\min})`.
+    """
+    a = s_min / (z + s_min)
+
+    p_value = 0
+
+    # Equal to (1 - a)^{p / 2} * a^j * (m/2)_j / j!, where (x)_j is the Pochhammer
+    # symbol, defined as (x)_j = x (x + 1) ... (x + j - 1). See end of Section 1.0 of
+    # Hillier's "Exact properties of the conditional likelihood ratio test in an IV
+    # regression model"
+    factor = 1
+    j = 0
+    delta = np.inf
+
+    # In the Appendix of Hillier's paper, they show that the error when truncating the
+    # infinite sum at j = J is bounded by a^J * (m/2)_J / J!, which is equal to
+    # `factor` here. As G_k(z + l), the c.d.f of a chi^2(k), is decreasing in k, one can
+    # keep the term G_{k + 2J}(z + l) from the first sum. Thus, we can stop when
+    # `delta = factor * G_{k + 2J}(z + l)` is smaller than the desired tolerance.
+    while delta >= tol:
+        delta = factor * scipy.stats.chi2(q + 2 * j).cdf(z + s_min)
+        p_value += delta
+
+        factor *= (p / 2 + j) / (j + 1) * a
+
+        j += 1
+        if j > 1000:
+            raise RuntimeError("Failed to converge.")
+
+    p_value *= (1 - a) ** (p / 2)
+
+    return 1 - p_value
+
+
+def conditional_likelihood_ratio_test(Z, X, y, beta, W=None, tol=1e-6):
     """
     Perform the conditional likelihood ratio test for ``beta``.
 
@@ -691,13 +737,15 @@ def conditional_likelihood_ratio_test(Z, X, y, beta, W=None):
         Coefficients to test.
     W: np.ndarray of dimension (n, r) or None
         Endogenous regressors not of interest.
+    tol: float, optional, default: 1e-6
+        Tolerance for the approximation of the critical value function.
 
     Returns
     -------
     statistic: float
         The test statistic :math:`CLR(\\beta)`.
     p_value: float
-        The p-value of the test, computed using a Monte Carlo simulation.
+        The p-value of the test, correct up to tolerance ``tol``.
 
     Raises
     ------
@@ -751,16 +799,9 @@ def conditional_likelihood_ratio_test(Z, X, y, beta, W=None):
 
         s_min = XWy_eigenvals[0] + XWy_eigenvals[1] - ar
 
-    chi2p = scipy.stats.chi2.rvs(size=1000, df=p, random_state=0)
-    if q - p > 0:
-        chi2q = scipy.stats.chi2.rvs(size=1000, df=q - p, random_state=2)
-    else:
-        chi2q = 0
-
-    chiqppms = chi2p + chi2q - s_min
-    D = np.sqrt(chiqppms**2 + 4 * chi2p * s_min)
-    Q = 1 / 2 * (chiqppms + D)
-    p_value = np.mean(Q > statistic)
+    p_value = _conditional_likelihood_ratio_critical_value_function(
+        p, q, s_min, statistic, tol=tol
+    )
 
     return statistic, p_value
 
