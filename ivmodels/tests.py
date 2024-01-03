@@ -620,6 +620,7 @@ def conditional_likelihood_ratio_test(Z, X, y, beta, W=None):
     :math:`s_\\mathrm{min}(\\beta_0) \\to \\infty`, the conditional likelihood ratio
     test is equivalent to the likelihood ratio test
     (see :py:func:`ivmodels.tests.likelihood_ratio_test`), with :math:`\\chi^2(p)`
+    limiting distribution.
     If identification is weak, that is :math:`s_\\mathrm{min}(\\beta_0) \\to 0`, the
     conditional likelihood ratio test is equivalent to the Anderson-Rubin test
     (see :py:func:`ivmodels.tests.anderson_rubin_test`) with :math:`\\chi^2(q)` limiting
@@ -640,15 +641,15 @@ def conditional_likelihood_ratio_test(Z, X, y, beta, W=None):
     :math:`(X \\ W)`, and outcomes :math:`y`.
     Let
 
-    .. math:: \\Sigma_{X, W, y} := ((X \\ W \\ y)^T M_Z (X \\ W \\ y))^{-1} (X \\ W \\ y)^T P_Z (X \\ W \\ y)
+    .. math:: \\Sigma_{X, W, y} := ((X \\ \\ W \\ \\ y)^T M_Z (X \\ \\ W \\ \\ y))^{-1} (X \\ \\ W \\ \\ y)^T P_Z (X \\ \\ W \\ \\ y)
 
     and
 
-    .. math:: \\Sigma_{W, y - X \\beta} := ((W \\ y - X \\beta)^T M_Z (W \\ y - X \\beta))^{-1} (W \\ y - X \\beta)^T P_Z (W \\ y - X \\beta)
+    .. math:: \\Sigma_{W, y - X \\beta} := ((W \\ \\ y - X \\beta)^T M_Z (W \\ \\ y - X \\beta))^{-1} (W \\ \\ y - X \\beta)^T P_Z (W \\ \\ y - X \\beta)
 
     and
 
-    .. math:: s_\\mathrm{min} := \\lambda_1(\\Sigma_{X, W, y}) \\lambda_2(\\Sigma_{X, W, y}) - \\lambda_1(\\Sigma_{W, y - X \\beta}),
+    .. math:: s_\\mathrm{min}(\\beta) := \\lambda_1(\\Sigma_{X, W, y}) + \\lambda_2(\\Sigma_{X, W, y}) - \\lambda_1(\\Sigma_{W, y - X \\beta}),
 
     where :math:`\\lambda_1` and :math:`\\lambda_2` are the smallest and second smallest
     eigenvalues, respectively.
@@ -657,11 +658,11 @@ def conditional_likelihood_ratio_test(Z, X, y, beta, W=None):
     and
     :math:`\\lambda_1(\\Sigma_{W, y - X \\beta}) = \\min_\\gamma \\frac{ \\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{ \\| M_Z (y - X \\beta - W \\gamma) \\|_2^2}`.
 
-    Then, conditionally on :math:`s_\\mathrm{min}`, the statistic
+    :cite:t:`kleibergen2021efficient` conjectures and motivates that, conditionally on :math:`s_\\mathrm{min}(\\beta_0)`, the statistic
     :math:`\\mathrm{CLR(\\beta_0)}` is asymptotically bounded from above by a random
     variable that is distributed as
 
-    .. math:: \\frac{1}{2} \\left( Q_p + Q_{q - p - r} - s_\\mathrm{min} + \\sqrt{ (Q_p + Q_{q - p - r}  - s_\\mathrm{min})^2 + 4 Q_{p} s_\\textrm{min} } \\right),
+    .. math:: \\frac{1}{2} \\left( Q_p + Q_{q - p - r} - s_\\mathrm{min}(\\beta_0) + \\sqrt{ (Q_p + Q_{q - p - r}  - s_\\mathrm{min}(\\beta_0))^2 + 4 Q_{p} s_\\textrm{min} } \\right),
 
     where :math:`Q_p \\sim \\chi^2(p)` and
     :math:`Q_{q - p - r} \\sim \\chi^2(q - p - r)` are independent chi-squared random
@@ -669,6 +670,7 @@ def conditional_likelihood_ratio_test(Z, X, y, beta, W=None):
     :math:`s_\\mathrm{min}(\\beta_0) \\to \\infty`, the conditional likelihood ratio
     test is equivalent to the likelihood ratio test
     (see :py:func:`ivmodels.tests.likelihood_ratio_test`), with :math:`\\chi^2(p)`
+    limiting distribution.
     If identification is weak, that is :math:`s_\\mathrm{min}(\\beta_0) \\to 0`, the
     conditional likelihood ratio test is equivalent to the Anderson-Rubin test
     (see :py:func:`ivmodels.tests.anderson_rubin_test`) with :math:`\\chi^2(q - r)`
@@ -691,7 +693,7 @@ def conditional_likelihood_ratio_test(Z, X, y, beta, W=None):
     Returns
     -------
     statistic: float
-        The test statistic :math:`CLR`.
+        The test statistic :math:`CLR(\\beta)`.
     p_value: float
         The p-value of the test, computed using a Monte Carlo simulation.
 
