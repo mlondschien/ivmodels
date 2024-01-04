@@ -607,7 +607,16 @@ def _conditional_likelihood_ratio_critical_value_function(p, q, s_min, z, tol=1e
     .. math: Q_{k, p} = (1 - a)^{p / 2} \\sum_{j = 0}^\\infty a^j \\frac{(p / 2)_j}{j!} \\F_{k + 2 j}(z + s_{\\min}),
 
     where :math:`(x)_j` is the Pochhammer symbol, defined as
-    :math:`(x)_j = x (x + 1) ... (x + j - 1)`, :math:`\\F_k` is the cumulative distribution function of the :math:`\\chi^2(k)` distribution, and :math:`a = s_{\\min} / (z + s_{\\min})`.
+    :math:`(x)_j = x (x + 1) ... (x + j - 1)`, :math:`\\F_k` is the cumulative
+    distribution function of the :math:`\\chi^2(k)` distribution, and
+    :math:`a = s_{\\min} / (z + s_{\\min})`.
+
+    References
+    ----------
+    .. bibliography::
+       :filter: False
+
+       hillier2009conditional
     """
     if z <= 0:
         return 1
@@ -779,6 +788,14 @@ def conditional_likelihood_ratio_test(Z, X, y, beta, W=None, tol=1e-6):
     ------
     ValueError:
         If the dimensions of the inputs are incorrect.
+
+    References
+    ----------
+    .. bibliography::
+       :filter: False
+
+       moreira2003conditional
+       kleibergen2021efficient
     """
     Z, X, y, W, beta = _check_test_inputs(Z, X, y, beta=beta, W=W)
 
