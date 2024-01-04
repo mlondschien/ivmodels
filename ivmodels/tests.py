@@ -587,6 +587,17 @@ def _conditional_likelihood_ratio_critical_value_function(p, q, s_min, z, tol=1e
     """
     Approximate the critical value function of the conditional likelihood ratio test.
 
+    Let
+
+    .. math: Z = 1/2 \\left( Q_{q-p} + Q_p - s_\\mathrm{min} + \\sqrt{ (Q_{q-p} + Q_p - s_\\mathrm{min})^2 + 4 Q_{p} s_\\mathrm{min} } \\right),
+
+    where :math:`Q_p \\sim \\chi^2(p)` and :math:`Q_{q-p} \\sim \\chi^2(q - p)` are
+    independent chi-squared random variables. This function approximates
+
+    .. math: \\mathbb{P}[ Z > z ]
+
+    up to tolerance ``tol``.
+
     Uses a formualtion by :cite:p:`hillier2009conditional` to approximate the critical
     value function of the conditional likelihood ratio test. In particular, computes the
     first terms of Equation (28) of :cite:p:`hillier2009conditional` which is equal to
@@ -597,6 +608,9 @@ def _conditional_likelihood_ratio_critical_value_function(p, q, s_min, z, tol=1e
     where :math:`(x)_j` is the Pochhammer symbol, defined as
     :math:`(x)_j = x (x + 1) ... (x + j - 1)`, :math:`\\F_k` is the cumulative distribution function of the :math:`\\chi^2(k)` distribution, and :math:`a = s_{\\min} / (z + s_{\\min})`.
     """
+    if z == 0:
+        return 1
+
     a = s_min / (z + s_min)
 
     p_value = 0
@@ -607,18 +621,28 @@ def _conditional_likelihood_ratio_critical_value_function(p, q, s_min, z, tol=1e
     # regression model"
     factor = 1
     j = 0
-    delta = np.inf
 
     # In the Appendix of Hillier's paper, they show that the error when truncating the
     # infinite sum at j = J is bounded by a^J * (m/2)_J / J!, which is equal to
-    # `factor` here. As G_k(z + l), the c.d.f of a chi^2(k), is decreasing in k, one can
+    # `factor` here. However, their claim
+    # "F_1(r+1, 1 - m/2, r+2, a) is less than 1 for 0 <= a <= 1"
+    # is incorrect for m = 1, where F_1(r+1, 1 - m/2, r+2, a) <= 1 / (1 - a) via the
+    # geometric series. Thus, the error is bounded by a^J * (m/2)_J / J! / (1 - a).
+    # As G_k(z + l), the c.d.f of a chi^2(k), is decreasing in k, one can
     # keep the term G_{k + 2J}(z + l) from the first sum. Thus, we can stop when
-    # `delta = factor * G_{k + 2J}(z + l)` is smaller than the desired tolerance.
-    while delta >= tol:
-        delta = factor * scipy.stats.chi2(q + 2 * j).cdf(z + s_min)
-        p_value += delta
+    # `delta / (1 - a) = factor * G_{k + 2J}(z + l) / (1 - a)` is smaller than the
+    # desired tolerance.
+    delta = scipy.stats.chi2(q).cdf(z + s_min)
+    p_value += delta
 
+    sqrt_minus_log_a = np.sqrt(-np.log(a))
+    tol = tol / (1 + (1 - scipy.special.erf(sqrt_minus_log_a)) / sqrt_minus_log_a)
+
+    while delta >= tol:
         factor *= (p / 2 + j) / (j + 1) * a
+        delta = scipy.stats.chi2(q + 2 * j + 2).cdf(z + s_min) * factor
+
+        p_value += delta
 
         j += 1
         if j > 1000:
