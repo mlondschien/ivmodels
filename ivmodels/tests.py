@@ -608,8 +608,11 @@ def _conditional_likelihood_ratio_critical_value_function(p, q, s_min, z, tol=1e
     where :math:`(x)_j` is the Pochhammer symbol, defined as
     :math:`(x)_j = x (x + 1) ... (x + j - 1)`, :math:`\\F_k` is the cumulative distribution function of the :math:`\\chi^2(k)` distribution, and :math:`a = s_{\\min} / (z + s_{\\min})`.
     """
-    if z == 0:
+    if z <= 0:
         return 1
+
+    if s_min <= 0:
+        return 1 - scipy.stats.chi2(q).cdf(z)
 
     a = s_min / (z + s_min)
 
