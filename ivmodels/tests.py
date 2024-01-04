@@ -107,7 +107,7 @@ def pulse_test(Z, X, y, beta):
         The test statistic :math:`T`.
     p_value: float
         The p-value of the test. Equal to :math:`1 - F_{\\chi^2(q)}(T)`, where
-        :math:`F_\\chi^2(q)` is the cumulative distribution function of the
+        :math:`F_{\\chi^2(q)}` is the cumulative distribution function of the
         :math:`\\chi^2(q)` distribution.
 
     Raises
@@ -183,7 +183,7 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
         The test statistic :math:`Wald`.
     p_value: float
         The p-value of the test. Equal to :math:`1 - F_{\\chi^2(p)}(Wald)`, where
-        :math:`F_\\chi^2(p)` is the cumulative distribution function of the
+        :math:`F_{\\chi^2(p)}` is the cumulative distribution function of the
         :math:`\\chi^2(p)` distribution.
 
     Raises
