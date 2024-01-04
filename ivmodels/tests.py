@@ -240,7 +240,7 @@ def anderson_rubin_test(Z, X, y, beta, W=None):
     :math:`M_Z = \\mathrm{Id} - P_Z`.
 
     Under the null and normally distributed errors, this test statistic is distributed as
-    :math:`F_{q, n - q}``, where :math:`q` is the number of instruments and :math:`n` is
+    :math:`F_{q, n - q}`, where :math:`q` is the number of instruments and :math:`n` is
     the number of observations. The statistic is asymptotically distributed as
     :math:`\\chi^2(q) / q` under the null and non-normally distributed errors, even for
     weak instruments.
@@ -254,7 +254,8 @@ def anderson_rubin_test(Z, X, y, beta, W=None):
 
     where :math:`\\hat\\gamma_\\mathrm{LIML}` is the LIML estimate using instruments
     :math:`Z`, covariates :math:`W` and outcomes :math:`y - X \\beta`.
-    Under the null, this test statistic is asymptotically distributed as
+    Under the null, this test statistic is asymptotically bounded from above by a random
+    variable that is distributed as
     :math:`\\frac{1}{q - r} \\chi^2(q - r)`, where :math:`r = \\mathrm{dim}(W)`. See
     :cite:p:`guggenberger2012asymptotic`.
 
