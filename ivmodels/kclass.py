@@ -177,6 +177,18 @@ class KClassMixin:
             return 0.0
 
     @staticmethod
+    def _spectrum(X, y, Z=None, X_proj=None, y_proj=None):
+        if X_proj is None:
+            X_proj = proj(Z, X)
+        if y_proj is None:
+            y_proj = proj(Z, y)
+
+        Xy = np.concatenate([X, y.reshape(-1, 1)], axis=1)
+        Xy_proj = np.concatenate([X_proj, y_proj.reshape(-1, 1)], axis=1)
+        W = np.linalg.solve((Xy - Xy_proj).T @ Xy, Xy.T @ Xy_proj)
+        return np.sort(np.real(np.linalg.eigvals(W)))
+
+    @staticmethod
     def ar_min(X, y, Z=None, X_proj=None, y_proj=None):
         """
         Compute the minimum of the unnormalized Anderson Rubin statistic.
@@ -213,15 +225,7 @@ class KClassMixin:
             :math:`((X y)^T M_Z (X y))^{-1} (X y)^T P_Z (X y)`.,
             where :math:`P_Z` is the projection matrix onto the subspace spanned by `Z`.
         """
-        if X_proj is None:
-            X_proj = proj(Z, X)
-        if y_proj is None:
-            y_proj = proj(Z, y)
-
-        Xy = np.concatenate([X, y.reshape(-1, 1)], axis=1)
-        Xy_proj = np.concatenate([X_proj, y_proj.reshape(-1, 1)], axis=1)
-        W = np.linalg.solve((Xy - Xy_proj).T @ Xy, Xy.T @ Xy_proj)
-        return min(np.real(np.linalg.eigvals(W)))
+        return min(KClassMixin()._spectrum(X=X, y=y, Z=Z, X_proj=X_proj, y_proj=y_proj))
 
     def _solve_normal_equations(self, X, y, X_proj, y_proj, alpha=0):
         if alpha != 0:

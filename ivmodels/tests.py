@@ -227,7 +227,89 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
     return statistic, p_value
 
 
-def anderson_rubin_test(Z, X, y, beta, W=None):
+def more_powerful_subvector_anderson_rubin_critical_value_function(
+    z, kappa_1_hat, k, mW
+):
+    """
+    Implement the critical value function proposed by :cite:t`guggenberger2019more`.
+
+    This is done by numerically integrating the approximate conditional density from
+    Equation (A.21) of :cite:p:`guggenberger2019more`.
+
+    Parameters
+    ----------
+    z: float
+        The test statistic.
+    kappa_1_hat: float
+        The maximum eigenvalue of the matrix
+        :math:`M:=((X \\ y- X \\beta)^T M_Z (X \\ y - X \\beta))^{-1} (X \\ y-X \\beta)^T P_Z (X \\ y-X \\beta)`. This is the conditioning statistic.
+    k: int
+        Number of instruments.
+    mW: int
+        Number of endogenous regressors not of interest, i.e., :math:`\\mathrm{dim}(W)`.
+
+    Returns
+    -------
+    p_value: float
+        The (approximate) p-value of observing :math:`\\lambda_\\mathrm{min}(M) > z` given :math:`\\lambda_\\mathrm{max}(M) = \\hat\\kappa_1` under the null
+        :math:`\\beta = \\beta_0`.
+
+    References
+    ----------
+    .. bibliography::
+       :filter: False
+
+       guggenberger2019more
+
+    """
+    # Code from them:
+    # decl g_kap1hat;						// value of conditioning statistic, largest eigenvalue of Wishart matrix
+    # decl g_k;							// # of instruments
+    # decl g_b = 1e6;						// constant to approximate the 1F1 function from 2F1 (must be very large)
+
+    # d1F1 = hyper_2F1((g_k-1)/2, g_b, (g_k+2)/2, -g_kap1hat/2/g_b);
+    # if(g_kap1hat > 1000 && d1F1 == .Inf)		   		// when the argument is large, numerical evaluation of 1F1 can fail (and it does!)
+    # d1F1 = exp(g_kap1hat)/sqrt(2*M_PI*g_kap1hat);   // in those cases, use the asymptotic expression lim_x->\infty [1F1(a,b;x) = exp(x)/sqrt(2*M_PI*x) (Olver, 1974, p. 435)
+    # return gammafact((g_k+2)/2) / gammafact((g_k-1)/2) * 2 .* exp(-x/2)
+    # *g_kap1hat^(-g_k/2) .* x.^((g_k-3)/2) .* sqrt(g_kap1hat-x)/sqrt(M_PI)
+    # /d1F1;
+
+    if z > kappa_1_hat:
+        raise ValueError("z must be smaller than kappa_1_hat")
+
+    # Page 494, footnote 3: "For general mW, discussed in the next subsection, the role
+    # of k − 1 is played by k − mW"
+    # Thus, k - 1 <- k - mW or k <- k - mW + 1
+    k_prime = k - mW + 1
+
+    # Equation A.22
+    # g = scipy.special.gamma(k_prime / 2 + 1) * np.square(k_prime / 2 + 0.5) / np.power(kappa_1_hat, k_prime / 2) / np.sqrt(np.pi) / scipy.special.hyp1f1(k_prime/2 - 0.5, k_prime/2 + 1, - kappa_1_hat / 2)
+
+    # This code would copy their code in Python
+    # hyp1f1 = scipy.special.hyp2f1(k_prime/2 - 0.5, 1e6, k_prime/2 + 1, - kappa_1_hat / 2 / 1e6)
+    # if not np.isfinite(hyp1f1):
+    #     hyp1f1 = np.exp(kappa_1_hat) / np.sqrt(2 * np.pi * kappa_1_hat)
+
+    hyp1f1 = scipy.special.hyp1f1(k_prime / 2 - 0.5, k_prime / 2 + 1, -kappa_1_hat / 2)
+
+    const = (
+        scipy.special.gamma(k_prime / 2 + 1)
+        * 2
+        / scipy.special.gamma(k_prime / 2 - 0.5)
+        / np.power(kappa_1_hat, k_prime / 2)
+        / np.sqrt(np.pi)
+        / hyp1f1
+    )
+
+    def f(x):
+        return (
+            np.exp(-x / 2) * np.power(x, k_prime / 2 - 1.5) * np.sqrt(kappa_1_hat - x)
+        )
+
+    return 1 - scipy.integrate.quad(f, 0, z, limit=50)[0] * const
+
+
+def anderson_rubin_test(Z, X, y, beta, W=None, critical_values="chi2"):
     """
     Perform the Anderson Rubin test :cite:p:`anderson1949estimation`.
 
@@ -271,6 +353,11 @@ def anderson_rubin_test(Z, X, y, beta, W=None):
         Coefficients to test.
     W: np.ndarray of dimension (n, r) or None
         Endogenous regressors not of interest.
+    critical_values: str
+        If ``"chi2"``, use the :math:`\\chi^2(q)` distribution to compute the p-value.
+        If ``"guggenberger2019"``, use the critical value function proposed by
+        :cite:t:`guggenberger2019more` to compute the p-value. Only relevant if ``W`` is
+        not ``None``.
 
     Returns
     -------
@@ -293,6 +380,7 @@ def anderson_rubin_test(Z, X, y, beta, W=None):
 
        anderson1949estimation
        guggenberger2012asymptotic
+       guggenberger2019more
     """
     Z, X, y, W, beta = _check_test_inputs(Z, X, y, W=W, beta=beta)
     n, q = Z.shape
@@ -306,11 +394,19 @@ def anderson_rubin_test(Z, X, y, beta, W=None):
         )
         dfn = q
     else:
-        ar = KClass.ar_min(X=W, y=y - X @ beta, Z=Z)
+        spectrum = KClass._spectrum(X=W, y=y - X @ beta, Z=Z)
+        ar = np.min(spectrum)
         dfn = q - W.shape[1]
 
     statistic = ar * (n - q)
-    p_value = 1 - scipy.stats.f.cdf(statistic / dfn, dfn=dfn, dfd=n - q)
+
+    if W is None or critical_values == "chi2":
+        p_value = 1 - scipy.stats.f.cdf(statistic / dfn, dfn=dfn, dfd=n - q)
+    else:
+        kappa_max = (n - q) * np.max(spectrum)
+        p_value = more_powerful_subvector_anderson_rubin_critical_value_function(
+            statistic, kappa_max, q, W.shape[1]
+        )
 
     return statistic, p_value
 
@@ -836,14 +932,27 @@ def conditional_likelihood_ratio_test(Z, X, y, beta, W=None, tol=1e-6):
                 )
             )
         )
-        ar = KClass().ar_min(
+        kclass = KClass(kappa="liml").fit(X=W, y=y - X @ beta, Z=Z)
+        ar = kclass.ar_min(
             X=W, y=y - X @ beta, X_proj=W_proj, y_proj=y_proj - X_proj @ beta
         )
 
         statistic = (n - q) * (ar - XWy_eigenvals[0])
 
+        # if type_ == "k":
         s_min = XWy_eigenvals[0] + XWy_eigenvals[1] - ar
+        # else:
+        #     XW = np.concatenate([X, W], axis=1)
+        #     XW_proj = np.concatenate([X_proj, W_proj], axis=1)
 
+        #     residuals = y - X @ beta - kclass.predict(X=W)
+        #     residuals_proj = proj(Z, residuals)
+        #     residuals_orth = residuals - residuals_proj
+
+        #     Sigma = (residuals_orth.T @ XW) / (residuals_orth.T @ residuals_orth)
+        #     XWt = XW - np.outer(residuals, Sigma)
+        #     XWt_proj = XW_proj - np.outer(residuals_proj, Sigma)
+        #     s_min = min(np.real(scipy.linalg.eigvals(np.linalg.solve((XWt - XWt_proj).T @ XWt, XWt_proj.T @ XWt))))
     p_value = _conditional_likelihood_ratio_critical_value_function(
         p, q, s_min, statistic, tol=tol
     )
