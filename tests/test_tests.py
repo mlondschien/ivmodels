@@ -17,12 +17,16 @@ from ivmodels.tests import (
     inverse_wald_test,
     lagrange_multiplier_test,
     likelihood_ratio_test,
+    more_powerful_subvector_anderson_rubin_critical_value_function,
     pulse_test,
     wald_test,
 )
 
 liml_wald_test = partial(wald_test, estimator="liml")
 liml_inverse_wald_test = partial(inverse_wald_test, estimator="liml")
+guggenberger_anderson_rubin_test = partial(
+    anderson_rubin_test, critical_values="guggenberger2019more"
+)
 
 TEST_PAIRS = [
     (conditional_likelihood_ratio_test, None),
@@ -75,6 +79,7 @@ def test_subvector_test_equal_to_original(test, n, p, r, q, u):
     "test",
     [
         anderson_rubin_test,
+        guggenberger_anderson_rubin_test,
         lagrange_multiplier_test,
         wald_test,
         liml_wald_test,
@@ -83,7 +88,7 @@ def test_subvector_test_equal_to_original(test, n, p, r, q, u):
     ],
 )
 @pytest.mark.parametrize(
-    "n, p, r, q, u", [(100, 1, 1, 2, 1), (100, 1, 2, 5, 2), (200, 2, 5, 10, 2)]
+    "n, p, r, q, u", [(1000, 1, 1, 2, 1), (1000, 1, 2, 5, 2), (2000, 2, 5, 10, 2)]
 )
 def test_subvector_test_size(test, n, p, r, q, u):
     """Test that the test size is close to the nominal level."""
@@ -119,6 +124,7 @@ def test_subvector_test_size(test, n, p, r, q, u):
     "test",
     [
         anderson_rubin_test,
+        guggenberger_anderson_rubin_test,
         lagrange_multiplier_test,
         wald_test,
         liml_wald_test,
@@ -161,7 +167,12 @@ def test_subvector_test_size_low_rank(test, n, p, r, q, u):
 # not valid for weak instruments.
 @pytest.mark.parametrize(
     "test",
-    [anderson_rubin_test, conditional_likelihood_ratio_test, lagrange_multiplier_test],
+    [
+        anderson_rubin_test,
+        guggenberger_anderson_rubin_test,
+        conditional_likelihood_ratio_test,
+        lagrange_multiplier_test,
+    ],
 )
 @pytest.mark.parametrize("n, q", [(100, 5), (100, 30)])
 def test_subvector_test_size_weak_instruments(test, n, q):
@@ -523,3 +534,59 @@ def test_conditional_likelihood_ratio_critical_value_function_equal_to_chi2(p, q
     #         1 - scipy.stats.chi2(p).cdf(z),
     #         atol=1e-2
     #     )
+
+
+@pytest.mark.parametrize(
+    "k, alpha, hat_kappa_1_cvs",
+    [
+        (1, 0.1, [[1.1, 0.7], [2.1, 1.2], [3.3, 1.6], [5.0, 2.0], [8.8, 2.4]]),
+        (
+            1,
+            0.01,
+            [[1.0, 0.9], [2.0, 1.8], [3.0, 2.6], [5.0, 3.9], [10.0, 5.6], [16.6, 6.2]],
+        ),
+        (
+            5,
+            0.1,
+            [
+                [1.0, 0.9],
+                [2.0, 1.8],
+                [3.0, 2.6],
+                [6.0, 4.8],
+                [11.0, 7.2],
+                [15.6, 8.2],
+                [34.8, 9.0],
+            ],
+        ),
+    ],
+)
+def testmore_powerful_subvector_anderson_rubin_critical_value_function(
+    k, alpha, hat_kappa_1_cvs
+):
+    """Compare to tables 3, 7 in Guggenberger (2019)."""
+    for hat_kappa_1, cv in hat_kappa_1_cvs:
+        # Through rounding to one decimal place
+        assert (
+            more_powerful_subvector_anderson_rubin_critical_value_function(
+                cv, hat_kappa_1, k, mW=0
+            )
+            <= alpha
+        )
+        assert (
+            more_powerful_subvector_anderson_rubin_critical_value_function(
+                cv - 0.1, hat_kappa_1, k, mW=0
+            )
+            >= alpha
+        )
+
+
+@pytest.mark.parametrize("k", [1, 5, 20])
+@pytest.mark.parametrize("hat_kappa_1", [0.1, 1, 5, 100])
+def test_more_powerful_sAR_critical_value_function_integrates_to_one(k, hat_kappa_1):
+    assert np.isclose(
+        more_powerful_subvector_anderson_rubin_critical_value_function(
+            hat_kappa_1, hat_kappa_1, k, mW=0
+        ),
+        0,
+        atol=2e-4,
+    )
