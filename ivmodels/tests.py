@@ -210,7 +210,7 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
     XW_proj = proj(Z, XW)
 
     kappa = estimator.kappa_
-    cov_hat = (kappa * XW_proj + (1 - kappa) * (XW - XW_proj)).T @ XW
+    cov_hat = (kappa * XW_proj + (1 - kappa) * XW).T @ XW
 
     if W.shape[1] == 0:
         statistic = (beta_gamma_hat - beta).T @ cov_hat @ (beta_gamma_hat - beta)
@@ -1132,7 +1132,7 @@ def inverse_wald_test(Z, X, y, alpha=0.05, W=None, estimator="tsls"):
     residuals = y.reshape(predictions.shape) - predictions
     hat_sigma_sq = np.mean(np.square(residuals))
 
-    A = X.T @ (kclass.kappa_ * X_proj + (1 - kclass.kappa_) * (X - X_proj))
+    A = X.T @ (kclass.kappa_ * X_proj + (1 - kclass.kappa_) * X)
     b = -2 * A @ beta
     c = beta.T @ A @ beta - hat_sigma_sq * z_alpha
 
