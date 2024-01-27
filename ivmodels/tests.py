@@ -143,21 +143,22 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
 
     .. math::
 
-       Wald := (\\beta - \\hat{\\beta})^T X^T P_Z X (\\beta - \\hat{\\beta}) / \\hat{\\sigma}^2,
+       Wald := (\\beta - \\hat{\\beta})^T \\hat\\Cov(\\hat\\beta)^{-1} (\\beta - \\hat{\\beta}) / \\hat{\\sigma}^2,
 
-    where :math:`\\hat \\beta` is the TSLS (or LIML) estimator,
+    where :math:`\\hat \\beta = \\hat \\beta(\\kappa)` is a k-class estimator with
+    :math:`\\sqrt{n} (1 - \\kappa) \\to 0`,
+    :math:`\\hat\\Cov(\\hat\\beta)^{-1} = \\frac{1}{n} (X^T (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) X)^{-1}`,
     :math:`\\hat \\sigma^2 = \\frac{1}{n - p} \\| y - X \\hat \\beta \\|^2_2` is an
     estimate of the variance of the errors, and :math:`P_Z` is the projection matrix
-    onto the column space of :math:`Z`. If
-    :math:`(X^T P_Z X)^{1/2}(\\hat \\beta - \\beta_0) \\overset{d}{\\to} \\mathcal{N}(0, \\sigma^2 \\mathrm{Id})`,
-    for :math:`n \\to \\infty`, the test statistic is asymptotically distributed as
-    :math:`\\chi^2(p)` under the null. This requires strong instruments.
+    onto the column space of :math:`Z`.
+    Under strong instruments, the test statistic is asymptotically distributed as
+    :math:`\\chi^2(p)` under the null.
 
     If ``W`` is not ``None``, the test statistic is defined as
 
     .. math::
 
-        Wald := (\\beta - \\hat{\\beta})^T (D ( (X W)^T P_Z (X W) )^{-1} D)^{-1} (\\beta - \\hat{\\beta}) / \\hat{\\sigma}^2,
+        Wald := (\\beta - \\hat{\\beta})^T (D ( (X W)^T (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) (X W) )^{-1} D)^{-1} (\\beta - \\hat{\\beta}) / \\hat{\\sigma}^2,
 
     where :math:`D \\in \\mathbb{R}^{(p + r) \\times (p + r)}` is diagonal with
     :math:`D_{ii} = 1` if :math:`i \\leq p` and :math:`D_{ii} = 0` otherwise.
@@ -208,15 +209,16 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
 
     XW_proj = proj(Z, XW)
 
+    kappa = estimator.kappa_
+    cov_hat = (kappa * XW_proj + (1 - kappa) * XW).T @ XW
+
     if W.shape[1] == 0:
-        statistic = (
-            (beta_gamma_hat - beta).T @ XW_proj.T @ XW_proj @ (beta_gamma_hat - beta)
-        )
+        statistic = (beta_gamma_hat - beta).T @ cov_hat @ (beta_gamma_hat - beta)
     else:
         beta_hat = beta_gamma_hat[:p]
         statistic = (
             (beta_hat - beta).T
-            @ np.linalg.inv(np.linalg.inv(XW_proj.T @ XW_proj)[:p, :p])
+            @ np.linalg.inv(np.linalg.inv(cov_hat)[:p, :p])
             @ (beta_hat - beta)
         )
 
@@ -1121,14 +1123,16 @@ def inverse_wald_test(Z, X, y, alpha=0.05, W=None, estimator="tsls"):
 
     X_proj = proj(Z, X)
 
-    beta = KClass(kappa=estimator).fit(X, y, Z).coef_
+    kclass = KClass(kappa=estimator).fit(X, y, Z)
+    beta = kclass.coef_
+
     # Avoid settings where (X @ beta).shape = (n, 1) and y.shape = (n,), resulting in
     # predictions.shape = (n, n) and residuals.shape = (n, n).
     predictions = X @ beta
     residuals = y.reshape(predictions.shape) - predictions
     hat_sigma_sq = np.mean(np.square(residuals))
 
-    A = X.T @ X_proj
+    A = X.T @ (kclass.kappa_ * X_proj + (1 - kclass.kappa_) * X)
     b = -2 * A @ beta
     c = beta.T @ A @ beta - hat_sigma_sq * z_alpha
 
