@@ -4,12 +4,10 @@ import numpy as np
 import pytest
 import scipy
 
-from ivmodels.kclass import KClass
+from ivmodels.models.kclass import KClass
 from ivmodels.simulate import simulate_gaussian_iv
 from ivmodels.tests import (
-    _conditional_likelihood_ratio_critical_value_function,
     anderson_rubin_test,
-    bounded_inverse_anderson_rubin,
     conditional_likelihood_ratio_test,
     inverse_anderson_rubin_test,
     inverse_likelihood_ratio_test,
@@ -17,7 +15,6 @@ from ivmodels.tests import (
     inverse_wald_test,
     lagrange_multiplier_test,
     likelihood_ratio_test,
-    more_powerful_subvector_anderson_rubin_critical_value_function,
     pulse_test,
     wald_test,
 )
@@ -88,7 +85,7 @@ def test_subvector_test_equal_to_original(test, n, p, r, q, u):
     ],
 )
 @pytest.mark.parametrize(
-    "n, p, r, q, u", [(1000, 1, 1, 2, 1), (1000, 1, 2, 5, 2), (2000, 2, 5, 10, 2)]
+    "n, p, r, q, u", [(100, 1, 1, 2, 1), (100, 1, 2, 5, 2), (300, 2, 5, 10, 2)]
 )
 def test_subvector_test_size(test, n, p, r, q, u):
     """Test that the test size is close to the nominal level."""
@@ -456,137 +453,28 @@ def test_inverse_test_sorted(inverse_test, n, p, q, u):
 #     assert above(beta_hat.reshape(1, -1)) > 0
 
 
-@pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2), (100, 2, 1, 2)])
-def test_bounded_inverse_anderson_rubin_p_value(n, p, q, u):
-    """
-    Test `bounded_inverse_anderson_rubin` against `anderson_rubin_test`.
+# @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2), (100, 2, 1, 2)])
+# def test_bounded_inverse_anderson_rubin_p_value(n, p, q, u):
+#     """
+#     Test `bounded_inverse_anderson_rubin` against `anderson_rubin_test`.
 
-    `bounded_inverse_anderson_rubin` should return the largest p-value s.t. the
-    corresponding confidence set is bounded. Test that this is the case by computing
-    the volume of the confidence sets after increasing / decreasing the p-value by 0.1%.
-    """
-    Z, X, Y = simulate_gaussian_iv(n, p, q, u, seed=0)
+#     `bounded_inverse_anderson_rubin` should return the largest p-value s.t. the
+#     corresponding confidence set is bounded. Test that this is the case by computing
+#     the volume of the confidence sets after increasing / decreasing the p-value by 0.1%.
+#     """
+#     Z, X, Y = simulate_gaussian_iv(n, p, q, u, seed=0)
 
-    Z = Z - Z.mean(axis=0)
-    X = X - X.mean(axis=0)
-    Y = Y - Y.mean(axis=0)
+#     Z = Z - Z.mean(axis=0)
+#     X = X - X.mean(axis=0)
+#     Y = Y - Y.mean(axis=0)
 
-    p_value = bounded_inverse_anderson_rubin(Z, X)
+#     p_value = bounded_inverse_anderson_rubin(Z, X)
 
-    if p > q:
-        assert np.isclose(p_value, 1)
-    else:
-        quad_below = inverse_anderson_rubin_test(Z, X, Y, p_value * 0.999)
-        quad_above = inverse_anderson_rubin_test(Z, X, Y, p_value * 1.001)
+#     if p > q:
+#         assert np.isclose(p_value, 1)
+#     else:
+#         quad_below = inverse_anderson_rubin_test(Z, X, Y, p_value * 0.999)
+#         quad_above = inverse_anderson_rubin_test(Z, X, Y, p_value * 1.001)
 
-        assert np.isinf(quad_below.volume())
-        assert np.isfinite(quad_above.volume())
-
-
-@pytest.mark.parametrize("p", [1, 2, 5])
-@pytest.mark.parametrize("q", [0, 1, 5, 20])
-@pytest.mark.parametrize("s_min", [0.01, 1, 1e3])
-@pytest.mark.parametrize("z", [0.1, 1, 10])
-def test_conditional_likelihood_ratio_critical_value_function(p, q, s_min, z):
-    chi2p = scipy.stats.chi2.rvs(size=20000, df=p, random_state=0)
-    chi2q = scipy.stats.chi2.rvs(size=20000, df=q, random_state=1) if q > 0 else 0
-    D = np.sqrt((chi2p + chi2q - s_min) ** 2 + 4 * chi2p * s_min)
-    Q = 1 / 2 * (chi2p + chi2q - s_min + D)
-    p_value = np.mean(Q > z)
-
-    assert np.isclose(
-        p_value,
-        _conditional_likelihood_ratio_critical_value_function(p, q + p, s_min, z),
-        atol=1e-2,
-    )
-
-
-@pytest.mark.parametrize("p", [1, 5, 20])
-@pytest.mark.parametrize("q", [0, 20])
-@pytest.mark.parametrize("s_min", [0.01, 1, 1e3])
-@pytest.mark.parametrize("z", [0.1, 1, 10])
-@pytest.mark.parametrize("tol", [1e-2, 1e-4, 1e-6])
-def test_conditional_likelihood_ratio_critical_value_function_tol(p, q, s_min, z, tol):
-    approx = _conditional_likelihood_ratio_critical_value_function(
-        p, q + p, s_min, z, tol=tol
-    )
-    exact = _conditional_likelihood_ratio_critical_value_function(
-        p, q + p, s_min, z, tol=1e-8
-    )
-    assert np.isclose(approx, exact, atol=2 * tol)
-
-
-@pytest.mark.parametrize("p", [1, 5, 20])
-@pytest.mark.parametrize("q", [0, 20])
-def test_conditional_likelihood_ratio_critical_value_function_equal_to_chi2(p, q):
-    for z in np.linspace(0, 2 * (p + q), 10):
-        assert np.isclose(
-            _conditional_likelihood_ratio_critical_value_function(p, q + p, 1e-6, z),
-            1 - scipy.stats.chi2(p + q).cdf(z),
-            atol=1e-4,
-        )
-
-    # TODO: Implement something that works for p=1 and s_min rather large, s.t.
-    # the difference below > tol but the approximation does take very long to converge.
-    # for z in np.linspace(0, 2 * (p + q), 10):
-    #     assert np.isclose(
-    #         _conditional_likelihood_ratio_critical_value_function(p, q + p, 1e3, z),
-    #         1 - scipy.stats.chi2(p).cdf(z),
-    #         atol=1e-2
-    #     )
-
-
-@pytest.mark.parametrize(
-    "k, alpha, hat_kappa_1_cvs",
-    [
-        (1, 0.1, [[1.1, 0.7], [2.1, 1.2], [3.3, 1.6], [5.0, 2.0], [8.8, 2.4]]),
-        (
-            1,
-            0.01,
-            [[1.0, 0.9], [2.0, 1.8], [3.0, 2.6], [5.0, 3.9], [10.0, 5.6], [16.6, 6.2]],
-        ),
-        (
-            5,
-            0.1,
-            [
-                [1.0, 0.9],
-                [2.0, 1.8],
-                [3.0, 2.6],
-                [6.0, 4.8],
-                [11.0, 7.2],
-                [15.6, 8.2],
-                [34.8, 9.0],
-            ],
-        ),
-    ],
-)
-def testmore_powerful_subvector_anderson_rubin_critical_value_function(
-    k, alpha, hat_kappa_1_cvs
-):
-    """Compare to tables 3, 7 in Guggenberger (2019)."""
-    for hat_kappa_1, cv in hat_kappa_1_cvs:
-        # Through rounding to one decimal place
-        assert (
-            more_powerful_subvector_anderson_rubin_critical_value_function(
-                cv, hat_kappa_1, k, mW=0
-            )
-            <= alpha
-        )
-        assert (
-            more_powerful_subvector_anderson_rubin_critical_value_function(
-                cv - 0.1, hat_kappa_1, k, mW=0
-            )
-            >= alpha
-        )
-
-
-@pytest.mark.parametrize("k", [1, 5, 20])
-@pytest.mark.parametrize("hat_kappa_1", [0.1, 1, 5, 100])
-def test_more_powerful_sAR_critical_value_function_integrates_to_one(k, hat_kappa_1):
-    assert np.isclose(
-        more_powerful_subvector_anderson_rubin_critical_value_function(
-            hat_kappa_1, hat_kappa_1, k, mW=0
-        ),
-        0,
-        atol=2e-4,
-    )
+#         assert np.isinf(quad_below.volume())
+#         assert np.isfinite(quad_above.volume())

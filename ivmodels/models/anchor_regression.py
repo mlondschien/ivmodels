@@ -1,6 +1,6 @@
 from glum import GeneralizedLinearRegressor
 
-from ivmodels.kclass import KClassMixin
+from ivmodels.models.kclass import KClassMixin
 
 
 class AnchorMixin(KClassMixin):
