@@ -1,10 +1,10 @@
 import numpy as np
 import pytest
 
-from ivmodels.kclass import KClass
-from ivmodels.pulse import PULSE
+from ivmodels.models.kclass import KClass
+from ivmodels.models.pulse import PULSE
 from ivmodels.simulate import simulate_gaussian_iv
-from ivmodels.tests import pulse_test
+from ivmodels.tests.pulse import pulse_test
 
 
 @pytest.mark.parametrize("rtol", [0.1, 0.01])

@@ -3,9 +3,9 @@ import pytest
 import scipy
 from sklearn.linear_model import LinearRegression
 
-from ivmodels.kclass import KClass, KClassMixin
+from ivmodels.models.kclass import KClass, KClassMixin
 from ivmodels.simulate import simulate_gaussian_iv
-from ivmodels.tests import anderson_rubin_test
+from ivmodels.tests.anderson_rubin import anderson_rubin_test
 from ivmodels.utils import proj
 
 

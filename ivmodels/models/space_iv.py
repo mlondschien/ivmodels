@@ -2,8 +2,8 @@ import itertools
 
 import numpy as np
 
-from ivmodels.kclass import KClass
-from ivmodels.tests import anderson_rubin_test
+from ivmodels.models.kclass import KClass
+from ivmodels.tests.anderson_rubin import anderson_rubin_test
 
 
 class SpaceIV:

@@ -17,6 +17,5 @@ def proj(Z, f):
         Projection of f onto the subspace spanned by Z. Same dimension as f.
     """
     Z = Z - Z.mean(axis=0)
-    # f = f - f.mean(axis=0)
 
     return np.dot(Z, np.linalg.lstsq(Z, f, rcond=None)[0])

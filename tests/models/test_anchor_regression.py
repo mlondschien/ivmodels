@@ -4,7 +4,7 @@ import pytest
 import scipy
 from glum import GeneralizedLinearRegressor
 
-from ivmodels.anchor_regression import AnchorRegression
+from ivmodels.models.anchor_regression import AnchorRegression
 from ivmodels.simulate import simulate_gaussian_iv
 from ivmodels.utils import proj
 
