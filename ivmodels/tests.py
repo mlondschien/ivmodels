@@ -145,8 +145,8 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
 
        Wald := (\\beta - \\hat{\\beta})^T \\hat\\Cov(\\hat\\beta)^{-1} (\\beta - \\hat{\\beta}) / \\hat{\\sigma}^2,
 
-    where :math:`\\hat \\beta = \\hat \\beta(\\kappa)` is a k-class estimator with
-    :math:`\\sqrt{n} (1 - \\kappa) \\to 0`,
+    where :math:`\\hat \\beta = \\hat \\beta(\\kappa)` is the k-class estimator given by
+    ``estimator`` with parameter :math:`\\kappa`,
     :math:`\\hat\\Cov(\\hat\\beta)^{-1} = \\frac{1}{n} (X^T (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) X)^{-1}`,
     :math:`\\hat \\sigma^2 = \\frac{1}{n - p} \\| y - X \\hat \\beta \\|^2_2` is an
     estimate of the variance of the errors, and :math:`P_Z` is the projection matrix
@@ -1077,7 +1077,7 @@ def inverse_wald_test(Z, X, y, alpha=0.05, W=None, estimator="tsls"):
 
     .. math::
 
-       (\\beta - \\hat{\\beta})^T X^T P_Z X (\\beta - \\hat{\\beta}) \\leq \\hat{\\sigma}^2 F_{\\chi^2(p)}(1 - \\alpha),
+       (\\beta - \\hat{\\beta})^T (X^T (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) X) (\\beta - \\hat{\\beta}) \\leq \\hat{\\sigma}^2 F_{\\chi^2(p)}(1 - \\alpha),
 
     where :math:`\\hat \\beta` is an estimate of the causal parameter :math:`\\beta_0`
     (controlled by the parameter ``estimator``),
@@ -1090,7 +1090,7 @@ def inverse_wald_test(Z, X, y, alpha=0.05, W=None, estimator="tsls"):
 
     .. math::
 
-       (\\beta - B \\hat{\\beta})^T (B ((X W)^T P_Z (X W))^{-1} B^T)^{-1} (\\beta - B \\hat{\\beta}) \\leq \\hat{\\sigma}^2 F_{\\chi^2(p)}(1 - \\alpha).
+       (\\beta - B \\hat{\\beta})^T (B ((X W)^T (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) X) (X W))^{-1} B^T)^{-1} (\\beta - B \\hat{\\beta}) \\leq \\hat{\\sigma}^2 F_{\\chi^2(p)}(1 - \\alpha).
 
     Parameters
     ----------
