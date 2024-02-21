@@ -6,32 +6,44 @@ from ivmodels.tests.utils import _check_test_inputs
 from ivmodels.utils import proj
 
 
-def _conditional_likelihood_ratio_critical_value_function(p, q, s_min, z, tol=1e-6):
+def _conditional_likelihood_ratio_critical_value_function(
+    p, q, s_min, z, method="numerical_integration", tol=1e-6
+):
     """
     Approximate the critical value function of the conditional likelihood ratio test.
 
     Let
 
-    .. math: Z = 1/2 \\left( Q_{q-p} + Q_p - s_\\mathrm{min} + \\sqrt{ (Q_{q-p} + Q_p - s_\\mathrm{min})^2 + 4 Q_{p} s_\\mathrm{min} } \\right),
+    .. math: \\Gamma(q-p, p, s_\\mathrm{min}) := 1/2 \\left( Q_{q-p} + Q_p - s_\\mathrm{min} + \\sqrt{ (Q_{q-p} + Q_p - s_\\mathrm{min})^2 + 4 Q_{p} s_\\mathrm{min} } \\right),
 
     where :math:`Q_p \\sim \\chi^2(p)` and :math:`Q_{q-p} \\sim \\chi^2(q - p)` are
     independent chi-squared random variables. This function approximates
 
-    .. math: \\mathbb{P}[ Z > z ]
+    .. math: Q_{q, p}(z) := \\mathbb{P}[ \\Gamma(q-p, p, s_\\mathrm{min}) > z ]
 
     up to tolerance ``tol``.
 
-    Uses a formualtion by :cite:p:`hillier2009conditional` to approximate the critical
-    value function of the conditional likelihood ratio test. In particular, computes the
-    first terms of Equation (28) of :cite:p:`hillier2009conditional` which is equal to
-    Equation (41) of :cite:p:`hillier2009exact`.
+    If ``method`` is ``"numerical_integration"``, numerically integrates the formulation
 
-    .. math: Q_{k, p} = (1 - a)^{p / 2} \\sum_{j = 0}^\\infty a^j \\frac{(p / 2)_j}{j!} \\F_{k + 2 j}(z + s_{\\min}),
+    .. math: Q_{q, p}(z) = \\mathbb{E}_{B \\sim \\mathrm{Beta}((k - m)/2, m/2)}[ F_{\\chi^2(k)}(z / (1 - a B)) ],
+
+    where :math:`F_{\\chi^2(k)}` is the cumulative distribution function of a
+    :math:`\\chi^2(k)` distribution, and :math:`a = s_{\\min} / (z + s_{\\min})`. This
+    is Equation (27) of :cite:p:`hillier2009conditional` or Equation (40) of
+    :cite:p:`hillier2009exact`.
+
+    If ``method`` is ``"power_series"``, truncates the formulation
+
+    .. math: Q_{k, p} = (1 - a)^{p / 2} \\sum_{j = 0}^\\infty a^j \\frac{(p / 2)_j}{j!} \\F_{\\chi^2(k + 2 j)}(z + s_{\\min}),
 
     where :math:`(x)_j` is the Pochhammer symbol, defined as
     :math:`(x)_j = x (x + 1) ... (x + j - 1)`, :math:`\\F_k` is the cumulative
     distribution function of the :math:`\\chi^2(k)` distribution, and
-    :math:`a = s_{\\min} / (z + s_{\\min})`.
+    :math:`a = s_{\\min} / (z + s_{\\min})`. This is Equation (28) of
+    :cite:p:`hillier2009conditional` or Equation (41) of :cite:p:`hillier2009exact`.
+    The truncation is done such that the error is bounded by a tolerance ``tol``.
+
+    Uses numerical integration by default.
 
     References
     ----------
@@ -39,6 +51,7 @@ def _conditional_likelihood_ratio_critical_value_function(p, q, s_min, z, tol=1e
        :filter: False
 
        hillier2009conditional
+       hillier2009exact
     """
     if z <= 0:
         return 1
@@ -46,49 +59,80 @@ def _conditional_likelihood_ratio_critical_value_function(p, q, s_min, z, tol=1e
     if s_min <= 0:
         return 1 - scipy.stats.chi2(q).cdf(z)
 
-    a = s_min / (z + s_min)
+    if q < p:
+        raise ValueError("q must be greater than or equal to p.")
+    if p == q:
+        return 1 - scipy.stats.chi2(q).cdf(z)
 
-    p_value = 0
+    if method in ["numerical_integration"]:
+        beta = scipy.stats.beta((q - p) / 2, p / 2)
+        chi2 = scipy.stats.chi2(q)
+        a = s_min / (z + s_min)
 
-    # Equal to (1 - a)^{p / 2} * a^j * (m/2)_j / j!, where (x)_j is the Pochhammer
-    # symbol, defined as (x)_j = x (x + 1) ... (x + j - 1). See end of Section 1.0 of
-    # Hillier's "Exact properties of the conditional likelihood ratio test in an IV
-    # regression model"
-    factor = 1
-    j = 0
+        def integrand(b):
+            return beta.pdf(b) * chi2.cdf(z / (1 - a * b))
 
-    # In the Appendix of Hillier's paper, they show that the error when truncating the
-    # infinite sum at j = J is bounded by a^J * (m/2)_J / J!, which is equal to
-    # `factor` here. However, their claim
-    # "F_1(r+1, 1 - m/2, r+2, a) is less than 1 for 0 <= a <= 1"
-    # is incorrect for m = 1, where F_1(r+1, 1 - m/2, r+2, a) <= 1 / (1 - a) via the
-    # geometric series. Thus, the error is bounded by a^J * (m/2)_J / J! / (1 - a).
-    # As G_k(z + l), the c.d.f of a chi^2(k), is decreasing in k, one can
-    # keep the term G_{k + 2J}(z + l) from the first sum. Thus, we can stop when
-    # `delta / (1 - a) = factor * G_{k + 2J}(z + l) / (1 - a)` is smaller than the
-    # desired tolerance.
-    delta = scipy.stats.chi2(q).cdf(z + s_min)
-    p_value += delta
+        res = scipy.integrate.quad(
+            integrand,
+            0,
+            1,
+            epsabs=tol,
+        )
 
-    sqrt_minus_log_a = np.sqrt(-np.log(a))
-    tol = tol / (1 + (1 - scipy.special.erf(sqrt_minus_log_a)) / sqrt_minus_log_a)
+        return 1 - res[0]
 
-    while delta >= tol:
-        factor *= (p / 2 + j) / (j + 1) * a
-        delta = scipy.stats.chi2(q + 2 * j + 2).cdf(z + s_min) * factor
+    elif method == "power_series":
+        a = s_min / (z + s_min)
 
+        p_value = 0
+
+        # Equal to (1 - a)^{p / 2} * a^j * (m/2)_j / j!, where (x)_j is the Pochhammer
+        # symbol, defined as (x)_j = x (x + 1) ... (x + j - 1). See end of Section 1.0 of
+        # Hillier's "Exact properties of the conditional likelihood ratio test in an IV
+        # regression model"
+        factor = 1
+        j = 0
+
+        # In the Appendix of Hillier's paper, they show that the error when truncating the
+        # infinite sum at j = J is bounded by a^J * (m/2)_J / J!, which is equal to
+        # `factor` here. However, their claim
+        # "F_1(r+1, 1 - m/2, r+2, a) is less than 1 for 0 <= a <= 1"
+        # is incorrect for m = 1, where F_1(r+1, 1 - m/2, r+2, a) <= 1 / (1 - a) via the
+        # geometric series. Thus, the error is bounded by a^J * (m/2)_J / J! / (1 - a).
+        # As G_k(z + l), the c.d.f of a chi^2(k), is decreasing in k, one can
+        # keep the term G_{k + 2J}(z + l) from the first sum. Thus, we can stop when
+        # `delta / (1 - a) = factor * G_{k + 2J}(z + l) / (1 - a)` is smaller than the
+        # desired tolerance.
+        delta = scipy.stats.chi2(q).cdf(z + s_min)
         p_value += delta
 
-        j += 1
-        if j > 1000:
-            raise RuntimeError("Failed to converge.")
+        sqrt_minus_log_a = np.sqrt(-np.log(a))
+        tol = tol / (1 + (1 - scipy.special.erf(sqrt_minus_log_a)) / sqrt_minus_log_a)
 
-    p_value *= (1 - a) ** (p / 2)
+        while delta >= tol:
+            factor *= (p / 2 + j) / (j + 1) * a
+            delta = scipy.stats.chi2(q + 2 * j + 2).cdf(z + s_min) * factor
 
-    return 1 - p_value
+            p_value += delta
+
+            j += 1
+            if j > 1000:
+                raise RuntimeError("Failed to converge.")
+
+        p_value *= (1 - a) ** (p / 2)
+
+        return 1 - p_value
+
+    else:
+        raise ValueError(
+            "method argument should be 'numerical_integration' or 'power_series'. "
+            f"Got {method}."
+        )
 
 
-def conditional_likelihood_ratio_test(Z, X, y, beta, W=None, tol=1e-6):
+def conditional_likelihood_ratio_test(
+    Z, X, y, beta, W=None, method="numerical_integration", tol=1e-6
+):
     """
     Perform the conditional likelihood ratio test for ``beta``.
 
@@ -196,8 +240,13 @@ def conditional_likelihood_ratio_test(Z, X, y, beta, W=None, tol=1e-6):
         Coefficients to test.
     W: np.ndarray of dimension (n, r) or None
         Endogenous regressors not of interest.
+    method: str, optional, default: "numerical_integration"
+        Method to approximate the critical value function. Must be
+        ``"numerical_integration"`` or ``"power_series"``. See
+        :py:func:`_conditional_likelihood_ratio_critical_value_function`.
     tol: float, optional, default: 1e-6
-        Tolerance for the approximation of the critical value function.
+        Tolerance for the approximation of the cdf of the critical value function and
+        thus the p-value.
 
     Returns
     -------

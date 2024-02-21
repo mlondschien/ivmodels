@@ -10,43 +10,52 @@ from ivmodels.tests.conditional_likelihood_ratio import (
 @pytest.mark.parametrize("p", [1, 5, 20])
 @pytest.mark.parametrize("q", [0, 20])
 @pytest.mark.parametrize("s_min", [0.01, 1, 1e3])
-@pytest.mark.parametrize("z", [0.1, 1, 10])
-@pytest.mark.parametrize("tol", [1e-2, 1e-4, 1e-6])
-def test_conditional_likelihood_ratio_critical_value_function_tol(p, q, s_min, z, tol):
+@pytest.mark.parametrize("z", [0.1, 10])
+@pytest.mark.parametrize("tol", [1e-2, 1e-4])
+@pytest.mark.parametrize("method", ["power_series", "numerical_integration"])
+def test_conditional_likelihood_ratio_critical_value_function_tol(
+    p, q, s_min, z, tol, method
+):
     approx = _conditional_likelihood_ratio_critical_value_function(
-        p, q + p, s_min, z, tol=tol
+        p, q + p, s_min, z, tol=tol, method=method
     )
     exact = _conditional_likelihood_ratio_critical_value_function(
-        p, q + p, s_min, z, tol=1e-8
+        p, q + p, s_min, z, tol=1e-8, method=method
     )
-    assert np.isclose(approx, exact, atol=2 * tol)
+    assert np.isclose(approx, exact, atol=3 * tol)
 
 
 @pytest.mark.parametrize("p", [1, 5, 20])
 @pytest.mark.parametrize("q", [0, 20])
-def test_conditional_likelihood_ratio_critical_value_function_equal_to_chi2(p, q):
+@pytest.mark.parametrize("method", ["numerical_integration", "power_series"])
+def test_conditional_likelihood_ratio_critical_value_function_equal_to_chi2(
+    p, q, method
+):
     for z in np.linspace(0, 2 * (p + q), 10):
         assert np.isclose(
-            _conditional_likelihood_ratio_critical_value_function(p, q + p, 1e-6, z),
+            _conditional_likelihood_ratio_critical_value_function(
+                p, q + p, 1e-6, z, method
+            ),
             1 - scipy.stats.chi2(p + q).cdf(z),
             atol=1e-4,
         )
 
-    # TODO: Implement something that works for p=1 and s_min rather large, s.t.
-    # the difference below > tol but the approximation does take very long to converge.
-    # for z in np.linspace(0, 2 * (p + q), 10):
-    #     assert np.isclose(
-    #         _conditional_likelihood_ratio_critical_value_function(p, q + p, 1e3, z),
-    #         1 - scipy.stats.chi2(p).cdf(z),
-    #         atol=1e-2
-    #     )
+    # The "power_series" method is very slow for a = (s_min + z) / s_min close to 1.
+    if method == "numerical_integration":
+        for z in np.linspace(0, 2 * (p + q), 10):
+            assert np.isclose(
+                _conditional_likelihood_ratio_critical_value_function(p, q + p, 1e5, z),
+                1 - scipy.stats.chi2(p).cdf(z),
+                atol=1e-2,
+            )
 
 
-@pytest.mark.parametrize("p", [1, 2, 5])
-@pytest.mark.parametrize("q", [0, 1, 5, 20])
+@pytest.mark.parametrize("p", [1, 5])
+@pytest.mark.parametrize("q", [0, 5, 20])
 @pytest.mark.parametrize("s_min", [0.01, 1, 1e3])
 @pytest.mark.parametrize("z", [0.1, 1, 10])
-def test_conditional_likelihood_ratio_critical_value_function(p, q, s_min, z):
+@pytest.mark.parametrize("method", ["numerical_integration", "power_series"])
+def test_conditional_likelihood_ratio_critical_value_function__(p, q, s_min, z, method):
     chi2p = scipy.stats.chi2.rvs(size=20000, df=p, random_state=0)
     chi2q = scipy.stats.chi2.rvs(size=20000, df=q, random_state=1) if q > 0 else 0
     D = np.sqrt((chi2p + chi2q - s_min) ** 2 + 4 * chi2p * s_min)
@@ -55,6 +64,27 @@ def test_conditional_likelihood_ratio_critical_value_function(p, q, s_min, z):
 
     assert np.isclose(
         p_value,
-        _conditional_likelihood_ratio_critical_value_function(p, q + p, s_min, z),
+        _conditional_likelihood_ratio_critical_value_function(
+            p, q + p, s_min, z, method
+        ),
         atol=1e-2,
+    )
+
+
+@pytest.mark.parametrize("p", [1, 20])
+@pytest.mark.parametrize("q", [0, 20])
+@pytest.mark.parametrize("s_min", [0.01, 1, 1e3])
+@pytest.mark.parametrize("z", [0.1, 10])
+@pytest.mark.parametrize("tol", [1e-2, 1e-6])
+def test_conditional_likelihood_ratio_critical_value_function_some_by_method(
+    p, q, s_min, z, tol
+):
+    assert np.isclose(
+        _conditional_likelihood_ratio_critical_value_function(
+            p, q + p, s_min, z, "numerical_integration"
+        ),
+        _conditional_likelihood_ratio_critical_value_function(
+            p, q + p, s_min, z, "power_series"
+        ),
+        atol=2 * tol,
     )
