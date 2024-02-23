@@ -145,9 +145,9 @@ def conditional_likelihood_ratio_test(
 
     where :math:`P_Z` is the projection matrix onto the column space of :math:`Z`,
     :math:`M_Z = \\mathrm{Id} - P_Z`, and :math:`\\hat\\beta_\\mathrm{LIML}` is the LIML
-    estimator of :math:`\\beta` (see :py:class:`ivmodels.kclass.KClass`), minimizing the
+    estimator of :math:`\\beta` (see :py:class:`~ivmodels.kclass.KClass`), minimizing the
     Anderson-Rubin test statistic :math:`\\mathrm{AR}(\\beta)`
-    (see :py:func:`ivmodels.tests.anderson_rubin_test`) at
+    (see :py:func:`~ivmodels.tests.anderson_rubin_test`) at
 
     .. math:: \\mathrm{AR}(\\hat\\beta_\\mathrm{LIML}) = \\frac{n - q}{q} \\lambda_\\mathrm{min}( (X \\ y)^T M_Z (X \\ y))^{-1} (X \\ y)^T P_Z (X \\ y) ).
 
