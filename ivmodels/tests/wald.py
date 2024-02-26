@@ -15,11 +15,11 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
 
     .. math::
 
-       Wald := (\\beta - \\hat{\\beta})^T \\hat\\Cov(\\hat\\beta)^{-1} (\\beta - \\hat{\\beta}) / \\hat{\\sigma}^2,
+       \\mathrm{Wald} := (\\beta - \\hat{\\beta})^T \\hat\\mathrm{Cov}(\\hat\\beta)^{-1} (\\beta - \\hat{\\beta}) / \\hat{\\sigma}^2,
 
     where :math:`\\hat \\beta = \\hat \\beta(\\kappa)` is a k-class estimator with
     :math:`\\sqrt{n} (1 - \\kappa) \\to 0`,
-    :math:`\\hat\\Cov(\\hat\\beta)^{-1} = \\frac{1}{n} (X^T (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) X)^{-1}`,
+    :math:`\\hat\\mathrm{Cov}(\\hat\\beta)^{-1} = \\frac{1}{n} (X^T (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) X)^{-1}`,
     :math:`\\hat \\sigma^2 = \\frac{1}{n - p} \\| y - X \\hat \\beta \\|^2_2` is an
     estimate of the variance of the errors, and :math:`P_Z` is the projection matrix
     onto the column space of :math:`Z`.
@@ -30,7 +30,7 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
 
     .. math::
 
-        Wald := (\\beta - \\hat{\\beta})^T (D ( (X W)^T (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) (X W) )^{-1} D)^{-1} (\\beta - \\hat{\\beta}) / \\hat{\\sigma}^2,
+        \\mathrm{Wald} := (\\beta - \\hat{\\beta})^T (D ( (X W)^T (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) (X W) )^{-1} D)^{-1} (\\beta - \\hat{\\beta}) / \\hat{\\sigma}^2,
 
     where :math:`D \\in \\mathbb{R}^{(p + r) \\times (p + r)}` is diagonal with
     :math:`D_{ii} = 1` if :math:`i \\leq p` and :math:`D_{ii} = 0` otherwise.
@@ -53,7 +53,7 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
     Returns
     -------
     statistic: float
-        The test statistic :math:`Wald`.
+        The test statistic :math:`\\mathrm{Wald}`.
     p_value: float
         The p-value of the test. Equal to :math:`1 - F_{\\chi^2(p)}(Wald)`, where
         :math:`F_{\\chi^2(p)}` is the cumulative distribution function of the
