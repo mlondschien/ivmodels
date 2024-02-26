@@ -15,11 +15,11 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
 
     .. math::
 
-       \\mathrm{Wald} := (\\beta - \\hat{\\beta})^T \\hat\\mathrm{Cov}(\\hat\\beta)^{-1} (\\beta - \\hat{\\beta}) / \\hat{\\sigma}^2,
+       \\mathrm{Wald} := (\\beta - \\hat{\\beta})^T \\hat{\\mathrm{Cov}}(\\hat\\beta)^{-1} (\\beta - \\hat{\\beta}) / \\hat{\\sigma}^2,
 
     where :math:`\\hat \\beta = \\hat \\beta(\\kappa)` is a k-class estimator with
     :math:`\\sqrt{n} (1 - \\kappa) \\to 0`,
-    :math:`\\hat\\mathrm{Cov}(\\hat\\beta)^{-1} = \\frac{1}{n} (X^T (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) X)^{-1}`,
+    :math:`\\hat{\\mathrm{Cov}}(\\hat\\beta)^{-1} = \\frac{1}{n} (X^T (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) X)^{-1}`,
     :math:`\\hat \\sigma^2 = \\frac{1}{n - p} \\| y - X \\hat \\beta \\|^2_2` is an
     estimate of the variance of the errors, and :math:`P_Z` is the projection matrix
     onto the column space of :math:`Z`.
