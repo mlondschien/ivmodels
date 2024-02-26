@@ -1,9 +1,14 @@
 import numpy as np
 import pytest
+import scipy
 
+from ivmodels.models.kclass import KClass
 from ivmodels.tests.anderson_rubin import (
+    anderson_rubin_test,
+    inverse_anderson_rubin_test,
     more_powerful_subvector_anderson_rubin_critical_value_function,
 )
+from ivmodels.utils import proj
 
 
 @pytest.mark.parametrize(
@@ -59,4 +64,48 @@ def test_more_powerful_sAR_critical_value_function_integrates_to_one(k, hat_kapp
         ),
         0,
         atol=2e-4,
+    )
+
+
+@pytest.mark.parametrize("alpha", [0.1, 0.05, 0.01])
+@pytest.mark.parametrize("n, k, mx, u", [(100, 1, 1, 1), (100, 20, 5, 5)])
+def test_inverse_anderson_rubin_confidence_set_alternative_formulation(
+    alpha, n, k, mx, u
+):
+    rng = np.random.RandomState(0)
+
+    delta_X = rng.normal(0, 1, (u, mx))
+    delta_y = rng.normal(0, 1, (u, 1))
+
+    beta = rng.normal(0, 0.1, (mx, 1))
+    Pi_X = rng.normal(0, 1, (k, mx))
+
+    U = rng.normal(0, 1, (n, u))
+
+    Z = rng.normal(0, 1, (n, k))
+    X = Z @ Pi_X + U @ delta_X + rng.normal(0, 1, (n, mx))
+    y = X @ beta + U @ delta_y + rng.normal(0, 1, (n, 1))
+
+    X = X - X.mean(axis=0)
+    y = y - y.mean()
+
+    inverse_ar = inverse_anderson_rubin_test(Z, X, y, alpha=alpha)
+    kappa_alpha = 1 + scipy.stats.f(dfn=k, dfd=n - k).ppf(1 - alpha) * k / (n - k)
+    kclass_kappa_alpha = KClass(kappa=kappa_alpha).fit(X=X, y=y, Z=Z)
+
+    assert np.allclose(inverse_ar.center, kclass_kappa_alpha.coef_, rtol=1e-8)
+
+    residuals = y.flatten() - X @ kclass_kappa_alpha.coef_
+    residuals_orth = residuals - proj(Z, residuals)
+    sigma_hat_sq = (residuals_orth.T @ residuals_orth) / (n - k)
+    ar = anderson_rubin_test(Z, X, y, beta=kclass_kappa_alpha.coef_)[0]
+    A = (kappa_alpha * proj(Z, X) + (1 - kappa_alpha) * X).T @ X
+
+    assert np.allclose(
+        A
+        / (
+            -sigma_hat_sq
+            * (k * scipy.stats.f(dfn=k, dfd=n - k).ppf(1 - alpha) * k - ar)
+        ),
+        inverse_ar.A / inverse_ar.c_standardized,
     )
