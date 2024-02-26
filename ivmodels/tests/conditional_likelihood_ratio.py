@@ -145,7 +145,7 @@ def conditional_likelihood_ratio_test(
 
     where :math:`P_Z` is the projection matrix onto the column space of :math:`Z`,
     :math:`M_Z = \\mathrm{Id} - P_Z`, and :math:`\\hat\\beta_\\mathrm{LIML}` is the LIML
-    estimator of :math:`\\beta` (see :py:class:`~ivmodels.kclass.KClass`), minimizing the
+    estimator of :math:`\\beta` (see :py:class:`~ivmodels.KClass`), minimizing the
     Anderson-Rubin test statistic :math:`\\mathrm{AR}(\\beta)`
     (see :py:func:`~ivmodels.tests.anderson_rubin_test`) at
 
@@ -170,11 +170,11 @@ def conditional_likelihood_ratio_test(
     variables. This is robust to weak instruments. If identification is strong, that is
     :math:`s_\\mathrm{min}(\\beta_0) \\to \\infty`, the conditional likelihood ratio
     test is equivalent to the likelihood ratio test
-    (see :py:func:`ivmodels.tests.likelihood_ratio_test`), with :math:`\\chi^2(p)`
+    (see :py:func:`~ivmodels.tests.likelihood_ratio_test`), with :math:`\\chi^2(p)`
     limiting distribution.
     If identification is weak, that is :math:`s_\\mathrm{min}(\\beta_0) \\to 0`, the
     conditional likelihood ratio test is equivalent to the Anderson-Rubin test
-    (see :py:func:`ivmodels.tests.anderson_rubin_test`) with :math:`\\chi^2(q)` limiting
+    (see :py:func:`~ivmodels.tests.anderson_rubin_test`) with :math:`\\chi^2(q)` limiting
     distribution.
     See :cite:p:`moreira2003conditional` for details.
 
@@ -185,7 +185,7 @@ def conditional_likelihood_ratio_test(
        &= (n - q) \\frac{ \\| P_Z (y - X \\beta - W \\hat\\gamma_\\textrm{liml}) \\|_2^2}{ \\| M_Z (y - X \\beta - W \\hat\\gamma_\\textrm{liml}) \\|_2^2} - (n - q) \\frac{ \\| P_Z (y - (X \\ W) \\hat\\delta_\\mathrm{liml}) \\|_2^2 }{ \\| M_Z (y - (X \\ W) \\hat\\delta_\\mathrm{liml}) \\|_2^2 },
 
     where :math:`\\hat\\gamma_\\mathrm{LIML}` is the LIML estimator of :math:`\\gamma`
-    (see :py:class:`ivmodels.kclass.KClass`) using instruments :math:`Z`, endogenous
+    (see :py:class:`~ivmodels.KClass`) using instruments :math:`Z`, endogenous
     covariates :math:`W`, and outcomes :math:`y - X \\beta` and
     :math:`\\hat\\delta_\\mathrm{LIML}` is the LIML estimator of
     :math:`(\\beta, \\gamma)` using instruments :math:`Z`, endogenous covariates
@@ -220,11 +220,11 @@ def conditional_likelihood_ratio_test(
     variables. This is robust to weak instruments. If identification is strong, that is
     :math:`s_\\mathrm{min}(\\beta_0) \\to \\infty`, the conditional likelihood ratio
     test is equivalent to the likelihood ratio test
-    (see :py:func:`ivmodels.tests.likelihood_ratio_test`), with :math:`\\chi^2(p)`
+    (see :py:func:`~ivmodels.tests.likelihood_ratio_test`), with :math:`\\chi^2(p)`
     limiting distribution.
     If identification is weak, that is :math:`s_\\mathrm{min}(\\beta_0) \\to 0`, the
     conditional likelihood ratio test is equivalent to the Anderson-Rubin test
-    (see :py:func:`ivmodels.tests.anderson_rubin_test`) with :math:`\\chi^2(q - r)`
+    (see :py:func:`~ivmodels.tests.anderson_rubin_test`) with :math:`\\chi^2(q - r)`
     limiting distribution.
     See :cite:p:`kleibergen2021efficient` for details.
 
