@@ -42,28 +42,25 @@ def _LM(X, X_proj, Y, Y_proj, W, W_proj, beta):
 
     sigma_hat = residuals_orth.T @ residuals_orth
 
-    XW_proj = np.hstack((X_proj, W_proj))
-    XW = np.hstack((X, W))
-    Sigma = residuals_orth.T @ XW / sigma_hat
-    St = XW - np.outer(residuals, Sigma)
-    St_proj = XW_proj - np.outer(residuals_proj, Sigma)
+    S = np.hstack((X, W))
+    S_proj = np.hstack((X_proj, W_proj))
+    Sigma = residuals_orth.T @ S / sigma_hat
+    St = S - np.outer(residuals, Sigma)
+    St_proj = S_proj - np.outer(residuals_proj, Sigma)
 
     solved = np.linalg.solve(St_proj.T @ St_proj, St_proj.T @ residuals_proj)
     residuals_proj_St = St_proj @ solved
 
     lm = residuals_proj_St.T @ residuals_proj_St / sigma_hat
+    ar = residuals_proj.T @ residuals_proj / sigma_hat
+    kappa = ar - lm
 
-    first_term = -2 * residuals_proj.T @ St_proj[:, : X.shape[1]] * sigma_hat
-    second_term = (
-        2
-        * residuals_proj.T
-        @ (residuals_proj - residuals_proj_St)
-        * (X - X_proj).T
-        @ St
-        @ solved
-    )
-    d_lm = (first_term + second_term) / (sigma_hat**2)
-    return (n * lm, n * d_lm)
+    first_term = -St_proj[:, : X.shape[1]].T @ residuals_proj
+    second_term = kappa * (St - St_proj)[:, : X.shape[1]].T @ St @ solved
+
+    d_lm = 2 * (first_term + second_term) / sigma_hat
+
+    return (n * lm.item(), n * d_lm.flatten())
 
 
 def lagrange_multiplier_test(Z, X, y, beta, W=None):
