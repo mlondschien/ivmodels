@@ -234,7 +234,7 @@ class KClassMixin:
         return np.linalg.solve(
             X.T @ (self.kappa_ * X_proj + (1 - self.kappa_) * X),
             X.T @ (self.kappa_ * y_proj + (1 - self.kappa_) * y),
-        ).T
+        ).flatten()
 
     def fit(self, X, y, Z=None, *args, **kwargs):
         """
@@ -306,8 +306,7 @@ class KClassMixin:
                 X, y, X_proj=X_proj, y_proj=y_proj, alpha=getattr(self, "alpha", 0)
             )
 
-        self.intercept_ = -np.matmul(self.coef_, x_mean) + y_mean
-
+        self.intercept_ = -self.coef_.T @ x_mean + y_mean
         return self
 
     def predict(self, X, *args, **kwargs):  # noqa D
