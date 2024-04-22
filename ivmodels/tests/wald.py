@@ -20,9 +20,9 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
     where :math:`\\hat \\beta = \\hat \\beta(\\kappa)` is a k-class estimator with
     :math:`\\sqrt{n} (1 - \\kappa) \\to 0`,
     :math:`\\widehat{\\mathrm{Cov}}(\\hat\\beta)^{-1} = \\frac{1}{n} (X^T (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) X)^{-1}`,
-    :math:`\\hat \\sigma^2 = \\frac{1}{n - p} \\| y - X \\hat \\beta \\|^2_2` is an
-    estimate of the variance of the errors, and :math:`P_Z` is the projection matrix
-    onto the column space of :math:`Z`.
+    :math:`\\hat \\sigma^2 = \\frac{1}{n - p} \\| M_Z (y - X \\hat \\beta) \\|^2_2` is
+    an estimate of the variance of the errors, :math:`P_Z` is the projection matrix
+    onto the column space of :math:`Z`, and :math:`M_Z = \\mathrm{Id} - P_Z`.
     Under strong instruments, the test statistic is asymptotically distributed as
     :math:`\\chi^2(p)` under the null.
 
@@ -67,17 +67,20 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
     """
     Z, X, y, W, beta = _check_test_inputs(Z, X, y, W=W, beta=beta)
 
-    p = X.shape[1]
+    n, mx = X.shape
+    k = Z.shape[1]
 
     if W is None:
-        W = np.zeros((X.shape[0], 0))
+        W = np.zeros((n, 0))
 
     XW = np.concatenate([X, W], axis=1)
 
     estimator = KClass(kappa=estimator).fit(XW, y, Z)
     beta_gamma_hat = estimator.coef_
 
-    sigma_hat_sq = np.mean(np.square(y - XW @ beta_gamma_hat))
+    residuals = y - XW @ beta_gamma_hat
+    residuals_orth = residuals - proj(Z, residuals)
+    sigma_hat_sq = np.sum(residuals_orth**2) / (n - k)
 
     XW_proj = proj(Z, XW)
 
@@ -87,16 +90,16 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
     if W.shape[1] == 0:
         statistic = (beta_gamma_hat - beta).T @ cov_hat @ (beta_gamma_hat - beta)
     else:
-        beta_hat = beta_gamma_hat[:p]
+        beta_hat = beta_gamma_hat[:mx]
         statistic = (
             (beta_hat - beta).T
-            @ np.linalg.inv(np.linalg.inv(cov_hat)[:p, :p])
+            @ np.linalg.inv(np.linalg.inv(cov_hat)[:mx, :mx])
             @ (beta_hat - beta)
         )
 
     statistic /= sigma_hat_sq
 
-    p_value = 1 - scipy.stats.chi2.cdf(statistic, df=X.shape[1])
+    p_value = 1 - scipy.stats.chi2.cdf(statistic, df=mx)
 
     return statistic, p_value
 
@@ -113,9 +116,10 @@ def inverse_wald_test(Z, X, y, alpha=0.05, W=None, estimator="tsls"):
 
     where :math:`\\hat \\beta` is an estimate of the causal parameter :math:`\\beta_0`
     (controlled by the parameter ``estimator``),
-    :math:`\\hat \\sigma^2 = \\frac{1}{n} \\| y - X \\hat \\beta \\|^2_2`,
-    :math:`P_Z` is the projection matrix onto the column space of :math:`Z`,
-    and :math:`F_{\\chi^2(p)}` is the cumulative distribution function of the
+    :math:`\\hat \\sigma^2 = \\frac{1}{n - k} \\| M_Z (y - X \\hat \\beta) \\|^2_2`,
+    :math:`P_Z` is the projection matrix onto the column space of :math:`Z`, :math:`M_Z`
+    is the projection matrix onto the orthogonal complement of the column space of
+    :math:`Z`, and :math:`F_{\\chi^2(p)}` is the cumulative distribution function of the
     :math:`\\chi^2(p)` distribution.
 
     If ``W`` is not ``None``, the quadric is defined as
@@ -142,6 +146,8 @@ def inverse_wald_test(Z, X, y, alpha=0.05, W=None, estimator="tsls"):
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1).")
 
+    n, k = Z.shape
+
     Z, X, y, W, _ = _check_test_inputs(Z, X, y, W)
 
     z_alpha = scipy.stats.chi2.ppf(1 - alpha, df=X.shape[1])
@@ -162,7 +168,8 @@ def inverse_wald_test(Z, X, y, alpha=0.05, W=None, estimator="tsls"):
     # predictions.shape = (n, n) and residuals.shape = (n, n).
     predictions = X @ beta
     residuals = y.reshape(predictions.shape) - predictions
-    hat_sigma_sq = np.mean(np.square(residuals))
+    residuals_orth = residuals - proj(Z, residuals)
+    hat_sigma_sq = np.sum(residuals_orth**2) / (n - k)
 
     A = X.T @ (kclass.kappa_ * X_proj + (1 - kclass.kappa_) * X)
     b = -2 * A @ beta
