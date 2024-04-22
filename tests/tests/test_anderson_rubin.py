@@ -102,10 +102,7 @@ def test_inverse_anderson_rubin_confidence_set_alternative_formulation(
     A = (kappa_alpha * proj(Z, X) + (1 - kappa_alpha) * X).T @ X
 
     assert np.allclose(
-        A
-        / (
-            -sigma_hat_sq
-            * (k * scipy.stats.f(dfn=k, dfd=n - k).ppf(1 - alpha) * k - ar)
-        ),
+        A / (-sigma_hat_sq * (scipy.stats.f(dfn=k, dfd=n - k).ppf(1 - alpha) * k - ar)),
         inverse_ar.A / inverse_ar.c_standardized,
+        rtol=1e-5,
     )
