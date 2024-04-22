@@ -166,7 +166,7 @@ def test_subvector_test_size_low_rank(test, n, p, r, q, u):
     assert np.mean(p_values < 0.05) < 0.07  # 4 stds above 0.05 for n_seeds = 100
 
 
-# The Pulse and the LM tests don't have subvector versions. The Wald and LR tests are
+# The Pulse does not have a subvector version. The Wald and LR tests are
 # not valid for weak instruments.
 @pytest.mark.parametrize(
     "test",
@@ -212,7 +212,7 @@ def test_subvector_test_size_weak_instruments(test, n, q):
             random_state=seed,
         )
 
-        Z = rng.normal(0, 1, (n, q))
+        Z = rng.normal(0, 1, (n, q)) + 1
 
         X = Z @ Pi_X + noise[:, 1:2]
         W = Z @ Pi_W + noise[:, 2:3]
