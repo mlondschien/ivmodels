@@ -133,20 +133,18 @@ def anderson_rubin_test(Z, X, y, beta, W=None, critical_values="chi2"):
         Coefficients to test.
     W: np.ndarray of dimension (n, r) or None
         Endogenous regressors not of interest.
-    critical_values: str
+    critical_values: str, optional, default = "chi2"
         If ``"chi2"``, use the :math:`\\chi^2(q)` distribution to compute the p-value.
-        If ``"guggenberger2019"``, use the critical value function proposed by
-        :cite:t:`guggenberger2019more` to compute the p-value. Only relevant if ``W`` is
-        not ``None``.
+        If ``"f"`, use the :math:`F_{q, n - q}` distribution to compute the p-value.
+        If ``"guggenberger"``, use the critical value function proposed by
+        :cite:t:`guggenberger2019more` to compute the p-value.
 
     Returns
     -------
     statistic: float
         The test statistic :math:`AR`.
     p_value: float
-        The p-value of the test. Equal to :math:`1 - F_{F_{q - r, n - q}}(AR)`, where
-        :math:`F_{F_{q - r, n - q}}` is the cumulative distribution function of the
-        :math:`F_{q - r, n - q}` distribution and ``r = 0`` if ``W`` is ``None``.
+        The p-value of the test.
 
     Raises
     ------
@@ -178,20 +176,33 @@ def anderson_rubin_test(Z, X, y, beta, W=None, critical_values="chi2"):
         ar = np.min(spectrum)
         dfn = q - W.shape[1]
 
-    statistic = ar * (n - q)
+    statistic = ar * (n - q) / dfn
 
-    if W is None or critical_values == "chi2":
-        p_value = 1 - scipy.stats.f.cdf(statistic / dfn, dfn=dfn, dfd=n - q)
-    else:
+    if critical_values == "chi2":
+        p_value = 1 - scipy.stats.chi2.cdf(statistic * dfn, df=dfn)
+    elif critical_values == "f":
+        p_value = 1 - scipy.stats.f.cdf(statistic, dfn=dfn, dfd=n - q)
+    elif critical_values.startswith("guggenberger"):
+        if W is None:
+            raise ValueError(
+                "The critical value function proposed by Guggenberger et al. (2019) is "
+                "only available for the subvector variant where W is not None."
+            )
+
         kappa_max = (n - q) * np.max(spectrum)
         p_value = more_powerful_subvector_anderson_rubin_critical_value_function(
-            statistic, kappa_max, q, W.shape[1]
+            statistic * dfn, kappa_max, q, W.shape[1]
+        )
+    else:
+        raise ValueError(
+            "critical_values must be one of 'chi2', 'f', or 'guggenberger'. Got "
+            f"{critical_values}."
         )
 
     return statistic, p_value
 
 
-def inverse_anderson_rubin_test(Z, X, y, alpha=0.05, W=None):
+def inverse_anderson_rubin_test(Z, X, y, alpha=0.05, W=None, critical_values="chi2"):
     """
     Return the quadric for to the inverse Anderson-Rubin test's acceptance region.
 
@@ -228,6 +239,9 @@ def inverse_anderson_rubin_test(Z, X, y, alpha=0.05, W=None):
         Significance level.
     W: np.ndarray of dimension (n, r) or None
         Endogenous regressors not of interest.
+    critical_values: str, optional, default = "chi2"
+        If ``"chi2"``, use the :math:`\\chi^2(q)` distribution to compute the p-value.
+        If ``"f"`, use the :math:`F_{q, n - q}` distribution to compute the p-value.
 
     Returns
     -------
@@ -240,15 +254,22 @@ def inverse_anderson_rubin_test(Z, X, y, alpha=0.05, W=None):
 
     Z, X, y, W, _ = _check_test_inputs(Z, X, y, W=W)
 
-    n, q = Z.shape
+    n, k = Z.shape
 
     if W is not None:
         X = np.concatenate([X, W], axis=1)
-        dfn = q - W.shape[1]
+        dfn = k - W.shape[1]
     else:
-        dfn = q
+        dfn = k
 
-    quantile = scipy.stats.f.ppf(1 - alpha, dfn=dfn, dfd=n - q) * dfn / (n - q)
+    if critical_values == "chi2":
+        quantile = scipy.stats.chi2.ppf(1 - alpha, df=dfn) / (n - k)
+    elif critical_values == "f":
+        quantile = scipy.stats.f.ppf(1 - alpha, dfn=dfn, dfd=n - k) * dfn / (n - k)
+    else:
+        raise ValueError(
+            "critical_values must be one of 'chi2', 'f'. Got " f"{critical_values}."
+        )
 
     Z = Z - Z.mean(axis=0)
     X = X - X.mean(axis=0)

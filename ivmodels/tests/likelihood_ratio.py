@@ -20,7 +20,7 @@ def likelihood_ratio_test(Z, X, y, beta, W=None):
     where :math:`P_Z` is the projection matrix onto the column space of :math:`Z`,
     :math:`M_Z = \\mathrm{Id} - P_Z`, and :math:`\\hat\\beta_\\mathrm{LIML}` is the LIML
     estimator of :math:`\\beta`, minimizing the Anderson-Rubin test statistic
-    :math:`\\mathrm{AR}(\\beta)` (see :py:func:`ivmodels.tests.anderson_rubin_test`) at
+    :math:`\\mathrm{AR}(\\beta)` (see :py:func:`~ivmodels.tests.anderson_rubin_test`) at
     :math:`\\mathrm{AR}(\\hat\\beta_\\mathrm{LIML}) = \\frac{n - q}{q} (\\hat\\kappa_\\mathrm{LIML} - 1)`.
 
     If ``W`` is not ``None``, the test statistic is defined as
@@ -30,7 +30,7 @@ def likelihood_ratio_test(Z, X, y, beta, W=None):
        \\mathrm{LR(\\beta)} := (n - q) \\frac{ \\|P_Z (y - X \\beta - W \\hat\\gamma_\\mathrm{LIML}) \\|^2_2 }{\\| M_Z (y - X \\beta - W \\hat\\gamma_\\mathrm{LIML}) \\|_2^2 } - (n - q) \\frac{\\| P_Z (y - (X \\ W) \\hat\\delta_\\mathrm{LIML}) \\|_2^2 }{ \\| M_Z (y - (X \\ W) \\hat\\delta_\\mathrm{LIML}) \\|_2^2}
 
     where :math:`\\gamma_\\mathrm{LIML}` is the LIML estimator (see
-    :py:class:`ivmodels.kclass.KClass`) using instruments :math:`Z`, endogenous
+    :py:class:`~ivmodels.KClass`) using instruments :math:`Z`, endogenous
     covariates :math:`W`, and outcomes :math:`y - X \\beta` and
     :math:`\\hat\\delta_\\mathrm{LIML}` is the LIML estimator
     using instruments :math:`Z`, endogenous covariates :math:`X \\ W`, and outcomes :math:`y`.
