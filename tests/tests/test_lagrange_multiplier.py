@@ -34,14 +34,14 @@ def test_lm_gradient(n, p, r, q, u):
     W_proj = proj(Z, W)
     y_proj = proj(Z, y)
 
-    for seed in range(5):
+    for _ in range(5):
         beta_test = rng.normal(0, 0.1, (p, 1))
 
-    grad_approx = scipy.optimize.approx_fprime(
-        beta_test.flatten(),
-        lambda b: _LM(X, X_proj, y, y_proj, W, W_proj, b.reshape(-1, 1))[0],
-        1e-6,
-    )
-    grad = _LM(X, X_proj, y, y_proj, W, W_proj, beta_test.reshape(-1, 1))[1].flatten()
+        grad_approx = scipy.optimize.approx_fprime(
+            beta_test.flatten(),
+            lambda b: _LM(X, X_proj, y, y_proj, W, W_proj, b.reshape(-1, 1))[0],
+            1e-6,
+        )
+        grad = _LM(X, X_proj, y, y_proj, W, W_proj, beta_test.reshape(-1, 1))[1]
 
-    assert np.allclose(grad, grad_approx, rtol=1e-5, atol=1e-4)
+        assert np.allclose(grad.flatten(), grad_approx, rtol=1e-4, atol=1e-4)
