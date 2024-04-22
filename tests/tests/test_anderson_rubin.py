@@ -90,9 +90,8 @@ def test_inverse_anderson_rubin_confidence_set_alternative_formulation(
     y = y - y.mean()
 
     inverse_ar = inverse_anderson_rubin_test(Z, X, y, alpha=alpha)
-    kappa_alpha = 1 + scipy.stats.f(dfn=k, dfd=n - k).ppf(1 - alpha) * k / (n - k)
+    kappa_alpha = 1 + scipy.stats.chi2(df=k).ppf(1 - alpha) / (n - k)
     kclass_kappa_alpha = KClass(kappa=kappa_alpha).fit(X=X, y=y, Z=Z)
-
     assert np.allclose(inverse_ar.center, kclass_kappa_alpha.coef_, rtol=1e-8)
 
     residuals = y.flatten() - X @ kclass_kappa_alpha.coef_
@@ -102,7 +101,7 @@ def test_inverse_anderson_rubin_confidence_set_alternative_formulation(
     A = (kappa_alpha * proj(Z, X) + (1 - kappa_alpha) * X).T @ X
 
     assert np.allclose(
-        A / (-sigma_hat_sq * (scipy.stats.f(dfn=k, dfd=n - k).ppf(1 - alpha) * k - ar)),
+        A / (-sigma_hat_sq * (scipy.stats.chi2(df=k).ppf(1 - alpha) - k * ar)),
         inverse_ar.A / inverse_ar.c_standardized,
-        rtol=1e-5,
+        rtol=1e-8,
     )
