@@ -4,7 +4,7 @@ import re
 import numpy as np
 from glum import GeneralizedLinearRegressor
 
-from ivmodels.utils import proj
+from ivmodels.utils import proj, to_numpy
 
 try:
     import pandas as pd
@@ -20,13 +20,25 @@ class KClassMixin:
     """Mixin class for k-class estimators."""
 
     def __init__(
-        self, kappa=1, instrument_names=None, instrument_regex=None, *args, **kwargs
+        self,
+        kappa=1,
+        instrument_names=None,
+        instrument_regex=None,
+        exogenous_names=None,
+        exogenous_regex=None,
+        *args,
+        **kwargs,
     ):
         super().__init__(*args, **kwargs)
 
         self.kappa = kappa
 
-        if instrument_names is not None or instrument_regex is not None:
+        if (
+            instrument_names is not None
+            or instrument_regex is not None
+            or exogenous_names is not None
+            or exogenous_regex is not None
+        ):
             if not _PANDAS_INSTALLED:
                 raise ImportError(
                     "pandas is required to use instrument columns or regex."
@@ -34,105 +46,180 @@ class KClassMixin:
 
         self.instrument_names = instrument_names
         self.instrument_regex = instrument_regex
+        self.exogenous_names = exogenous_names
+        self.exogenous_regex = exogenous_regex
 
-    def _X_Z(self, X, Z=None, check=True):
+    def _X_Z_C(self, X, Z=None, C=None):
         """
-        Extract instrument columns from X and Z.
+        Extract instrument and exogenous columns from X and Z.
 
         Parameters
         ----------
         X: array-like, shape (n_samples, n_features)
-            The input data. Must be a pandas DataFrame if `instrument_names` or
-            `instrument_regex` is not None.
+            The input data. Must be a pandas DataFrame if any of `instrument_names`,
+            `instrument_regex`, `exogenous_names` or `exogenous_names` is not None.
         Z: array-like, shape (n_samples, n_instruments), optional
-            The instrument data. If None, `instrument_names` or `instrument_regex` must be
-            specified.
-        check: bool, optional
-            Whether to check the input data for consistency.
+            The instrument data.
+        C: array-like, shape (n_samples, n_exogenous), optional
+            The exogenous regressors.
 
         Returns
         -------
-        X: array-like, shape (n_samples, n_features - n_instrument)
-            The input data with instrument columns removed.
-        Z: array-like, shape (n_samples, n_instrument)
+        X: np.array, shape (n_samples, n_features - n_instrument - n_exogenous)
+            The input data with instrument and exogenous columns removed.
+        Z: np.array, shape (n_samples, n_instrument)
             The instrument data.
+        C: np.array, shape (n_samples, n_exogenous)
+            The exogenous data.
 
         Raises
         ------
         ValueError
-            If `check` is True and `Z`, `instrument_names`, and `instrument_regex` are all
-            None.
+            If `Z` is not None and `instrument_names` or `instrument_regex` is not None.
         ValueError
-            If `check` is True and `Z` is not None and `instrument_names` or
-            `instrument_regex` is not None.
+            If `C` is not None and `exogenous_names` or `exogenous_regex` is not None.
         ValueError
-            If `check` is True and `instrument_names` or `instrument_regex` is not None
-            and `X` is not a pandas DataFrame.
+            If `instrument_names`, `instrument_regex`, `exogenous_names` or
+            `exogenous_regex` is not None and `X` is not a pandas DataFrame.
         ValueError
-            If `check` is True, `instrument_regex` is specified and no columns are
-            matched.
+            If `instrument_regex` is specified and no columns are matched.
         ValueError
-            If `check` is True, `instrument_names` is specified, and some columns in
-            `instrument_names` are missing in `X`.
-        """
-        if Z is not None:
-            if (
-                self.instrument_names is not None
-                or self.instrument_regex is not None
-                and check
-            ):
-                raise ValueError(
-                    "If `instrument_names` or `instrument_regex` is specified, "
-                    "then `Z` must be None."
-                )
-            else:
-                return X, Z
-        else:
-            if self.instrument_names is None and self.instrument_regex is None:
-                if check:
-                    raise ValueError(
-                        "If `instrument_names` and `instrument_regex` are None, "
-                        "then `Z` must be specified."
-                    )
-                else:
-                    return X, np.zeros(shape=(X.shape[0], 0))
+            If `instrument_names` is specified and some columns in `instrument_names`
+            are missing in `X`.
+        ValueError
+            If `instrument_regex` is specified and no columns are matched.
+        ValueError
+            If `exogenous_names` is specified and some columns in `exogenous_names` are
+            missing in `X`.
+        ValueError
+            If and the columns selected by `instrument_names` and `instrument_regex` and
+            `exogenous_names` and `exogenous_regex` are not disjoint.
 
+        """
+        if (
+            self.exogenous_names is not None
+            or self.exogenous_regex is not None
+            or self.instrument_names is not None
+            or self.instrument_regex is not None
+        ):
             if not _PANDAS_INSTALLED:
                 raise ImportError(
-                    "pandas is required to use instrument_columns or regex."
+                    "pandas is required to use `exogenous_names`, "
+                    "`exogenous_regex`, `instrument_names` of `instrument_regex`."
                 )
 
             if not isinstance(X, pd.DataFrame):
-                if check:
-                    raise ValueError(
-                        "If `instrument_names` or `instrument_regex` is specified, "
-                        "`X` must be a pandas DataFrame."
-                    )
+                raise ValueError(
+                    "If `instrument_names`, `instrument_regex`, `exogenous_names`, "
+                    "or `exogenous_regex` is specified, `X` must be a pandas "
+                    "DataFrame."
+                )
+
+        if self.exogenous_names is not None or self.exogenous_regex is not None:
+            if C is not None:
+                raise ValueError(
+                    "If `exogenous_names` or `exogenous_regex` is specified, "
+                    "`C` must be None."
+                )
+
+        if self.instrument_names is not None or self.instrument_regex is not None:
+            if Z is not None:
+                raise ValueError(
+                    "If `instrument_names` or `instrument_regex` is specified, "
+                    "`Z` must be None."
+                )
+
+        if self.instrument_names is None:
+            instrument_names = pd.Index([])
+        else:
+            instrument_names = pd.Index(self.instrument_names)
+
+            if not instrument_names.isin(X.columns).all():
+                raise ValueError(
+                    "The following instrument columns were not found in X: "
+                    f"{set(self.instrument_names) - set(X.columns)}"
+                )
+
+        if self.instrument_regex is not None:
+            matched_columns = X.columns[X.columns.str.contains(self.instrument_regex)]
+            if len(matched_columns) == 0:
+                raise ValueError(
+                    f"No columns in X matched the regex {self.instrument_regex}"
+                )
+            instrument_names = instrument_names.union(matched_columns)
+
+        if len(instrument_names) > 0:
+            Z = X[instrument_names]
+
+        if self.exogenous_names is None:
+            exogenous_names = pd.Index([])
+        else:
+            exogenous_names = pd.Index(self.exogenous_names)
+
+            if not exogenous_names.isin(X.columns).all():
+                raise ValueError(
+                    "The following instrument columns were not found in X: "
+                    f"{set(self.exogenous_names) - set(X.columns)}"
+                )
+
+        if self.instrument_regex is not None:
+            matched_columns = X.columns[X.columns.str.contains(self.instrument_regex)]
+            if len(matched_columns) == 0:
+                raise ValueError(
+                    f"No columns in X matched the regex {self.instrument_regex}"
+                )
+            exogenous_names = exogenous_names.union(matched_columns)
+
+        if len(exogenous_names) > 0:
+            C = X[exogenous_names]
+
+        non_endogenous_names = instrument_names.union(exogenous_names)
+        if len(non_endogenous_names) > 0:
+            X = X.drop(columns=non_endogenous_names)
+
+        if C is None:
+            C = np.zeros((X.shape[0], 0))
+        if Z is None:
+            Z = np.zeros((X.shape[0], 0))
+
+        return to_numpy(X), to_numpy(Z), to_numpy(C)
+
+    def _X_Z_C_predict(self, X, C=None):
+        """
+        Remove instruments from X. Join X and C.
+
+        Parameters
+        ----------
+        X: array-like, shape (n_samples, n_features)
+            The input data. Must be a pandas DataFrame if any of `instrument_names`,
+            `instrument_regex`, `exogenous_names` or `exogenous_names` is not None.
+        C: array-like, shape (n_samples, n_exogenous), optional
+            The exogenous regressors.
+
+        Returns
+        -------
+        X: np.array, shape (n_samples, n_features - n_instrument)
+            The input data with instruments removec.
+        """
+        if self.instrument_names is not None or self.instrument_regex is not None:
+            if _PANDAS_INSTALLED and isinstance(X, pd.DataFrame):
+                if self.instrument_names is None:
+                    instrument_names = pd.Index([])
                 else:
-                    return X, None
-            else:
-                instrument_columns = pd.Index([])
+                    instrument_names = pd.Index(self.instrument_names)
 
                 if self.instrument_regex is not None:
                     matched_columns = X.columns[
                         X.columns.str.contains(self.instrument_regex)
                     ]
-                    if len(matched_columns) == 0 and check:
-                        raise ValueError(
-                            f"No columns in X matched the regex {self.instrument_regex}"
-                        )
-                    instrument_columns = instrument_columns.union(matched_columns)
+                    instrument_names = instrument_names.union(matched_columns)
 
-                if self.instrument_names is not None:
-                    included_columns = X.columns.intersection(self.instrument_names)
-                    if len(included_columns) < len(self.instrument_names) and check:
-                        raise ValueError(
-                            "The following instrument columns were not found in X: "
-                            f"{set(self.instrument_names) - set(included_columns)}"
-                        )
-                    instrument_columns = instrument_columns.union(included_columns)
+                X = X.drop(columns=X.columns.intersection(instrument_names))
 
-                return X.drop(instrument_columns, axis=1), X[instrument_columns]
+        if C is not None:
+            return np.hstack([to_numpy(X), to_numpy(C)])
+        else:
+            return to_numpy(X)
 
     def _fuller_alpha(self, kappa):
         """
@@ -236,7 +323,7 @@ class KClassMixin:
             X.T @ (self.kappa_ * y_proj + (1 - self.kappa_) * y),
         ).flatten()
 
-    def fit(self, X, y, Z=None, *args, **kwargs):
+    def fit(self, X, y, Z=None, C=None, *args, **kwargs):
         """
         Fit a k-class or anchor regression estimator.
 
@@ -244,6 +331,9 @@ class KClassMixin:
         pandas DataFrame containing columns ``instrument_names`` and ``Z`` must be
         ``None``. At least one one of ``Z``, ``instrument_names``, and
         ``instrument_regex`` must be specified.
+        If ``exogenous_names`` or ``exogenous_regex`` are specified, ``X`` must be a
+        pandas DataFrame containing columns ``exogenous_names`` and ``C`` must be
+        ``None``.
 
         Parameters
         ----------
@@ -257,8 +347,12 @@ class KClassMixin:
             The instrument values. If ``instrument_names`` or ``instrument_regex`` are
             specified, ``Z`` must be ``None``. If ``Z`` is specified,
             ``instrument_names`` and ``instrument_regex`` must be ``None``.
+        C: array-like, shape (n_samples, n_exogenous), optional
+            The exogenous regressors. If ``exogenous_names`` or ``exogenous_regex`` are
+            specified, ``C`` must be ``None``. If ``C`` is specified,
+            ``exogenous_names`` and ``exogenous_regex`` must be ``None``.
         """
-        X, Z = self._X_Z(X, Z)
+        X, Z, C = self._X_Z_C(X, Z, C)
 
         n, q = X.shape[0], Z.shape[1]
 
@@ -309,8 +403,8 @@ class KClassMixin:
         self.intercept_ = -self.coef_.T @ x_mean + y_mean
         return self
 
-    def predict(self, X, *args, **kwargs):  # noqa D
-        X, _ = self._X_Z(X, Z=None, check=False)
+    def predict(self, X, C=None, *args, **kwargs):  # noqa D
+        X = self._X_Z_C_predict(X, C=C)
         return super().predict(X, *args, **kwargs)
 
 
@@ -366,6 +460,14 @@ class KClass(KClassMixin, GeneralizedLinearRegressor):
         instruments. Requires ``X`` to be a pandas DataFrame. If both
         ``instrument_names`` and ``instrument_regex`` are specified, the union of the
         two is used.
+    exogenous_names: str or list of str, optional
+        The names of the columns in ``X`` that should be used as exogenous regressors.
+        Requires ``X`` to be a pandas DataFrame. If both ``exogenous_names`` and
+        ``exogenous_regex`` are specified, the union of the two is used.
+    exogenous_regex: str, optional
+        A regex that is used to select columns in ``X`` that should be used as exogenous
+        regressors. Requires ``X`` to be a pandas DataFrame. If both ``exogenous_names``
+        and ``exogenous_regex`` are specified, the union of the two is used.
     alpha: float, optional, default=0
         Regularization parameter for elastic net regularization.
     l1_ratio: float, optional, default=0
@@ -401,12 +503,21 @@ class KClass(KClassMixin, GeneralizedLinearRegressor):
     """
 
     def __init__(
-        self, kappa=1, instrument_names=None, instrument_regex=None, alpha=0, l1_ratio=0
+        self,
+        kappa=1,
+        instrument_names=None,
+        instrument_regex=None,
+        exogenous_names=None,
+        exogenous_regex=None,
+        alpha=0,
+        l1_ratio=0,
     ):
         super().__init__(
             kappa=kappa,
             instrument_names=instrument_names,
             instrument_regex=instrument_regex,
+            exogenous_names=exogenous_names,
+            exogenous_regex=exogenous_regex,
             family="gaussian",
             alpha=alpha,
             l1_ratio=l1_ratio,
