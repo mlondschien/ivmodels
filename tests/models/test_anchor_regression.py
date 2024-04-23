@@ -68,52 +68,6 @@ def test_linear_anchor_regression_different_inputs(gamma, n, p, q, u):
     assert np.allclose(ar_1.intercept_, ar_3.intercept_)
 
 
-# We fit on df with feature names, but predict on X without feature names
-# @pytest.mark.filterwarnings("ignore:X does not have valid feature names, but LinearAnc")
-def test_linear_anchor_regression_raise():
-    A, X, Y = simulate_gaussian_iv(10, 3, 2, 1)
-    Y = Y.flatten()
-
-    df = pd.DataFrame(np.hstack([X, A]), columns=["X1", "X2", "X3", "A1", "A2"])
-
-    ar_1 = AnchorRegression(gamma=1, instrument_names=["A1", "A2"])
-    with pytest.raises(ValueError, match="must be None"):
-        ar_1.fit(df, Y, A)
-
-    with pytest.raises(ValueError, match="not found in X: {'A1'}"):
-        ar_1.fit(df.drop(columns=["A1"]), Y)
-
-    with pytest.raises(ValueError, match="must be a pandas DataFrame"):
-        ar_1.fit(X, Y)
-
-    ar_1.fit(df, Y)
-    _ = ar_1.predict(df)
-    _ = ar_1.predict(X)
-    _ = ar_1.predict(df.drop(columns=["A1", "A2"]))
-
-    ar_2 = AnchorRegression(gamma=1, instrument_regex="A")
-    with pytest.raises(ValueError, match="must be None"):
-        ar_2.fit(df, Y, A)
-
-    with pytest.raises(ValueError, match="No columns in X matched the regex A"):
-        ar_2.fit(df.drop(columns=["A1", "A2"]), Y)
-
-    with pytest.raises(ValueError, match="must be a pandas DataFrame"):
-        ar_2.fit(X, Y)
-
-    ar_2.fit(df, Y)
-    _ = ar_2.predict(df)
-    _ = ar_2.predict(X)
-    _ = ar_2.predict(df.drop(columns=["A1", "A2"]))
-
-    ar_3 = AnchorRegression(gamma=1)
-    with pytest.raises(ValueError, match="`Z` must be specified"):
-        ar_3.fit(X, Y)
-
-    ar_3.fit(X, Y, A)
-    _ = ar_3.predict(X)
-
-
 def test_score():
     A, X, Y = simulate_gaussian_iv(100, 2, 2, 1)
     model = AnchorRegression(gamma=1).fit(X, Y.flatten(), A)

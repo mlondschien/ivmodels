@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import pytest
 import scipy
 from sklearn.linear_model import LinearRegression
@@ -172,3 +173,48 @@ def test_fuller_bias_and_mse(n, beta, Pi, gamma, delta):
     # assert all(
     #     np.abs(biases["fuller(1)"]) == np.min(np.abs(list(biases.values())), axis=0)
     # )
+
+
+# We fit on df with feature names, but predict on X without feature names
+def test_kclass_X_Z_C_raises():
+    Z, X, Y = simulate_gaussian_iv(10, 3, 2, 1)
+    Y = Y.flatten()
+
+    df = pd.DataFrame(np.hstack([X, Z]), columns=["X1", "X2", "X3", "A1", "A2"])
+
+    ar_1 = KClass(kappa=1, instrument_names=["A1", "A2"])
+    with pytest.raises(ValueError, match="must be None"):
+        ar_1.fit(df, Y, Z)
+
+    with pytest.raises(ValueError, match="not found in X: {'A1'}"):
+        ar_1.fit(df.drop(columns=["A1"]), Y)
+
+    with pytest.raises(ValueError, match="must be a pandas DataFrame"):
+        ar_1.fit(X, Y)
+
+    ar_1.fit(df, Y)
+    _ = ar_1.predict(df)
+    _ = ar_1.predict(X)
+    _ = ar_1.predict(df.drop(columns=["A1", "A2"]))
+
+    ar_2 = KClass(kappa=1, instrument_regex="A")
+    with pytest.raises(ValueError, match="must be None"):
+        ar_2.fit(df, Y, Z)
+
+    with pytest.raises(ValueError, match="No columns in X matched the regex A"):
+        ar_2.fit(df.drop(columns=["A1", "A2"]), Y)
+
+    with pytest.raises(ValueError, match="must be a pandas DataFrame"):
+        ar_2.fit(X, Y)
+
+    ar_2.fit(df, Y)
+    _ = ar_2.predict(df)
+    _ = ar_2.predict(X)
+    _ = ar_2.predict(df.drop(columns=["A1", "A2"]))
+
+    ar_3 = KClass(kappa=1)
+    with pytest.raises(ValueError, match="`Z` must be specified"):
+        ar_3.fit(X, Y)
+
+    ar_3.fit(X, Y, Z)
+    _ = ar_3.predict(X)
