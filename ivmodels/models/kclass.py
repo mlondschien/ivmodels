@@ -26,7 +26,6 @@ class KClassMixin:
         instrument_regex=None,
         exogenous_names=None,
         exogenous_regex=None,
-        fit_intercept=True,
         *args,
         **kwargs,
     ):
@@ -49,7 +48,6 @@ class KClassMixin:
         self.instrument_regex = instrument_regex
         self.exogenous_names = exogenous_names
         self.exogenous_regex = exogenous_regex
-        self.fit_intercept = fit_intercept
 
     def _X_Z_C(self, X, Z=None, C=None, predict=False):
         """
@@ -298,6 +296,8 @@ class KClassMixin:
 
     @staticmethod
     def _spectrum(X, y, Z=None, X_proj=None, y_proj=None):
+        if (y_proj is None or X_proj is None) and Z is None:
+            raise ValueError("Either Z or both X_proj and y_proj must be specified.")
         if X_proj is None:
             X_proj = proj(Z, X)
         if y_proj is None:
@@ -412,6 +412,8 @@ class KClassMixin:
         else:
             X_proj = proj(Z, X)
 
+        y_proj = proj(Z, y)
+
         if isinstance(self.kappa, str):
             if self.kappa.lower() in {"tsls", "2sls"}:
                 self.kappa_ = 1
@@ -423,10 +425,10 @@ class KClassMixin:
                     X[:, :mx] - proj(C, X[:, :mx]),
                     y - proj(C, y),
                     X_proj=X_proj[:, :mx],
+                    y_proj=y_proj,
                 )
                 self.kappa_liml_ = 1 + self.ar_min_
                 self.kappa_ = self.kappa_liml_ - self.fuller_alpha_ / (n - Z.shape[1])
-
         else:
             self.kappa_ = self.kappa
 
@@ -438,8 +440,7 @@ class KClassMixin:
                 np.sqrt(1 - self.kappa_) * X + (1 - np.sqrt(1 - self.kappa_)) * X_proj
             ) + x_mean
             y_tilde = (
-                np.sqrt(1 - self.kappa_) * y
-                + (1 - np.sqrt(1 - self.kappa_)) * proj(Z, y)
+                np.sqrt(1 - self.kappa_) * y + (1 - np.sqrt(1 - self.kappa_)) * y_proj
             ) + y_mean
             super().fit(X_tilde, y_tilde, *args, **kwargs)
 

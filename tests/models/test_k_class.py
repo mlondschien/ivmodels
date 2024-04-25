@@ -137,7 +137,7 @@ def test_liml_minimizes_anderson_rubin(fit_intercept, n, mx, k, u):
     Z, X, y, _, _ = simulate_gaussian_iv(n, mx, k, u)
 
     kclass = KClass(kappa="liml", fit_intercept=fit_intercept)
-    kclass.fit(X, y, Z)
+    kclass.fit(X, y, Z=Z)
 
     if fit_intercept:
         X = X - X.mean(axis=0)
