@@ -75,7 +75,7 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
 
     XW = np.concatenate([X, W], axis=1)
 
-    estimator = KClass(kappa=estimator).fit(XW, y, Z)
+    estimator = KClass(kappa=estimator, fit_intercept=False).fit(XW, y, Z)
     beta_gamma_hat = estimator.coef_
 
     residuals = y - XW @ beta_gamma_hat
@@ -161,7 +161,7 @@ def inverse_wald_test(Z, X, y, alpha=0.05, W=None, estimator="tsls"):
 
     X_proj = proj(Z, X)
 
-    kclass = KClass(kappa=estimator).fit(X, y, Z)
+    kclass = KClass(kappa=estimator, fit_intercept=False).fit(X, y, Z)
     beta = kclass.coef_
 
     # Avoid settings where (X @ beta).shape = (n, 1) and y.shape = (n,), resulting in

@@ -26,6 +26,7 @@ class KClassMixin:
         instrument_regex=None,
         exogenous_names=None,
         exogenous_regex=None,
+        fit_intercept=True,
         *args,
         **kwargs,
     ):
@@ -48,8 +49,9 @@ class KClassMixin:
         self.instrument_regex = instrument_regex
         self.exogenous_names = exogenous_names
         self.exogenous_regex = exogenous_regex
+        self.fit_intercept = fit_intercept
 
-    def _X_Z_C(self, X, Z=None, C=None):
+    def _X_Z_C(self, X, Z=None, C=None, predict=False):
         """
         Extract instrument and exogenous columns from X and Z.
 
@@ -62,6 +64,9 @@ class KClassMixin:
             The instrument data.
         C: array-like, shape (n_samples, n_exogenous), optional
             The exogenous regressors.
+        predict: bool, optional, default=False
+            Whether the method is called from the predict method. If True, instruments
+            are not necessary.
 
         Returns
         -------
@@ -82,12 +87,13 @@ class KClassMixin:
             If `instrument_names`, `instrument_regex`, `exogenous_names` or
             `exogenous_regex` is not None and `X` is not a pandas DataFrame.
         ValueError
-            If `instrument_regex` is specified and no columns are matched.
+            If `predict` is False, `instrument_regex` is specified and no columns are
+            matched.
         ValueError
-            If `instrument_names` is specified and some columns in `instrument_names`
-            are missing in `X`.
+            If `predict` is False, `instrument_names` is specified and some columns in
+            `instrument_names` are missing in `X`.
         ValueError
-            If `instrument_regex` is specified and no columns are matched.
+            If `exogenous_regex` is specified and no columns are matched.
         ValueError
             If `exogenous_names` is specified and some columns in `exogenous_names` are
             missing in `X`.
@@ -135,14 +141,17 @@ class KClassMixin:
             instrument_names = pd.Index(self.instrument_names)
 
             if not instrument_names.isin(X.columns).all():
-                raise ValueError(
-                    "The following instrument columns were not found in X: "
-                    f"{set(self.instrument_names) - set(X.columns)}"
-                )
+                if predict:
+                    instrument_names = instrument_names.intersection(X.columns)
+                else:
+                    raise ValueError(
+                        "The following instrument columns were not found in X: "
+                        f"{set(self.instrument_names) - set(X.columns)}"
+                    )
 
         if self.instrument_regex is not None:
             matched_columns = X.columns[X.columns.str.contains(self.instrument_regex)]
-            if len(matched_columns) == 0:
+            if not predict and len(matched_columns) == 0:
                 raise ValueError(
                     f"No columns in X matched the regex {self.instrument_regex}"
                 )
@@ -158,18 +167,26 @@ class KClassMixin:
 
             if not exogenous_names.isin(X.columns).all():
                 raise ValueError(
-                    "The following instrument columns were not found in X: "
+                    "The following exogenous columns were not found in X: "
                     f"{set(self.exogenous_names) - set(X.columns)}"
                 )
 
-        if self.instrument_regex is not None:
-            matched_columns = X.columns[X.columns.str.contains(self.instrument_regex)]
+        if self.exogenous_regex is not None:
+            matched_columns = X.columns[X.columns.str.contains(self.exogenous_regex)]
             if len(matched_columns) == 0:
                 raise ValueError(
-                    f"No columns in X matched the regex {self.instrument_regex}"
+                    f"No columns in X matched the regex {self.exogenous_regex}"
                 )
             exogenous_names = exogenous_names.union(matched_columns)
 
+        intersection_names = instrument_names.intersection(exogenous_names)
+        if len(intersection_names) > 0:
+            raise ValueError(
+                f"The columns selected by `instrument_names` and `instrument_regex` "
+                f"and `exogenous_names` and `exogenous_regex` must be disjoint. "
+                f"The following columns are in both `instrument_names` and "
+                f"`exogenous_names`: {intersection_names}"
+            )
         if len(exogenous_names) > 0:
             C = X[exogenous_names]
 
@@ -184,42 +201,58 @@ class KClassMixin:
 
         return to_numpy(X), to_numpy(Z), to_numpy(C)
 
-    def _X_Z_C_predict(self, X, C=None):
-        """
-        Remove instruments from X. Join X and C.
+    # def _X_Z_C_predict(self, X, C=None):
+    #     """
+    #     Remove instruments from X. Join X and C.
 
-        Parameters
-        ----------
-        X: array-like, shape (n_samples, n_features)
-            The input data. Must be a pandas DataFrame if any of `instrument_names`,
-            `instrument_regex`, `exogenous_names` or `exogenous_names` is not None.
-        C: array-like, shape (n_samples, n_exogenous), optional
-            The exogenous regressors.
+    #     Parameters
+    #     ----------
+    #     X: array-like, shape (n_samples, n_features)
+    #         The input data. Must be a pandas DataFrame if any of `instrument_names`,
+    #         `instrument_regex`, `exogenous_names` or `exogenous_names` is not None.
+    #     C: array-like, shape (n_samples, n_exogenous), optional
+    #         The exogenous regressors.
 
-        Returns
-        -------
-        X: np.array, shape (n_samples, n_features - n_instrument)
-            The input data with instruments removec.
-        """
-        if self.instrument_names is not None or self.instrument_regex is not None:
-            if _PANDAS_INSTALLED and isinstance(X, pd.DataFrame):
-                if self.instrument_names is None:
-                    instrument_names = pd.Index([])
-                else:
-                    instrument_names = pd.Index(self.instrument_names)
+    #     Returns
+    #     -------
+    #     X: np.array, shape (n_samples, n_features - n_instrument)
+    #         The input data with instruments removec.
+    #     """
+    #     if self.instrument_names is not None or self.instrument_regex is not None:
+    #         if _PANDAS_INSTALLED and isinstance(X, pd.DataFrame):
+    #             if self.instrument_names is None:
+    #                 instrument_names = pd.Index([])
+    #             else:
+    #                 instrument_names = pd.Index(self.instrument_names)
 
-                if self.instrument_regex is not None:
-                    matched_columns = X.columns[
-                        X.columns.str.contains(self.instrument_regex)
-                    ]
-                    instrument_names = instrument_names.union(matched_columns)
+    #             if self.instrument_regex is not None:
+    #                 matched_columns = X.columns[
+    #                     X.columns.str.contains(self.instrument_regex)
+    #                 ]
+    #                 instrument_names = instrument_names.union(matched_columns)
 
-                X = X.drop(columns=X.columns.intersection(instrument_names))
+    #             X = X.drop(columns=X.columns.intersection(instrument_names))
 
-        if C is not None:
-            return np.hstack([to_numpy(X), to_numpy(C)])
-        else:
-            return to_numpy(X)
+    #     if self.exogenous_names is not None or self.exogenous_regex is not None:
+    #         if _PANDAS_INSTALLED and isinstance(X, pd.DataFrame):
+    #             if self.exogenous_names is None:
+    #                 exogenous_names = pd.Index([])
+    #             else:
+    #                 exogenous_names = pd.Index(self.exogenous_names)
+
+    #             if self.exogenous_regex is not None:
+    #                 matched_columns = X.columns[
+    #                     X.columns.str.contains(self.exogenous_regex)
+    #                 ]
+    #                 exogenous_names = exogenous_names.union(matched_columns)
+
+    #             C = X[exogenous_names]
+    #             X = X.drop(columns=X.columns.intersection(exogenous_names))
+
+    #     if C is not None:
+    #         return np.hstack([to_numpy(X), to_numpy(C)])
+    #     else:
+    #         return to_numpy(X)
 
     def _fuller_alpha(self, kappa):
         """
@@ -314,14 +347,12 @@ class KClassMixin:
         """
         return min(KClassMixin()._spectrum(X=X, y=y, Z=Z, X_proj=X_proj, y_proj=y_proj))
 
-    def _solve_normal_equations(self, X, y, X_proj, y_proj, alpha=0):
+    def _solve_normal_equations(self, X, y, X_proj, alpha=0):
         if alpha != 0:
-            raise NotImplementedError("alpha != 0 not yet implemented.")
+            raise NotImplementedError("alpha != 0 not yet implemented for kappa>1.")
 
-        return np.linalg.solve(
-            X.T @ (self.kappa_ * X_proj + (1 - self.kappa_) * X),
-            X.T @ (self.kappa_ * y_proj + (1 - self.kappa_) * y),
-        ).flatten()
+        X_kappa = self.kappa_ * X_proj + (1 - self.kappa_) * X
+        return np.linalg.solve(X_kappa.T @ X, X_kappa.T @ y).flatten()
 
     def fit(self, X, y, Z=None, C=None, *args, **kwargs):
         """
@@ -352,18 +383,34 @@ class KClassMixin:
             specified, ``C`` must be ``None``. If ``C`` is specified,
             ``exogenous_names`` and ``exogenous_regex`` must be ``None``.
         """
-        X, Z, C = self._X_Z_C(X, Z, C)
+        X, Z, C = self._X_Z_C(X, Z, C, predict=False)
 
-        n, q = X.shape[0], Z.shape[1]
+        n, mx = X.shape
 
-        x_mean = X.mean(axis=0)
-        y_mean = y.mean(axis=0)
+        if self.fit_intercept:
+            x_mean = X.mean(axis=0)
+            y_mean = y.mean(axis=0)
 
-        X = X - x_mean
-        y = y - y_mean
+            X = X - x_mean
+            y = y - y_mean
+            Z = Z - Z.mean(axis=0)
 
-        X_proj = proj(Z, X)
-        y_proj = proj(Z, y)
+            if C.shape[1] > 0:
+                c_mean = C.mean(axis=0)
+                C = C - c_mean
+            else:
+                c_mean = np.zeros(0)
+        else:
+            x_mean, y_mean, c_mean = np.zeros(mx), 0, np.zeros(C.shape[1])
+
+        if C.shape[1] > 0:
+            Z = np.hstack([Z, C])
+            X_proj = np.hstack([proj(Z, X), C])
+            X = np.hstack([X, C])
+            x_mean = np.hstack([x_mean, c_mean])
+
+        else:
+            X_proj = proj(Z, X)
 
         if isinstance(self.kappa, str):
             if self.kappa.lower() in {"tsls", "2sls"}:
@@ -372,23 +419,28 @@ class KClassMixin:
                 self.kappa_ = 0
             else:
                 self.fuller_alpha_ = self._fuller_alpha(self.kappa)
-                self.ar_min_ = self.ar_min(X, y, X_proj=X_proj, y_proj=y_proj)
+                self.ar_min_ = self.ar_min(
+                    X[:, :mx] - proj(C, X[:, :mx]),
+                    y - proj(C, y),
+                    X_proj=X_proj[:, :mx],
+                )
                 self.kappa_liml_ = 1 + self.ar_min_
-                self.kappa_ = self.kappa_liml_ - self.fuller_alpha_ / (n - q)
+                self.kappa_ = self.kappa_liml_ - self.fuller_alpha_ / (n - Z.shape[1])
 
         else:
             self.kappa_ = self.kappa
 
-        # If kappa <=1, the k-class estimator is an anchor regression estimator, i.e.,
-        # sqrt( (1-kappa) * Id + kappa * P_Z) ) exists and we apply linear regression
-        # to the transformed data.
+        # If kappa <=1, the k-class estimator is an anchor regression estimator and
+        # sqrt( (1-kappa) * Id + kappa * P_Z) ) = sqrt(1-kappa) * Id + sqrt(kappa) * P_Z
+        # and we apply linear regression to the transformed data.
         if self.kappa_ <= 1:
             X_tilde = (
                 np.sqrt(1 - self.kappa_) * X + (1 - np.sqrt(1 - self.kappa_)) * X_proj
-            )
+            ) + x_mean
             y_tilde = (
-                np.sqrt(1 - self.kappa_) * y + (1 - np.sqrt(1 - self.kappa_)) * y_proj
-            )
+                np.sqrt(1 - self.kappa_) * y
+                + (1 - np.sqrt(1 - self.kappa_)) * proj(Z, y)
+            ) + y_mean
             super().fit(X_tilde, y_tilde, *args, **kwargs)
 
         else:
@@ -397,15 +449,20 @@ class KClassMixin:
                     f"Arguments {args} and {kwargs} are not supported for kappa > 1."
                 )
             self.coef_ = self._solve_normal_equations(
-                X, y, X_proj=X_proj, y_proj=y_proj, alpha=getattr(self, "alpha", 0)
+                X, y, X_proj=X_proj, alpha=getattr(self, "alpha", 0)
             )
 
-        self.intercept_ = -self.coef_.T @ x_mean + y_mean
+            if self.fit_intercept:
+                self.intercept_ = -self.coef_.T @ x_mean + y_mean
+            else:
+                # needed for glum.GeneralizedLinearRegressor.predict
+                self.intercept_ = 0
+
         return self
 
     def predict(self, X, C=None, *args, **kwargs):  # noqa D
-        X = self._X_Z_C_predict(X, C=C)
-        return super().predict(X, *args, **kwargs)
+        X, _, C = self._X_Z_C(X, C=C, Z=None, predict=True)
+        return super().predict(np.hstack([X, C]), *args, **kwargs)
 
 
 class KClass(KClassMixin, GeneralizedLinearRegressor):
@@ -511,6 +568,7 @@ class KClass(KClassMixin, GeneralizedLinearRegressor):
         exogenous_regex=None,
         alpha=0,
         l1_ratio=0,
+        fit_intercept=True,
     ):
         super().__init__(
             kappa=kappa,
@@ -521,5 +579,5 @@ class KClass(KClassMixin, GeneralizedLinearRegressor):
             family="gaussian",
             alpha=alpha,
             l1_ratio=l1_ratio,
-            fit_intercept=False,
+            fit_intercept=fit_intercept,
         )

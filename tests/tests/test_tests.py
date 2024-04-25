@@ -321,7 +321,7 @@ def test_test_size_weak_ivs(test, n, p, q, u):
 @pytest.mark.parametrize("p_value", [0.1, 0.01])
 def test_test_round_trip(test, inverse_test, n, p, q, u, p_value):
     """A test's p-value at the confidence set's boundary equals the nominal level."""
-    Z, X, y = simulate_gaussian_iv(n, p, q, u, seed=0)
+    Z, X, y, _, _ = simulate_gaussian_iv(n, p, q, u, seed=0)
 
     Z = Z - Z.mean(axis=0)
     X = X - X.mean(axis=0)
@@ -357,7 +357,7 @@ def test_subvector_round_trip(test, inverse_test, n, p, q, u, r, p_value):
 
     This time for subvector tests.
     """
-    Z, X, y, W = simulate_gaussian_iv(n, p, q, u, r=r, seed=0)
+    Z, X, y, _, W = simulate_gaussian_iv(n, p, q, u, r=r, seed=0)
 
     Z = Z - Z.mean(axis=0)
     X = X - X.mean(axis=0)
@@ -393,7 +393,7 @@ def test_subvector_round_trip(test, inverse_test, n, p, q, u, r, p_value):
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
 def test_p_value_of_estimator(test, kappa, n, p, q, u):
     """The estimated coefficient should be in the confidence set with 95% coverage."""
-    Z, X, y = simulate_gaussian_iv(n, p, q, u)
+    Z, X, y, _, _ = simulate_gaussian_iv(n, p, q, u)
     estimator = KClass(kappa=kappa).fit(X, y.flatten(), Z=Z)
     p_value = test(Z, X, y, estimator.coef_)[1]
     assert p_value > 0.05
@@ -403,7 +403,7 @@ def test_p_value_of_estimator(test, kappa, n, p, q, u):
 @pytest.mark.parametrize("n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
 def test_ar_test_monotonic_in_kappa(test, n, p, q, u):
     """AR(beta(kappa)) should be decreasing in kappa increasing towards kappa."""
-    Z, X, Y = simulate_gaussian_iv(n, p, q, u)
+    Z, X, Y, _, _ = simulate_gaussian_iv(n, p, q, u)
     Y = Y.flatten()
     kappas = np.linspace(0, KClass.ar_min(X, Y, Z) + 1, 10)
     models = [KClass(kappa=kappa).fit(X, Y, Z=Z) for kappa in kappas]
@@ -428,7 +428,7 @@ def test_ar_test_monotonic_in_kappa(test, n, p, q, u):
 )
 def test_inverse_test_sorted(inverse_test, n, p, q, u):
     """The volume of confidence sets should be increasing in the p-value."""
-    Z, X, y = simulate_gaussian_iv(n, p, q, u, seed=0)
+    Z, X, y, _, _ = simulate_gaussian_iv(n, p, q, u, seed=0)
 
     p_values = [0.5, 0.2, 0.1, 0.05]
     quadrics = [inverse_test(Z, X, y, p_value) for p_value in p_values]

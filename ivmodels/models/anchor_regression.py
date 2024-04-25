@@ -82,7 +82,13 @@ class AnchorRegression(AnchorMixin, GeneralizedLinearRegressor):
     """
 
     def __init__(
-        self, gamma=1, instrument_names=None, instrument_regex=None, alpha=0, l1_ratio=0
+        self,
+        gamma=1,
+        instrument_names=None,
+        instrument_regex=None,
+        alpha=0,
+        l1_ratio=0,
+        fit_intercept=True,
     ):
         super().__init__(
             gamma=gamma,
@@ -91,5 +97,5 @@ class AnchorRegression(AnchorMixin, GeneralizedLinearRegressor):
             alpha=alpha,
             l1_ratio=l1_ratio,
             family="gaussian",
-            fit_intercept=False,
+            fit_intercept=fit_intercept,
         )
