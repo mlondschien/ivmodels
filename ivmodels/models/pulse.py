@@ -21,7 +21,7 @@ class PULSEMixin:
         self.rtol = rtol
         self.kappa_max = kappa_max
 
-    def fit(self, X, y, Z=None, *args, **kwargs):
+    def fit(self, X, y, Z=None, C=None, *args, **kwargs):
         """Fit a p-uncorrelated least squares estimator (PULSE) [1].
 
         If ``instrument_names`` or ``instrument_regex`` are specified, ``X`` must be a
@@ -42,7 +42,10 @@ class PULSEMixin:
             ``instrument_regex`` are specified, ``Z`` must be ``None``. If ``Z`` is
             specified, ``instrument_names`` and ``instrument_regex`` must be ``None``.
         """
-        _, Z_ = self._X_Z(X, Z, check=False)
+        _, Z_, C_ = self._X_Z_C(X, Z, C)
+
+        if C_.shape[1] > 0:
+            raise ValueError("PULSE does not support exogenous included variables.")
 
         if self.kappa_max == 1 and Z_.shape[1] < X.shape[1] and self.alpha == 0:
             raise ValueError(

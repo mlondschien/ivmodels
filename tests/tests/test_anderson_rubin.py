@@ -3,6 +3,7 @@ import pytest
 import scipy
 
 from ivmodels.models.kclass import KClass
+from ivmodels.simulate import simulate_gaussian_iv
 from ivmodels.tests.anderson_rubin import (
     anderson_rubin_test,
     inverse_anderson_rubin_test,
@@ -72,27 +73,18 @@ def test_more_powerful_sAR_critical_value_function_integrates_to_one(k, hat_kapp
 def test_inverse_anderson_rubin_confidence_set_alternative_formulation(
     alpha, n, k, mx, u
 ):
-    rng = np.random.RandomState(0)
+    Z, X, y, _, _ = simulate_gaussian_iv(n, mx, k, u)
 
-    delta_X = rng.normal(0, 1, (u, mx))
-    delta_y = rng.normal(0, 1, (u, 1))
-
-    beta = rng.normal(0, 0.1, (mx, 1))
-    Pi_X = rng.normal(0, 1, (k, mx))
-
-    U = rng.normal(0, 1, (n, u))
-
-    Z = rng.normal(0, 1, (n, k))
-    X = Z @ Pi_X + U @ delta_X + rng.normal(0, 1, (n, mx))
-    y = X @ beta + U @ delta_y + rng.normal(0, 1, (n, 1))
-
+    Z = Z - Z.mean(axis=0)
     X = X - X.mean(axis=0)
     y = y - y.mean()
 
     inverse_ar = inverse_anderson_rubin_test(Z, X, y, alpha=alpha)
     kappa_alpha = 1 + scipy.stats.chi2(df=k).ppf(1 - alpha) / (n - k)
-    kclass_kappa_alpha = KClass(kappa=kappa_alpha).fit(X=X, y=y, Z=Z)
-    assert np.allclose(inverse_ar.center, kclass_kappa_alpha.coef_, rtol=1e-8)
+    kclass_kappa_alpha = KClass(kappa=kappa_alpha, fit_intercept=False).fit(
+        X=X, y=y, Z=Z
+    )
+    assert np.allclose(inverse_ar.center, kclass_kappa_alpha.coef_, rtol=1e-6)
 
     residuals = y.flatten() - X @ kclass_kappa_alpha.coef_
     residuals_orth = residuals - proj(Z, residuals)

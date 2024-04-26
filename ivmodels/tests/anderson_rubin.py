@@ -271,6 +271,7 @@ def inverse_anderson_rubin_test(Z, X, y, alpha=0.05, W=None, critical_values="ch
             "critical_values must be one of 'chi2', 'f'. Got " f"{critical_values}."
         )
 
+    # TODO: remove this
     Z = Z - Z.mean(axis=0)
     X = X - X.mean(axis=0)
     y = y - y.mean()

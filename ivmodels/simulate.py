@@ -1,25 +1,30 @@
 import numpy as np
 
 
-def simulate_gaussian_iv(n, p, q, u, r=0, seed=0):
+def simulate_gaussian_iv(n, mx, k, u, mw=0, r=0, seed=0):
     """Simulate a Gaussian IV dataset."""
     rng = np.random.RandomState(seed)
+    beta = rng.normal(0, 1, (mx, 1))
 
-    ux = rng.normal(0, 1, (u, p))
+    ux = rng.normal(0, 1, (u, mx))
     uy = rng.normal(0, 1, (u, 1))
-    uw = rng.normal(0, 1, (u, r))
-    beta = rng.normal(0, 0.1, (p, 1))
-    Pi_X = rng.normal(0, 1, (q, p))
-    Pi_W = rng.normal(0, 1, (q, r))
+    uw = rng.normal(0, 1, (u, mw))
+
+    alpha = rng.normal(0, 1, (r, 1))
+    gamma = rng.normal(0, 1, (mw, 1))
+
+    Pi_ZX = rng.normal(0, 1, (k, mx))
+    Pi_ZW = rng.normal(0, 1, (k, mw))
+    Pi_CX = rng.normal(0, 1, (r, mx))
+    Pi_CW = rng.normal(0, 1, (r, mw))
 
     U = rng.normal(0, 1, (n, u))
 
-    Z = rng.normal(0, 1, (n, q))
-    X = Z @ Pi_X + U @ ux + rng.normal(0, 1, (n, p))
-    W = Z @ Pi_W + U @ uw + rng.normal(0, 1, (n, r))
-    y = X @ beta + U @ uy + rng.normal(0, 1, (n, 1))
+    Z = rng.normal(0, 1, (n, k))
+    C = rng.normal(0, 1, (n, r))
 
-    if r == 0:
-        return Z, X, y
-    else:
-        return Z, X, y, W
+    X = Z @ Pi_ZX + C @ Pi_CX + U @ ux + rng.normal(0, 1, (n, mx))
+    W = Z @ Pi_ZW + C @ Pi_CW + U @ uw + rng.normal(0, 1, (n, mw))
+    y = C @ alpha + X @ beta + W @ gamma + U @ uy + rng.normal(0, 1, (n, 1))
+
+    return Z, X, y.flatten(), C, W

@@ -7,7 +7,7 @@ from ivmodels.tests.utils import _check_test_inputs
 from ivmodels.utils import proj
 
 
-def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
+def wald_test(Z, X, y, beta, W=None, estimator="tsls", fit_intercept=True):
     """
     Test based on asymptotic normality of the TSLS (or LIML) estimator.
 
@@ -47,8 +47,12 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
         Endogenous regressors not of interest.
     beta: np.ndarray of dimension (p,)
         Coefficients to test.
-    estimator: str
+    estimator: str, optional, default = "tsls"
         Estimator to use. Must be one of ``"tsls"`` or ``"liml"``.
+    fit_intercept: bool, optional, default = True
+        Whether to include an intercept. The intercept will be included both in the
+        complete and the (restricted) model. Including an intercept is equivalent to
+        centering the columns of all design matrices.
 
     Returns
     -------
@@ -67,20 +71,22 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
     """
     Z, X, y, W, beta = _check_test_inputs(Z, X, y, W=W, beta=beta)
 
-    n, mx = X.shape
-    k = Z.shape[1]
+    if fit_intercept:
+        X = X - X.mean(axis=0)
+        y = y - y.mean()
+        Z = Z - Z.mean(axis=0)
+        W = W - W.mean(axis=0)
 
-    if W is None:
-        W = np.zeros((n, 0))
+    n, mx = X.shape
 
     XW = np.concatenate([X, W], axis=1)
 
-    estimator = KClass(kappa=estimator).fit(XW, y, Z)
+    estimator = KClass(kappa=estimator, fit_intercept=False).fit(XW, y, Z)
+
     beta_gamma_hat = estimator.coef_
 
-    residuals = y - XW @ beta_gamma_hat
-    residuals_orth = residuals - proj(Z, residuals)
-    sigma_hat_sq = np.sum(residuals_orth**2) / (n - k)
+    residuals = y - estimator.predict(XW)
+    sigma_hat_sq = np.sum(residuals**2) / (n - mx - W.shape[1] - fit_intercept)
 
     XW_proj = proj(Z, XW)
 
@@ -104,7 +110,9 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
     return statistic, p_value
 
 
-def inverse_wald_test(Z, X, y, alpha=0.05, W=None, estimator="tsls"):
+def inverse_wald_test(
+    Z, X, y, alpha=0.05, W=None, estimator="tsls", fit_intercept=True
+):
     """
     Return the quadric for the acceptance region based on asymptotic normality.
 
@@ -142,34 +150,34 @@ def inverse_wald_test(Z, X, y, alpha=0.05, W=None, estimator="tsls"):
         Endogenous regressors not of interest.
     estimator: float or str, optional, default = "tsls"
         Estimator to use. Passed as ``kappa`` parameter to ``KClass``.
+    fit_intercept: bool, optional, default = True
+        Whether to include an intercept. The intercept will be included both in the
+        complete and the (restricted) model. Including an intercept is equivalent to
+        centering the columns of all design matrices.
     """
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1).")
 
-    n, k = Z.shape
+    n = Z.shape[0]
 
     Z, X, y, W, _ = _check_test_inputs(Z, X, y, W)
 
     z_alpha = scipy.stats.chi2.ppf(1 - alpha, df=X.shape[1])
 
-    if W is not None:
-        X = np.concatenate([X, W], axis=1)
+    XW = np.concatenate([X, W], axis=1)
 
-    Z = Z - Z.mean(axis=0)
-    X = X - X.mean(axis=0)
-    y = y - y.mean()
+    if fit_intercept:
+        Z = Z - Z.mean(axis=0)
+        XW = XW - XW.mean(axis=0)
+        y = y - y.mean()
 
     X_proj = proj(Z, X)
 
-    kclass = KClass(kappa=estimator).fit(X, y, Z)
+    kclass = KClass(kappa=estimator, fit_intercept=False).fit(XW, y, Z)
     beta = kclass.coef_
 
-    # Avoid settings where (X @ beta).shape = (n, 1) and y.shape = (n,), resulting in
-    # predictions.shape = (n, n) and residuals.shape = (n, n).
-    predictions = X @ beta
-    residuals = y.reshape(predictions.shape) - predictions
-    residuals_orth = residuals - proj(Z, residuals)
-    hat_sigma_sq = np.sum(residuals_orth**2) / (n - k)
+    residuals = y - kclass.predict(XW)
+    hat_sigma_sq = np.sum(residuals**2) / (n - XW.shape[1] - fit_intercept)
 
     A = X.T @ (kclass.kappa_ * X_proj + (1 - kclass.kappa_) * X)
     b = -2 * A @ beta
@@ -179,6 +187,6 @@ def inverse_wald_test(Z, X, y, alpha=0.05, W=None, estimator="tsls"):
         c = c.item()
 
     if W is not None:
-        return Quadric(A, b, c).project(range(X.shape[1] - W.shape[1]))
+        return Quadric(A, b, c).project(range(XW.shape[1] - W.shape[1]))
     else:
         return Quadric(A, b, c)
