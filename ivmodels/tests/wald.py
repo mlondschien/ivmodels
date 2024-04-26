@@ -86,7 +86,7 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls", fit_intercept=True):
     beta_gamma_hat = estimator.coef_
 
     residuals = y - estimator.predict(XW)
-    sigma_hat_sq = np.sum(residuals**2) / (n - mx - fit_intercept)
+    sigma_hat_sq = np.sum(residuals**2) / (n - mx - W.shape[1] - fit_intercept)
 
     XW_proj = proj(Z, XW)
 
