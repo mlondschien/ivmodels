@@ -7,7 +7,7 @@ from ivmodels.tests.utils import _check_test_inputs
 from ivmodels.utils import proj
 
 
-def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
+def wald_test(Z, X, y, beta, W=None, estimator="tsls", fit_intercept=True):
     """
     Test based on asymptotic normality of the TSLS (or LIML) estimator.
 
@@ -47,8 +47,12 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
         Endogenous regressors not of interest.
     beta: np.ndarray of dimension (p,)
         Coefficients to test.
-    estimator: str
+    estimator: str, optional, default = "tsls"
         Estimator to use. Must be one of ``"tsls"`` or ``"liml"``.
+    fit_intercept: bool, optional, default = True
+        Whether to include an intercept. The intercept will be included both in the
+        complete and the (restricted) model. Including an intercept is equivalent to
+        centering the columns of all design matrices.
 
     Returns
     -------
@@ -67,20 +71,22 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls"):
     """
     Z, X, y, W, beta = _check_test_inputs(Z, X, y, W=W, beta=beta)
 
-    n, mx = X.shape
-    k = Z.shape[1]
+    if fit_intercept:
+        X = X - X.mean(axis=0)
+        y = y - y.mean()
+        Z = Z - Z.mean(axis=0)
+        W = W - W.mean(axis=0)
 
-    if W is None:
-        W = np.zeros((n, 0))
+    n, mx = X.shape
 
     XW = np.concatenate([X, W], axis=1)
 
     estimator = KClass(kappa=estimator, fit_intercept=False).fit(XW, y, Z)
+
     beta_gamma_hat = estimator.coef_
 
-    residuals = y - XW @ beta_gamma_hat
-    residuals_orth = residuals - proj(Z, residuals)
-    sigma_hat_sq = np.sum(residuals_orth**2) / (n - k)
+    residuals = y - estimator.predict(XW)
+    sigma_hat_sq = np.sum(residuals**2) / (n - mx - fit_intercept)
 
     XW_proj = proj(Z, XW)
 

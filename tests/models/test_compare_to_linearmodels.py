@@ -17,12 +17,14 @@ def test_compare_against_linearmodels(fit_intercept, n, mx, k, r, u, kappa):
     kclass.fit(X, y, Z=Z, C=C)
 
     if fit_intercept:
-        C = sm.add_constant(C)
+        C_ = sm.add_constant(C)
+    else:
+        C_ = C
 
     if kappa == "liml":
-        linearmodel = IVLIML(y, C, X, Z)
+        linearmodel = IVLIML(y, C_, X, Z)
     elif kappa == "tsls":
-        linearmodel = IV2SLS(y, C, X, Z)
+        linearmodel = IV2SLS(y, C_, X, Z)
     else:
         raise ValueError
 
@@ -31,6 +33,9 @@ def test_compare_against_linearmodels(fit_intercept, n, mx, k, r, u, kappa):
     np.testing.assert_allclose(kclass.coef_[:mx], results.params[-mx:], rtol=1e-5)
     np.testing.assert_allclose(
         kclass.coef_[mx:], results.params[-(mx + r) : -mx], rtol=1e-5
+    )
+    np.testing.assert_allclose(
+        kclass.predict(X, C), results.fitted_values.to_numpy().flatten(), rtol=1e-5
     )
 
     if fit_intercept:
