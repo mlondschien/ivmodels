@@ -98,6 +98,7 @@ def test_equivalence_exogenous_covariates_and_fitting_on_residuals(
     np.testing.assert_allclose(kclass1.coef_[:mx], kclass2.coef_)
     np.testing.assert_allclose(kclass1.intercept_, kclass2.intercept_)
 
+    # See comment in KClassMixin.fit
     if r > 0:
         kclass3 = KClass(kappa=0, fit_intercept=fit_intercept)
         kclass3.fit(X=C, y=y - kclass2.predict(X))

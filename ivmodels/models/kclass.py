@@ -334,6 +334,16 @@ class KClassMixin:
 
         n, mx = X.shape
 
+        # Including an intercept is equivalent to replacing y <- M_1 y, X <- M_1 X,
+        # C <- M_1 C, Z <- M_1 Z, where M_1 = Id - 1/n 1 1^T is the projection
+        # orthogonal to np.ones(n). I.e., center the columns of all design matrices.
+        # We thus subtract the means here and work with the centered data to compute
+        # kappa and when fitting the model via solving the normal equations (if
+        # kappa > 1). If we fit the model via the normal equation, we manually compute
+        # the intercept (for this we need x_mean and y_mean). When fitting the model via
+        # OLS + a data transformation (if kappa <= 1), we let
+        # glum.GeneralizedLinearRegressor figure out the intercept by adding it back to
+        # the data.
         if self.fit_intercept:
             x_mean = X.mean(axis=0)
             y_mean = y.mean(axis=0)
@@ -350,8 +360,21 @@ class KClassMixin:
         else:
             x_mean, y_mean, c_mean = np.zeros(mx), 0, np.zeros(C.shape[1])
 
+        # Including exogenous covariates C can be done by the following approaches:
+        #
+        # - Replace Z <- M_C Z, X <- M_C X, y <- M_C y, where M_C = Id - P_C is the
+        #   projection orthogonal to the column space of C. Then apply the k-class
+        #   estimator to the transformed data. For the coefficients of C, fit a linear
+        #   model y - X \hat\beta_k ~ C. See also the test
+        #   test_equivalence_exogenous_covariates_and_fitting_on_residuals
+        #
+        # - Include C in both the instruments and the endogenous regressors, that is,
+        #   replace Z <- [Z C], X <- [X C], y <- y, and apply the k-class estimator to
+        #   the augmented data. This is the approach taken here. Care needs to be taken
+        #   to compute kappa. For this, we follow the first approach. See below.
         if C.shape[1] > 0:
             Z = np.hstack([Z, C])
+            # save some compute here, as proj([Z, C], C) = C
             X_proj = np.hstack([proj(Z, X), C])
             X = np.hstack([X, C])
             x_mean = np.hstack([x_mean, c_mean])
@@ -368,6 +391,9 @@ class KClassMixin:
                 self.kappa_ = 0
             else:
                 self.fuller_alpha_ = self._fuller_alpha(self.kappa)
+                # If C!=None, we compute the ar_min as if we removed C from all design
+                # matrices. I.e., we replace Z <- M_C Z, X <- M_C X, y <- M_C y.
+                # We also exclude the columns in X coming from C.
                 self.ar_min_ = self.ar_min(
                     X[:, :mx] - proj(C, X[:, :mx]),
                     y - proj(C, y),
@@ -385,7 +411,7 @@ class KClassMixin:
         if self.kappa_ <= 1:
             X_tilde = (
                 np.sqrt(1 - self.kappa_) * X + (1 - np.sqrt(1 - self.kappa_)) * X_proj
-            ) + x_mean
+            ) + x_mean  # Add means so glum.GLM can figure out the intercept.
             y_tilde = (
                 np.sqrt(1 - self.kappa_) * y + (1 - np.sqrt(1 - self.kappa_)) * y_proj
             ) + y_mean
