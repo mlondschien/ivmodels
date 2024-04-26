@@ -458,18 +458,24 @@ class KClass(KClassMixin, GeneralizedLinearRegressor):
     the two-stage least-squares (2SLS) estimator
     (:math:`\\kappa = 1`), the limited information maximum likelihood (LIML) estimator
     (:math:`\\kappa = \\hat\\kappa_\\mathrm{LIML}`), and the Fuller estimator
-    (:math:`\\kappa = \\hat\\kappa_\\mathrm{LIML} - \\alpha / (n - q)`) as special
+    (:math:`\\kappa = \\hat\\kappa_\\mathrm{LIML} - \\alpha / (n - k)`) as special
     cases.
+
+    Specifying exogenous included regressors :math:`C` is equivalent to including them
+    into both :math:`Z` and :math:`X`.
 
     Parameters
     ----------
     kappa: float or { "ols", "tsls", "2sls", "liml", "fuller", "fuller(a)"}
         The kappa parameter of the k-class estimator. If float, then kappa must be in
         :math:`[0, \\hat\\kappa_\\mathrm{LIML}]`, where
-        :math:`\\kappa_\\mathrm{LIML} \\geq 1` is 1 plus the smallest eigenvalue of the
-        matrix :math:`((X \\ \\ y)^T M_Z (X \\ \\ y))^{-1} (X \\ \\ y)^T P_Z (X \\ y)`,
+        :math:`\\kappa_\\mathrm{LIML} \\geq 1` is the smallest eigenvalue of the
+        matrix :math:`((X \\ \\ y)^T M_Z (X \\ \\ y))^{-1} (X \\ \\ y)^T (X \\ y)`,
         where :math:`P_Z` is the projection matrix onto the subspace spanned by :math:`Z`
         and :math:`M_Z = Id - P_Z`.
+        If exogenous included regressors math:`C` are specified, then
+        :math:`\\kappa_\\mathrm{LIML}` is the smallest eigenvalue of the matrix
+        :math:`((X \\ \\ y)^T M_{[Z, C]} (X \\ \\ y))^{-1} (X \\ \\ y)^T M_C (X \\ y)`.
         If string, then must be one of ``"ols"``, ``"2sls"``, ``"tsls"``, ``"liml"``,
         ``"fuller"``, or ``"fuller(a)"``, where ``a`` is numeric. If ``kappa="ols"``,
         then ``kappa=0`` and the k-class estimator is the ordinary least squares
@@ -484,27 +490,31 @@ class KClass(KClassMixin, GeneralizedLinearRegressor):
         :math:`O(1/n)` :cite:p:`fuller1977some`.
     instrument_names: str or list of str, optional
         The names of the columns in ``X`` that should be used as instruments.
-        Requires ``X`` to be a pandas DataFrame. If both ``instrument_names`` and
-        ``instrument_regex`` are specified, the union of the two is used.
-    instrument_regex: str, optional
-        A regex that is used to select columns in ``X`` that should be used as
-        instruments. Requires ``X`` to be a pandas DataFrame. If both
+        Requires ``X`` argument of ``fit`` method to be a pandas DataFrame. If both
         ``instrument_names`` and ``instrument_regex`` are specified, the union of the
         two is used.
+    instrument_regex: str, optional
+        A regex that is used to select columns in ``X`` that should be used as
+        instruments. Requires ``X`` argument of ``fit`` method to be a pandas DataFrame.
+        If both ``instrument_names`` and ``instrument_regex`` are specified, the union
+        of the two is used.
     exogenous_names: str or list of str, optional
         The names of the columns in ``X`` that should be used as exogenous regressors.
-        Requires ``X`` to be a pandas DataFrame. If both ``exogenous_names`` and
-        ``exogenous_regex`` are specified, the union of the two is used.
+        Requires ``X`` argument of ``fit`` method to be a pandas DataFrame. If both
+        ``exogenous_names`` and ``exogenous_regex`` are specified, the union of the two
+        is used.
     exogenous_regex: str, optional
         A regex that is used to select columns in ``X`` that should be used as exogenous
-        regressors. Requires ``X`` to be a pandas DataFrame. If both ``exogenous_names``
-        and ``exogenous_regex`` are specified, the union of the two is used.
+        regressors. Requires ``X`` argument of ``fit`` method to be a pandas DataFrame.
+        If both ``exogenous_names`` and ``exogenous_regex`` are specified, the union of
+        the two is used.
     alpha: float, optional, default=0
-        Regularization parameter for elastic net regularization.
+        Regularization parameter for elastic net regularization. Only implemented for
+        :math:`\\kappa \\leq 1`.
     l1_ratio: float, optional, default=0
         Ratio of L1 to L2 regularization for elastic net regularization. For
         ``l1_ratio=0`` the penalty is an L2 penalty. For ``l1_ratio=1`` it is an L1
-        penalty.
+        penalty. Only implemented for :math:`\\kappa \\leq 1`.
 
     Attributes
     ----------
