@@ -199,59 +199,6 @@ class KClassMixin:
 
         return to_numpy(X), to_numpy(Z), to_numpy(C)
 
-    # def _X_Z_C_predict(self, X, C=None):
-    #     """
-    #     Remove instruments from X. Join X and C.
-
-    #     Parameters
-    #     ----------
-    #     X: array-like, shape (n_samples, n_features)
-    #         The input data. Must be a pandas DataFrame if any of `instrument_names`,
-    #         `instrument_regex`, `exogenous_names` or `exogenous_names` is not None.
-    #     C: array-like, shape (n_samples, n_exogenous), optional
-    #         The exogenous regressors.
-
-    #     Returns
-    #     -------
-    #     X: np.array, shape (n_samples, n_features - n_instrument)
-    #         The input data with instruments removec.
-    #     """
-    #     if self.instrument_names is not None or self.instrument_regex is not None:
-    #         if _PANDAS_INSTALLED and isinstance(X, pd.DataFrame):
-    #             if self.instrument_names is None:
-    #                 instrument_names = pd.Index([])
-    #             else:
-    #                 instrument_names = pd.Index(self.instrument_names)
-
-    #             if self.instrument_regex is not None:
-    #                 matched_columns = X.columns[
-    #                     X.columns.str.contains(self.instrument_regex)
-    #                 ]
-    #                 instrument_names = instrument_names.union(matched_columns)
-
-    #             X = X.drop(columns=X.columns.intersection(instrument_names))
-
-    #     if self.exogenous_names is not None or self.exogenous_regex is not None:
-    #         if _PANDAS_INSTALLED and isinstance(X, pd.DataFrame):
-    #             if self.exogenous_names is None:
-    #                 exogenous_names = pd.Index([])
-    #             else:
-    #                 exogenous_names = pd.Index(self.exogenous_names)
-
-    #             if self.exogenous_regex is not None:
-    #                 matched_columns = X.columns[
-    #                     X.columns.str.contains(self.exogenous_regex)
-    #                 ]
-    #                 exogenous_names = exogenous_names.union(matched_columns)
-
-    #             C = X[exogenous_names]
-    #             X = X.drop(columns=X.columns.intersection(exogenous_names))
-
-    #     if C is not None:
-    #         return np.hstack([to_numpy(X), to_numpy(C)])
-    #     else:
-    #         return to_numpy(X)
-
     def _fuller_alpha(self, kappa):
         """
         Extract the Fuller alpha parameter from the kappa parameter.
