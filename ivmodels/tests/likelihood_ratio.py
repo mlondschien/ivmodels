@@ -6,7 +6,7 @@ from ivmodels.tests.utils import _check_test_inputs
 from ivmodels.utils import proj
 
 
-def likelihood_ratio_test(Z, X, y, beta, W=None, fit_intercept=False):
+def likelihood_ratio_test(Z, X, y, beta, W=None, fit_intercept=True):
     """
     Perform the likelihood ratio test for ``beta``.
 
@@ -50,7 +50,7 @@ def likelihood_ratio_test(Z, X, y, beta, W=None, fit_intercept=False):
         Coefficients to test.
     W: np.ndarray of dimension (n, mw) or None, optional, default=None
         Endogenous regressors not of interest.
-    fit_intercept: bool, optional, default=False
+    fit_intercept: bool, optional, default=True
         Whether to fit an intercept. This is equivalent to centering the inputs.
 
     Returns
