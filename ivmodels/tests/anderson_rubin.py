@@ -22,7 +22,8 @@ def more_powerful_subvector_anderson_rubin_critical_value_function(
         The test statistic.
     kappa_1_hat: float
         The maximum eigenvalue of the matrix
-        :math:`M:=((X \\ y- X \\beta)^T M_Z (X \\ y - X \\beta))^{-1} (X \\ y-X \\beta)^T P_Z (X \\ y-X \\beta)`. This is the conditioning statistic.
+        :math:`M:=((X \\ y - X \\beta)^T M_Z (X \\ y - X \\beta))^{-1} (X \\ y-X \\beta)^T P_Z (X \\ y-X \\beta)`.
+        This is the conditioning statistic.
     k: int
         Number of instruments.
     mW: int
