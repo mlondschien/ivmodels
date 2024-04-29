@@ -5,7 +5,6 @@ import scipy
 from ivmodels.models.kclass import KClass
 from ivmodels.simulate import simulate_gaussian_iv
 from ivmodels.tests.anderson_rubin import (
-    anderson_rubin_test,
     inverse_anderson_rubin_test,
     more_powerful_subvector_anderson_rubin_critical_value_function,
 )
@@ -75,25 +74,17 @@ def test_inverse_anderson_rubin_confidence_set_alternative_formulation(
 ):
     Z, X, y, _, _ = simulate_gaussian_iv(n, mx, k, u)
 
-    Z = Z - Z.mean(axis=0)
-    X = X - X.mean(axis=0)
-    y = y - y.mean()
-
-    inverse_ar = inverse_anderson_rubin_test(Z, X, y, alpha=alpha)
+    inverse_ar = inverse_anderson_rubin_test(Z, X, y, alpha=alpha, fit_intercept=False)
     kappa_alpha = 1 + scipy.stats.chi2(df=k).ppf(1 - alpha) / (n - k)
     kclass_kappa_alpha = KClass(kappa=kappa_alpha, fit_intercept=False).fit(
         X=X, y=y, Z=Z
     )
     assert np.allclose(inverse_ar.center, kclass_kappa_alpha.coef_, rtol=1e-6)
 
-    residuals = y.flatten() - X @ kclass_kappa_alpha.coef_
-    residuals_orth = residuals - proj(Z, residuals)
-    sigma_hat_sq = (residuals_orth.T @ residuals_orth) / (n - k)
-    ar = anderson_rubin_test(Z, X, y, beta=kclass_kappa_alpha.coef_)[0]
     A = (kappa_alpha * proj(Z, X) + (1 - kappa_alpha) * X).T @ X
 
     assert np.allclose(
-        A / (-sigma_hat_sq * (scipy.stats.chi2(df=k).ppf(1 - alpha) - k * ar)),
-        inverse_ar.A / inverse_ar.c_standardized,
+        A,
+        inverse_ar.A,
         rtol=1e-8,
     )

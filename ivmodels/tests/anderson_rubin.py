@@ -22,7 +22,8 @@ def more_powerful_subvector_anderson_rubin_critical_value_function(
         The test statistic.
     kappa_1_hat: float
         The maximum eigenvalue of the matrix
-        :math:`M:=((X \\ y- X \\beta)^T M_Z (X \\ y - X \\beta))^{-1} (X \\ y-X \\beta)^T P_Z (X \\ y-X \\beta)`. This is the conditioning statistic.
+        :math:`M:=((X \\ y - X \\beta)^T M_Z (X \\ y - X \\beta))^{-1} (X \\ y-X \\beta)^T P_Z (X \\ y-X \\beta)`.
+        This is the conditioning statistic.
     k: int
         Number of instruments.
     mW: int
@@ -89,7 +90,9 @@ def more_powerful_subvector_anderson_rubin_critical_value_function(
     return 1 - scipy.integrate.quad(f, 0, z, limit=50)[0] * const
 
 
-def anderson_rubin_test(Z, X, y, beta, W=None, critical_values="chi2"):
+def anderson_rubin_test(
+    Z, X, y, beta, W=None, critical_values="chi2", fit_intercept=True
+):
     """
     Perform the Anderson Rubin test :cite:p:`anderson1949estimation`.
 
@@ -138,6 +141,8 @@ def anderson_rubin_test(Z, X, y, beta, W=None, critical_values="chi2"):
         If ``"f"`, use the :math:`F_{q, n - q}` distribution to compute the p-value.
         If ``"guggenberger"``, use the critical value function proposed by
         :cite:t:`guggenberger2019more` to compute the p-value.
+    fit_intercept: bool, optional, default = True
+        Whether to include an intercept. This is equivalent to centering the inputs.
 
     Returns
     -------
@@ -161,37 +166,43 @@ def anderson_rubin_test(Z, X, y, beta, W=None, critical_values="chi2"):
        guggenberger2019more
     """
     Z, X, y, W, beta = _check_test_inputs(Z, X, y, W=W, beta=beta)
-    n, q = Z.shape
+    n, k = Z.shape
 
-    if W is None:
+    if fit_intercept:
+        Z = Z - Z.mean(axis=0)
+        X = X - X.mean(axis=0)
+        y = y - y.mean()
+        W = W - W.mean(axis=0)
+
+    if W.shape[1] == 0:
         residuals = y - X @ beta
         proj_residuals = proj(Z, residuals)
         ar = (
             np.square(proj_residuals).sum()
             / np.square(residuals - proj_residuals).sum()
         )
-        dfn = q
+        dfn = k
     else:
         spectrum = KClass._spectrum(X=W, y=y - X @ beta, Z=Z)
         ar = np.min(spectrum)
-        dfn = q - W.shape[1]
+        dfn = k - W.shape[1]
 
-    statistic = ar * (n - q) / dfn
+    statistic = ar * (n - k - fit_intercept) / dfn
 
     if critical_values == "chi2":
         p_value = 1 - scipy.stats.chi2.cdf(statistic * dfn, df=dfn)
     elif critical_values == "f":
-        p_value = 1 - scipy.stats.f.cdf(statistic, dfn=dfn, dfd=n - q)
+        p_value = 1 - scipy.stats.f.cdf(statistic, dfn=dfn, dfd=n - k - fit_intercept)
     elif critical_values.startswith("guggenberger"):
-        if W is None:
+        if W.shape[1] == 0:
             raise ValueError(
                 "The critical value function proposed by Guggenberger et al. (2019) is "
                 "only available for the subvector variant where W is not None."
             )
 
-        kappa_max = (n - q) * np.max(spectrum)
+        kappa_max = (n - k - fit_intercept) * np.max(spectrum)
         p_value = more_powerful_subvector_anderson_rubin_critical_value_function(
-            statistic * dfn, kappa_max, q, W.shape[1]
+            statistic * dfn, kappa_max, k, W.shape[1]
         )
     else:
         raise ValueError(
@@ -202,7 +213,9 @@ def anderson_rubin_test(Z, X, y, beta, W=None, critical_values="chi2"):
     return statistic, p_value
 
 
-def inverse_anderson_rubin_test(Z, X, y, alpha=0.05, W=None, critical_values="chi2"):
+def inverse_anderson_rubin_test(
+    Z, X, y, alpha=0.05, W=None, critical_values="chi2", fit_intercept=True
+):
     """
     Return the quadric for to the inverse Anderson-Rubin test's acceptance region.
 
@@ -242,6 +255,8 @@ def inverse_anderson_rubin_test(Z, X, y, alpha=0.05, W=None, critical_values="ch
     critical_values: str, optional, default = "chi2"
         If ``"chi2"``, use the :math:`\\chi^2(q)` distribution to compute the p-value.
         If ``"f"`, use the :math:`F_{q, n - q}` distribution to compute the p-value.
+    fit_intercept: bool, optional, default = True
+        Whether to include an intercept. This is equivalent to centering the inputs.
 
     Returns
     -------
@@ -262,19 +277,23 @@ def inverse_anderson_rubin_test(Z, X, y, alpha=0.05, W=None, critical_values="ch
     else:
         dfn = k
 
+    if fit_intercept:
+        Z = Z - Z.mean(axis=0)
+        X = X - X.mean(axis=0)
+        y = y - y.mean()
+
     if critical_values == "chi2":
-        quantile = scipy.stats.chi2.ppf(1 - alpha, df=dfn) / (n - k)
+        quantile = scipy.stats.chi2.ppf(1 - alpha, df=dfn) / (n - k - fit_intercept)
     elif critical_values == "f":
-        quantile = scipy.stats.f.ppf(1 - alpha, dfn=dfn, dfd=n - k) * dfn / (n - k)
+        quantile = (
+            scipy.stats.f.ppf(1 - alpha, dfn=dfn, dfd=n - k - fit_intercept)
+            * dfn
+            / (n - k - fit_intercept)
+        )
     else:
         raise ValueError(
             "critical_values must be one of 'chi2', 'f'. Got " f"{critical_values}."
         )
-
-    # TODO: remove this
-    Z = Z - Z.mean(axis=0)
-    X = X - X.mean(axis=0)
-    y = y - y.mean()
 
     X_proj = proj(Z, X)
     X_orth = X - X_proj

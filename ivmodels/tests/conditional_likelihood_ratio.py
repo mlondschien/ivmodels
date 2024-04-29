@@ -131,7 +131,7 @@ def _conditional_likelihood_ratio_critical_value_function(
 
 
 def conditional_likelihood_ratio_test(
-    Z, X, y, beta, W=None, method="numerical_integration", tol=1e-6
+    Z, X, y, beta, W=None, fit_intercept=True, method="numerical_integration", tol=1e-6
 ):
     """
     Perform the conditional likelihood ratio test for ``beta``.
@@ -240,6 +240,8 @@ def conditional_likelihood_ratio_test(
         Coefficients to test.
     W: np.ndarray of dimension (n, r) or None
         Endogenous regressors not of interest.
+    fit_intercept: bool, optional, default: True
+        Whether to include an intercept. This is equivalent to centering the inputs.
     method: str, optional, default: "numerical_integration"
         Method to approximate the critical value function. Must be
         ``"numerical_integration"`` or ``"power_series"``. See
@@ -270,16 +272,22 @@ def conditional_likelihood_ratio_test(
     """
     Z, X, y, W, beta = _check_test_inputs(Z, X, y, beta=beta, W=W)
 
-    n, q = Z.shape
-    p = X.shape[1]
-    r = W.shape[1] if W is not None else 0
+    if fit_intercept:
+        Z = Z - Z.mean(axis=0)
+        X = X - X.mean(axis=0)
+        W = W - W.mean(axis=0)
+        y = y - y.mean()
+
+    n, k = Z.shape
+    mx = X.shape[1]
+    mw = W.shape[1]
 
     X_proj = proj(Z, X)
     y_proj = proj(Z, y)
 
-    if r == 0:
+    if mw == 0:
         residuals = y - X @ beta
-        residuals_proj = y_proj - X_proj[:, :p] @ beta
+        residuals_proj = y_proj - X_proj[:, :mx] @ beta
         residuals_orth = residuals - residuals_proj
 
         Sigma = (residuals_orth.T @ X) / (residuals_orth.T @ residuals_orth)
@@ -287,15 +295,15 @@ def conditional_likelihood_ratio_test(
         Xt_proj = X_proj - np.outer(residuals_proj, Sigma)
         Xt_orth = Xt - Xt_proj
         mat_Xt = np.linalg.solve(Xt_orth.T @ Xt_orth, Xt_proj.T @ Xt_proj)
-        s_min = min(np.real(np.linalg.eigvals(mat_Xt))) * (n - q)
+        s_min = min(np.real(np.linalg.eigvals(mat_Xt))) * (n - k - fit_intercept)
 
         # TODO: This can be done with efficient rank-1 updates.
         ar_min = KClass.ar_min(X=X, y=y, Z=Z)
         ar = residuals_proj.T @ residuals_proj / (residuals_orth.T @ residuals_orth)
 
-        statistic = (n - q) * (ar - ar_min)
+        statistic = (n - k - fit_intercept) * (ar - ar_min)
 
-    elif r > 0:
+    elif mw > 0:
         W_proj = proj(Z, W)
         XWy = np.concatenate([X, W, y.reshape(-1, 1)], axis=1)
         XWy_proj = np.concatenate([X_proj, W_proj, y_proj.reshape(-1, 1)], axis=1)
@@ -312,7 +320,7 @@ def conditional_likelihood_ratio_test(
             X=W, y=y - X @ beta, X_proj=W_proj, y_proj=y_proj - X_proj @ beta
         )
 
-        statistic = (n - q) * (ar - XWy_eigenvals[0])
+        statistic = (n - k - fit_intercept) * (ar - XWy_eigenvals[0])
 
         # if type_ == "k":
         s_min = XWy_eigenvals[0] + XWy_eigenvals[1] - ar
@@ -329,7 +337,7 @@ def conditional_likelihood_ratio_test(
         #     XWt_proj = XW_proj - np.outer(residuals_proj, Sigma)
         #     s_min = min(np.real(scipy.linalg.eigvals(np.linalg.solve((XWt - XWt_proj).T @ XWt, XWt_proj.T @ XWt))))
     p_value = _conditional_likelihood_ratio_critical_value_function(
-        p, q, s_min, statistic, tol=tol
+        mx, k, s_min, statistic, tol=tol
     )
 
     return statistic, p_value

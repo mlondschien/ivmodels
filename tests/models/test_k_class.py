@@ -140,14 +140,9 @@ def test_liml_minimizes_anderson_rubin(fit_intercept, n, mx, k, u):
     kclass = KClass(kappa="liml", fit_intercept=fit_intercept)
     kclass.fit(X, y, Z=Z)
 
-    if fit_intercept:
-        X = X - X.mean(axis=0)
-        y = y - y.mean()
-        Z = Z - Z.mean(axis=0)
-
     # TODO: Use C once implemented for tests.
     def ar(beta):
-        return anderson_rubin_test(Z, X, y, beta)[0]
+        return anderson_rubin_test(Z, X, y, beta, fit_intercept=fit_intercept)[0]
 
     grad = scipy.optimize.approx_fprime(kclass.coef_, ar, 1e-8)
     np.testing.assert_allclose(grad, 0, atol=1e-4)
@@ -206,17 +201,18 @@ def test_liml_equal_to_tsls_in_just_identified_setting(n, mx, k, r, u):
     assert np.allclose(liml.intercept_, tsls.intercept_)
 
 
+@pytest.mark.parametrize("fit_intercept", [True, False])
 @pytest.mark.parametrize("n, mx, k, r, u", [(100, 2, 2, 0, 1), (100, 4, 4, 1, 2)])
-def test_anderson_rubin_at_liml_is_equal_to_ar_min(n, mx, k, r, u):
+def test_anderson_rubin_at_liml_is_equal_to_ar_min(n, mx, k, r, u, fit_intercept):
     Z, X, y, _, _ = simulate_gaussian_iv(n, mx, k, u, r=r)
     y = y.flatten()
 
-    liml = KClass(kappa="liml", fit_intercept=False)
+    liml = KClass(kappa="liml", fit_intercept=fit_intercept)
     liml.fit(X, y, Z)
 
     # TODO: Use C once available for test.
     assert np.allclose(
-        anderson_rubin_test(Z, X, y, liml.coef_)[0],
+        anderson_rubin_test(Z, X, y, liml.coef_, fit_intercept=fit_intercept)[0],
         (n - k) / k * liml.ar_min_,
         atol=1e-8,
     )
