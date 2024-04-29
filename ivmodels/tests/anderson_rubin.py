@@ -174,7 +174,7 @@ def anderson_rubin_test(
         y = y - y.mean()
         W = W - W.mean(axis=0)
 
-    if W is None:
+    if W.shape[1] == 0:
         residuals = y - X @ beta
         proj_residuals = proj(Z, residuals)
         ar = (
@@ -194,7 +194,7 @@ def anderson_rubin_test(
     elif critical_values == "f":
         p_value = 1 - scipy.stats.f.cdf(statistic, dfn=dfn, dfd=n - k - fit_intercept)
     elif critical_values.startswith("guggenberger"):
-        if W is None:
+        if W.shape[1] == 0:
             raise ValueError(
                 "The critical value function proposed by Guggenberger et al. (2019) is "
                 "only available for the subvector variant where W is not None."

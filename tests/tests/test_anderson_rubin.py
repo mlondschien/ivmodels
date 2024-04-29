@@ -75,11 +75,7 @@ def test_inverse_anderson_rubin_confidence_set_alternative_formulation(
 ):
     Z, X, y, _, _ = simulate_gaussian_iv(n, mx, k, u)
 
-    Z = Z - Z.mean(axis=0)
-    X = X - X.mean(axis=0)
-    y = y - y.mean()
-
-    inverse_ar = inverse_anderson_rubin_test(Z, X, y, alpha=alpha)
+    inverse_ar = inverse_anderson_rubin_test(Z, X, y, alpha=alpha, fit_intercept=False)
     kappa_alpha = 1 + scipy.stats.chi2(df=k).ppf(1 - alpha) / (n - k)
     kclass_kappa_alpha = KClass(kappa=kappa_alpha, fit_intercept=False).fit(
         X=X, y=y, Z=Z
