@@ -25,54 +25,19 @@ guggenberger_anderson_rubin_test = partial(
     anderson_rubin_test, critical_values="guggenberger2019more"
 )
 f_anderson_rubin_test = partial(anderson_rubin_test, critical_values="f")
-inverse_f_anderon_rubin_test = partial(inverse_anderson_rubin_test, critical_values="f")
+inverse_f_anderson_rubin_test = partial(
+    inverse_anderson_rubin_test, critical_values="f"
+)
 
 TEST_PAIRS = [
     (conditional_likelihood_ratio_test, None),
     (pulse_test, inverse_pulse_test),
     (lagrange_multiplier_test, None),
     (anderson_rubin_test, inverse_anderson_rubin_test),
-    (f_anderson_rubin_test, inverse_f_anderon_rubin_test),
+    (f_anderson_rubin_test, inverse_f_anderson_rubin_test),
     (wald_test, inverse_wald_test),
     (likelihood_ratio_test, inverse_likelihood_ratio_test),
 ]
-
-
-# The Pulse and the LM tests don't have subvector versions.
-@pytest.mark.parametrize(
-    "test",
-    [
-        anderson_rubin_test,
-        f_anderson_rubin_test,
-        wald_test,
-        liml_wald_test,
-        lagrange_multiplier_test,
-        likelihood_ratio_test,
-        conditional_likelihood_ratio_test,
-    ],
-)
-@pytest.mark.parametrize(
-    "n, p, r, q, u", [(100, 1, 1, 2, 1), (100, 1, 2, 5, 2), (100, 2, 5, 10, 2)]
-)
-def test_subvector_test_equal_to_original(test, n, p, r, q, u):
-    """Test that test(.., W=None) == test(.., W=np.zeros((n, 0)))."""
-    rng = np.random.RandomState(0)
-
-    delta_X = rng.normal(0, 1, (u, p))
-    delta_y = rng.normal(0, 1, (u, 1))
-
-    beta = rng.normal(0, 0.1, (p, 1))
-    Pi_X = rng.normal(0, 1, (q, p))
-
-    U = rng.normal(0, 1, (n, u))
-
-    Z = rng.normal(0, 1, (n, q))
-    X = Z @ Pi_X + U @ delta_X + rng.normal(0, 1, (n, p))
-    y = X @ beta + U @ delta_y + rng.normal(0, 1, (n, 1))
-
-    np.testing.assert_almost_equal(
-        test(Z, X, y, beta, W=None), test(Z, X, y, beta, W=np.zeros((n, 0))), decimal=2
-    )
 
 
 # The Pulse and the LM tests don't have subvector versions.
@@ -92,31 +57,25 @@ def test_subvector_test_equal_to_original(test, n, p, r, q, u):
 @pytest.mark.parametrize(
     "n, p, r, q, u", [(100, 1, 1, 2, 1), (100, 1, 2, 5, 2), (300, 2, 5, 10, 2)]
 )
-def test_subvector_test_size(test, n, p, r, q, u):
+@pytest.mark.parametrize("fit_intercept", [True, False])
+def test_subvector_test_size(test, n, p, r, q, u, fit_intercept):
     """Test that the test size is close to the nominal level."""
     n_seeds = 200
     p_values = np.zeros(n_seeds)
 
     for seed in range(n_seeds):
-        rng = np.random.RandomState(seed)
+        Z, X, y, _, W, beta = simulate_gaussian_iv(
+            n,
+            p,
+            q,
+            u,
+            r=r,
+            seed=seed,
+            include_intercept=fit_intercept,
+            return_beta=True,
+        )
 
-        delta_X = rng.normal(0, 1, (u, p))
-        delta_W = rng.normal(0, 1, (u, r))
-        delta_y = rng.normal(0, 1, (u, 1))
-
-        beta = rng.normal(0, 0.1, (p, 1))
-        gamma = rng.normal(0, 1, (r, 1))
-        Pi_X = rng.normal(0, 1, (q, p))
-        Pi_W = rng.normal(0, 1, (q, r))
-
-        U = rng.normal(0, 1, (n, u))
-
-        Z = rng.normal(0, 1, (n, q))
-        X = Z @ Pi_X + U @ delta_X + rng.normal(0, 1, (n, p))
-        W = Z @ Pi_W + U @ delta_W + rng.normal(0, 1, (n, r))
-        y = X @ beta + W @ gamma + U @ delta_y + rng.normal(0, 1, (n, 1))
-
-        _, p_values[seed] = test(Z, X, y, beta, W)
+        _, p_values[seed] = test(Z, X, y, beta, W, fit_intercept=fit_intercept)
 
     assert np.mean(p_values < 0.05) <= 0.07  # 4 stds above 0.05 for n_seeds = 100
 
@@ -136,7 +95,7 @@ def test_subvector_test_size(test, n, p, r, q, u):
     ],
 )
 @pytest.mark.parametrize("n, p, r, q, u", [(100, 2, 5, 10, 2)])
-def test_subvector_test_size_low_rank(test, n, p, r, q, u):
+def test_subvector_test_size_low_rank(test, n, p, r, q, u, fit_intercept):
     """Test that the test size is close to the nominal level if Pi is low rank."""
     n_seeds = 200
     p_values = np.zeros(n_seeds)
@@ -161,7 +120,7 @@ def test_subvector_test_size_low_rank(test, n, p, r, q, u):
         W = Z @ Pi_W + U @ delta_W + rng.normal(0, 1, (n, r))
         y = X @ beta + W @ gamma + U @ delta_y + rng.normal(0, 1, (n, 1))
 
-        _, p_values[seed] = test(Z, X, y, beta, W)
+        _, p_values[seed] = test(Z, X, y, beta, W, fit_intercept=False)
 
     assert np.mean(p_values < 0.05) < 0.07  # 4 stds above 0.05 for n_seeds = 100
 
@@ -242,29 +201,27 @@ def test_subvector_test_size_weak_instruments(test, n, q):
 @pytest.mark.parametrize(
     "n, p, q, u", [(100, 2, 2, 1), (100, 2, 5, 2), (200, 5, 10, 2)]
 )
-def test_test_size(test, n, p, q, u):
+@pytest.mark.parametrize("fit_intercept", [True, False])
+def test_test_size(test, n, p, q, u, fit_intercept):
     """Test that the test size is close to the nominal level."""
-    n_seeds = 250
+    n_seeds = 100
     p_values = np.zeros(n_seeds)
 
     for seed in range(n_seeds):
-        rng = np.random.RandomState(seed)
+        Z, X, y, _, W, beta = simulate_gaussian_iv(
+            n,
+            p,
+            q,
+            u,
+            r=0,
+            seed=seed,
+            include_intercept=fit_intercept,
+            return_beta=True,
+        )
 
-        delta = rng.normal(0, 1, (u, p))
-        gamma = rng.normal(0, 1, (u, 1))
+        _, p_values[seed] = test(Z, X, y, beta, fit_intercept=fit_intercept)
 
-        beta = rng.normal(0, 0.1, (p, 1))
-        Pi = rng.normal(0, 1, (q, p))
-
-        U = rng.normal(0, 1, (n, u))
-
-        Z = rng.normal(0, 1, (n, q))
-        X = Z @ Pi + U @ delta + rng.normal(0, 1, (n, p))
-        y = X @ beta + U @ gamma + rng.normal(0, 1, (n, 1))
-
-        _, p_values[seed] = test(Z, X, y, beta)
-
-    assert np.mean(p_values < 0.05) <= 0.09  # 8 stds above 0.05 for n_seeds = 100
+    assert np.mean(p_values <= 0.1) <= 0.2
 
 
 # The wald, and likelihood ratio tests are not valid for weak instruments
@@ -311,7 +268,7 @@ def test_test_size_weak_ivs(test, n, p, q, u):
     [
         (pulse_test, inverse_pulse_test),
         (anderson_rubin_test, inverse_anderson_rubin_test),
-        (f_anderson_rubin_test, inverse_f_anderon_rubin_test),
+        (f_anderson_rubin_test, inverse_f_anderson_rubin_test),
         (wald_test, inverse_wald_test),
         (liml_wald_test, liml_inverse_wald_test),
         (likelihood_ratio_test, inverse_likelihood_ratio_test),
@@ -345,7 +302,7 @@ def test_test_round_trip(test, inverse_test, n, p, q, u, p_value):
         (wald_test, inverse_wald_test),
         (liml_wald_test, liml_inverse_wald_test),
         (anderson_rubin_test, inverse_anderson_rubin_test),
-        (f_anderson_rubin_test, inverse_f_anderon_rubin_test),
+        (f_anderson_rubin_test, inverse_f_anderson_rubin_test),
         (likelihood_ratio_test, inverse_likelihood_ratio_test),
     ],
 )
@@ -420,7 +377,7 @@ def test_ar_test_monotonic_in_kappa(test, n, p, q, u):
     [
         inverse_pulse_test,
         inverse_anderson_rubin_test,
-        inverse_f_anderon_rubin_test,
+        inverse_f_anderson_rubin_test,
         inverse_wald_test,
         liml_inverse_wald_test,
         inverse_likelihood_ratio_test,

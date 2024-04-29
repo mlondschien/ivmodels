@@ -165,7 +165,7 @@ def anderson_rubin_test(
        guggenberger2019more
     """
     Z, X, y, W, beta = _check_test_inputs(Z, X, y, W=W, beta=beta)
-    n, q = Z.shape
+    n, k = Z.shape
 
     if fit_intercept:
         Z = Z - Z.mean(axis=0)
@@ -180,18 +180,18 @@ def anderson_rubin_test(
             np.square(proj_residuals).sum()
             / np.square(residuals - proj_residuals).sum()
         )
-        dfn = q
+        dfn = k
     else:
         spectrum = KClass._spectrum(X=W, y=y - X @ beta, Z=Z)
         ar = np.min(spectrum)
-        dfn = q - W.shape[1]
+        dfn = k - W.shape[1]
 
-    statistic = ar * (n - q) / dfn
+    statistic = ar * (n - k - fit_intercept) / dfn
 
     if critical_values == "chi2":
         p_value = 1 - scipy.stats.chi2.cdf(statistic * dfn, df=dfn)
     elif critical_values == "f":
-        p_value = 1 - scipy.stats.f.cdf(statistic, dfn=dfn, dfd=n - q)
+        p_value = 1 - scipy.stats.f.cdf(statistic, dfn=dfn, dfd=n - k - fit_intercept)
     elif critical_values.startswith("guggenberger"):
         if W is None:
             raise ValueError(
@@ -199,9 +199,9 @@ def anderson_rubin_test(
                 "only available for the subvector variant where W is not None."
             )
 
-        kappa_max = (n - q) * np.max(spectrum)
+        kappa_max = (n - k - fit_intercept) * np.max(spectrum)
         p_value = more_powerful_subvector_anderson_rubin_critical_value_function(
-            statistic * dfn, kappa_max, q, W.shape[1]
+            statistic * dfn, kappa_max, k, W.shape[1]
         )
     else:
         raise ValueError(
