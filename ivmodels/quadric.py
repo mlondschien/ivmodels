@@ -45,7 +45,7 @@ class Quadric:
         if not np.allclose(self.A, self.A.T):
             raise ValueError("Matrix `A` needs to be symmetric.")
 
-        self.center = np.linalg.lstsq(A, -b / 2.0, rcond=None)[0]
+        self.center = np.linalg.solve(A, -b / 2.0)
         self.c_standardized = c - self.center.T @ A @ self.center
 
         eigenvalues, eigenvectors = np.linalg.eig(A)
