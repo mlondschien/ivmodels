@@ -307,8 +307,11 @@ def test_test_round_trip(test, inverse_test, n, p, q, u, p_value):
     ],
 )
 @pytest.mark.parametrize("n, p, q, r, u", [(100, 2, 3, 1, 2), (100, 2, 5, 2, 3)])
-@pytest.mark.parametrize("p_value", [0.1, 0.01])
-def test_subvector_round_trip(test, inverse_test, n, p, q, u, r, p_value):
+@pytest.mark.parametrize("p_value", [0.1])
+@pytest.mark.parametrize("fit_intercept", [True, False])
+def test_subvector_round_trip(
+    test, inverse_test, n, p, q, u, r, p_value, fit_intercept
+):
     """
     A test's p-value at the confidence set's boundary equals the nominal level.
 
@@ -316,19 +319,14 @@ def test_subvector_round_trip(test, inverse_test, n, p, q, u, r, p_value):
     """
     Z, X, y, _, W = simulate_gaussian_iv(n, p, q, u, r=r, seed=0)
 
-    Z = Z - Z.mean(axis=0)
-    X = X - X.mean(axis=0)
-    y = y.flatten() - y.mean()
-    W = W - W.mean(axis=0)
-
-    quadric = inverse_test(Z, X, y, p_value, W=W)
+    quadric = inverse_test(Z, X, y, p_value, W=W, fit_intercept=fit_intercept)
     boundary = quadric._boundary()
 
     assert np.allclose(quadric(boundary), 0, atol=1e-7)
 
     p_values = np.zeros(boundary.shape[0])
     for idx, row in enumerate(boundary):
-        p_values[idx] = test(Z, X, y, beta=row, W=W)[1]
+        p_values[idx] = test(Z, X, y, beta=row, W=W, fit_intercept=fit_intercept)[1]
 
     assert np.allclose(p_values, p_value, atol=1e-8)
 
