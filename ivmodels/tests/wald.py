@@ -171,7 +171,7 @@ def inverse_wald_test(
         XW = XW - XW.mean(axis=0)
         y = y - y.mean()
 
-    XW_proj = proj(Z, XW)
+    X_proj = proj(Z, X)
 
     kclass = KClass(kappa=estimator, fit_intercept=False).fit(XW, y, Z)
     beta = kclass.coef_
@@ -179,11 +179,13 @@ def inverse_wald_test(
     residuals = y - kclass.predict(XW)
     hat_sigma_sq = np.sum(residuals**2) / (n - XW.shape[1] - fit_intercept)
 
-    A = np.linalg.inv(
-        np.linalg.inv(XW.T @ (kclass.kappa_ * XW_proj + (1 - kclass.kappa_) * XW))[
-            : X.shape[1], : X.shape[1]
-        ]
-    )
+    Xkappa = kclass.kappa_ * X_proj + (1 - kclass.kappa_) * X
+
+    A = X.T @ (kclass.kappa_ * X_proj + (1 - kclass.kappa_) * X)
+    if W.shape[1] > 0:
+        Wkappa = kclass.kappa_ * proj(Z, W) + (1 - kclass.kappa_) * X
+        A = A - Xkappa.T @ W @ np.linalg.lstsq(Wkappa.T @ Wkappa, Wkappa.T @ Xkappa)
+
     b = -2 * A @ beta[: X.shape[1]]
     c = beta[: X.shape[1]].T @ A @ beta[: X.shape[1]] - hat_sigma_sq * z_alpha
 
