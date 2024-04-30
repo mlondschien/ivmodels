@@ -157,3 +157,17 @@ def test_quadric_trivial_projection_does_not_change_standardization(n, seed):
     assert np.allclose(quadric.D, projected_quadric.D)
     assert np.allclose(quadric.c_standardized, projected_quadric.c_standardized)
     assert np.allclose(quadric.center, projected_quadric.center)
+
+
+@pytest.mark.parametrize(
+    "A, b, c, expected",
+    [
+        (np.array([[1]]), np.array([-4]), 3, "[1.0, 3.0]"),
+        (np.array([[-1]]), np.array([-4]), -3, "[-infty, -3.0] U [-1.0, infty]"),
+        (np.array([[1]]), np.zeros(1), 1, "[]"),
+        (np.array([[0]]), np.zeros(1), -1, "[-infty, infty]"),
+    ],
+)
+def test_quadric_str(A, b, c, expected):
+    quadric = Quadric(A, b, c)
+    assert str(quadric) == expected
