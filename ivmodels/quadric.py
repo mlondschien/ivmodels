@@ -85,6 +85,24 @@ class Quadric:
 
         return (x @ self.A * x).sum(axis=x.ndim - 1) + self.b.T @ x.T + self.c
 
+    def __str__(self):  # noqa D
+        if self.A.shape[0] > 1:
+            return super().__str__()
+
+        if self.D[0] * self.c_standardized > 0:
+            return "[]"
+
+        if self.D[0] == 0:
+            return "[-infty, infty]"
+
+        boundary = self.center + np.array([-1, 1]) * np.sqrt(
+            -self.c_standardized / self.D[0]
+        )
+        if self.D[0] > 0:
+            return f"[{boundary[0]}, {boundary[1]}]"
+        else:
+            return f"[-infty, {boundary[0]}] U [{boundary[1]}, infty]"
+
     def forward_map(self, x_tilde):
         """Map from the standardized space to the original space."""
         return x_tilde @ self.V.T + self.center.T
