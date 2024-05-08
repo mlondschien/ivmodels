@@ -38,7 +38,7 @@ def test_rank_test_raises():
         _ = rank_test(Z, X)
 
 
-@pytest.mark.parametrize("n, k, m", [(2000, 2, 2), (2000, 2, 1)])
+@pytest.mark.parametrize("n, k, m", [(2000, 2, 2), (2000, 2, 1), (2000, 8, 3)])
 def test_rank_test(n, k, m):
     rng = np.random.default_rng(0)
 
