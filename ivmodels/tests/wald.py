@@ -20,11 +20,11 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls", fit_intercept=True):
     where :math:`\\hat \\beta = \\hat \\beta(\\kappa)` is a k-class estimator with
     :math:`\\sqrt{n} (1 - \\kappa) \\to 0`,
     :math:`\\widehat{\\mathrm{Cov}}(\\hat\\beta)^{-1} = \\frac{1}{n} (X^T (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) X)^{-1}`,
-    :math:`\\hat \\sigma^2 = \\frac{1}{n - p} \\| M_Z (y - X \\hat \\beta) \\|^2_2` is
+    :math:`\\hat \\sigma^2 = \\frac{1}{n - m_X} \\| y - X \\hat \\beta \\|^2_2` is
     an estimate of the variance of the errors, :math:`P_Z` is the projection matrix
     onto the column space of :math:`Z`, and :math:`M_Z = \\mathrm{Id} - P_Z`.
     Under strong instruments, the test statistic is asymptotically distributed as
-    :math:`\\chi^2(p)` under the null.
+    :math:`\\chi^2(m_X)` under the null.
 
     If ``W`` is not ``None``, the test statistic is defined as
 
@@ -32,18 +32,18 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls", fit_intercept=True):
 
         \\mathrm{Wald} := (\\beta - \\hat{\\beta})^T (D ( (X W)^T (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) (X W) )^{-1} D)^{-1} (\\beta - \\hat{\\beta}) / \\hat{\\sigma}^2,
 
-    where :math:`D \\in \\mathbb{R}^{(p + r) \\times (p + r)}` is diagonal with
-    :math:`D_{ii} = 1` if :math:`i \\leq p` and :math:`D_{ii} = 0` otherwise.
+    where :math:`D \\in \\mathbb{R}^{(m_X + m_W) \\times (m_X + m_W)}` is diagonal with
+    :math:`D_{ii} = 1` if :math:`i \\leq m_X` and :math:`D_{ii} = 0` otherwise.
 
     Parameters
     ----------
-    Z: np.ndarray of dimension (n, q)
+    Z: np.ndarray of dimension (n, k)
         Instruments.
-    X: np.ndarray of dimension (n, p)
+    X: np.ndarray of dimension (n, m_X)
         Regressors.
     y: np.ndarray of dimension (n,)
         Outcomes.
-    W: np.ndarray of dimension (n, r) or None
+    W: np.ndarray of dimension (n, m_W) or None
         Endogenous regressors not of interest.
     beta: np.ndarray of dimension (p,)
         Coefficients to test.
@@ -59,9 +59,9 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls", fit_intercept=True):
     statistic: float
         The test statistic :math:`\\mathrm{Wald}`.
     p_value: float
-        The p-value of the test. Equal to :math:`1 - F_{\\chi^2(p)}(Wald)`, where
-        :math:`F_{\\chi^2(p)}` is the cumulative distribution function of the
-        :math:`\\chi^2(p)` distribution.
+        The p-value of the test. Equal to :math:`1 - F_{\\chi^2(m_X)}(Wald)`, where
+        :math:`F_{\\chi^2(m_X)}` is the cumulative distribution function of the
+        :math:`\\chi^2(m_X)` distribution.
 
     Raises
     ------
@@ -120,33 +120,33 @@ def inverse_wald_test(
 
     .. math::
 
-       (\\beta - \\hat{\\beta})^T X^T P_Z X (\\beta - \\hat{\\beta}) \\leq \\hat{\\sigma}^2 F_{\\chi^2(p)}(1 - \\alpha),
+       (\\beta - \\hat{\\beta})^T (X^T (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) X)^{-1} (\\beta - \\hat{\\beta}) \\leq \\hat{\\sigma}^2 F_{\\chi^2(m_X)}(1 - \\alpha),
 
     where :math:`\\hat \\beta` is an estimate of the causal parameter :math:`\\beta_0`
     (controlled by the parameter ``estimator``),
-    :math:`\\hat \\sigma^2 = \\frac{1}{n - k} \\| M_Z (y - X \\hat \\beta) \\|^2_2`,
+    :math:`\\hat \\sigma^2 = \\frac{1}{n - m_X} \\| y - X \\hat \\beta \\|^2_2`,
     :math:`P_Z` is the projection matrix onto the column space of :math:`Z`, :math:`M_Z`
     is the projection matrix onto the orthogonal complement of the column space of
-    :math:`Z`, and :math:`F_{\\chi^2(p)}` is the cumulative distribution function of the
-    :math:`\\chi^2(p)` distribution.
+    :math:`Z`, and :math:`F_{\\chi^2(m_X)}` is the cumulative distribution function of the
+    :math:`\\chi^2(m_X)` distribution.
 
     If ``W`` is not ``None``, the quadric is defined as
 
     .. math::
 
-       (\\beta - B \\hat{\\beta})^T (B ((X W)^T P_Z (X W))^{-1} B^T)^{-1} (\\beta - B \\hat{\\beta}) \\leq \\hat{\\sigma}^2 F_{\\chi^2(p)}(1 - \\alpha).
+       (\\beta - B \\hat{\\beta})^T (B ((X W)^T (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) (X W))^{-1} B^T)^{-1} (\\beta - B \\hat{\\beta}) \\leq \\hat{\\sigma}^2 F_{\\chi^2(m_X)}(1 - \\alpha).
 
     Parameters
     ----------
-    Z: np.ndarray of dimension (n, q)
+    Z: np.ndarray of dimension (n, k)
         Instruments.
-    X: np.ndarray of dimension (n, p)
+    X: np.ndarray of dimension (n, m_X)
         Regressors.
     y: np.ndarray of dimension (n,)
         Outcomes.
     alpha: float
         Significance level.
-    W: np.ndarray of dimension (n, r) or None
+    W: np.ndarray of dimension (n, m_W) or None
         Endogenous regressors not of interest.
     estimator: float or str, optional, default = "tsls"
         Estimator to use. Passed as ``kappa`` parameter to ``KClass``.

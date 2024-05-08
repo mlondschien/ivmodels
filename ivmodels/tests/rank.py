@@ -4,7 +4,7 @@ import scipy
 from ivmodels.utils import proj
 
 
-def f_test(Z, X, fit_intercept=True):
+def rank_test(Z, X, fit_intercept=True):
     """
     Perform Anderson's test for reduced rank :cite:p:`anderson1951estimating`.
 
@@ -15,7 +15,7 @@ def f_test(Z, X, fit_intercept=True):
     where :math:`X = Z \\Pi + V` with :math:`V` consisting i.i.d. copies of a centered
     Gaussian, uncorrelated with :math:`Z`. The test statistic is
 
-    .. math: F := \\frac{n-k}{k} \\lambda_\\mathrm{min}((X^T M_Z X)^{-1} X^T P_Z X)
+    .. math: \\lambda := \\frac{n-k}{k} \\lambda_\\mathrm{min}((X^T M_Z X)^{-1} X^T P_Z X)
 
     where :math:`P_Z = Z (Z^T Z)^{-1} Z^T` is the orthogonal projection onto the
     column space of :math:`Z`, :math:`M_Z = I - P_Z` is the orthogonal projection onto
@@ -34,11 +34,14 @@ def f_test(Z, X, fit_intercept=True):
     Returns
     -------
     statistic: float
-        The test statistic :math:`F`.
+        The test statistic :math:`\\lambda`.
     p_value: float
         The p-value of the test.
     """
     n, k = Z.shape
+
+    if k < X.shape[1]:
+        raise ValueError("Need `Z.shape[1] >= X.shape[1]`.")
 
     if fit_intercept:
         X = X - X.mean(axis=0)
@@ -47,8 +50,7 @@ def f_test(Z, X, fit_intercept=True):
     X_proj = proj(Z, X)
 
     W = np.linalg.solve(X.T @ (X - X_proj), X.T @ X_proj)
-    statistic = (n - k - fit_intercept) / k * min(np.real(np.linalg.eigvals(W)))
-
-    cdf = scipy.stats.f.cdf(statistic, dfn=k, dfd=n - k - fit_intercept)
+    statistic = (n - k - fit_intercept) * min(np.real(np.linalg.eigvals(W)))
+    cdf = scipy.stats.chi2.cdf(statistic, df=k)
 
     return statistic, 1 - cdf
