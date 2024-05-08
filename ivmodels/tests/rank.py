@@ -39,8 +39,9 @@ def rank_test(Z, X, fit_intercept=True):
         The p-value of the test.
     """
     n, k = Z.shape
+    m = X.shape[1]
 
-    if k < X.shape[1]:
+    if k < m:
         raise ValueError("Need `Z.shape[1] >= X.shape[1]`.")
 
     if fit_intercept:
@@ -51,6 +52,6 @@ def rank_test(Z, X, fit_intercept=True):
 
     W = np.linalg.solve(X.T @ (X - X_proj), X.T @ X_proj)
     statistic = (n - k - fit_intercept) * min(np.real(np.linalg.eigvals(W)))
-    cdf = scipy.stats.chi2.cdf(statistic, df=k)
+    cdf = scipy.stats.chi2.cdf(statistic, df=(k - m + 1))
 
     return statistic, 1 - cdf
