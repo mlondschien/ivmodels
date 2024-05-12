@@ -21,11 +21,17 @@ Quadric
 
 .. autoclass:: ivmodels.Quadric
    :members:
+
 Tests
 =====
 
 .. automodule:: ivmodels.tests
    :members:
+
+Other
+=====
+
+
 Bibliography
 ============
 
