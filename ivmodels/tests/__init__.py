@@ -10,7 +10,6 @@ __all__ = [
     "anderson_rubin_test",
     "inverse_anderson_rubin_test",
     "conditional_likelihood_ratio_test",
-    "rank_test",
     "lagrange_multiplier_test",
     "likelihood_ratio_test",
     "inverse_likelihood_ratio_test",

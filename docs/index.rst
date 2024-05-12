@@ -26,7 +26,7 @@ Tests
 =====
 
 .. automodule:: ivmodels.tests
-   :members:
+   :members: conditional_likelihood_ratio_critical_value_function
 
 Bibliography
 ============
