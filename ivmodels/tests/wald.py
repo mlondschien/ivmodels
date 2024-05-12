@@ -45,7 +45,7 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls", fit_intercept=True):
         Outcomes.
     W: np.ndarray of dimension (n, m_W) or None
         Endogenous regressors not of interest.
-    beta: np.ndarray of dimension (p,)
+    beta: np.ndarray of dimension (mx,)
         Coefficients to test.
     estimator: str, optional, default = "tsls"
         Estimator to use. Must be one of ``"tsls"`` or ``"liml"``.
@@ -140,13 +140,13 @@ def inverse_wald_test(
     ----------
     Z: np.ndarray of dimension (n, k)
         Instruments.
-    X: np.ndarray of dimension (n, m_X)
+    X: np.ndarray of dimension (n, mx)
         Regressors.
     y: np.ndarray of dimension (n,)
         Outcomes.
     alpha: float
         Significance level.
-    W: np.ndarray of dimension (n, m_W) or None
+    W: np.ndarray of dimension (n, mw) or None
         Endogenous regressors not of interest.
     estimator: float or str, optional, default = "tsls"
         Estimator to use. Passed as ``kappa`` parameter to ``KClass``.

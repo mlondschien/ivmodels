@@ -8,7 +8,7 @@ from ivmodels.utils import proj
 
 
 def more_powerful_subvector_anderson_rubin_critical_value_function(
-    z, kappa_1_hat, k, mW
+    z, kappa_1_hat, k, mw
 ):
     """
     Implement the critical value function proposed by :cite:t`guggenberger2019more`.
@@ -26,7 +26,7 @@ def more_powerful_subvector_anderson_rubin_critical_value_function(
         This is the conditioning statistic.
     k: int
         Number of instruments.
-    mW: int
+    mw: int
         Number of endogenous regressors not of interest, i.e., :math:`\\mathrm{dim}(W)`.
 
     Returns
@@ -61,7 +61,7 @@ def more_powerful_subvector_anderson_rubin_critical_value_function(
     # Page 494, footnote 3: "For general mW, discussed in the next subsection, the role
     # of k − 1 is played by k − mW"
     # Thus, k - 1 <- k - mW or k <- k - mW + 1
-    k_prime = k - mW + 1
+    k_prime = k - mw + 1
 
     # Equation A.22
     # g = scipy.special.gamma(k_prime / 2 + 1) * np.square(k_prime / 2 + 0.5) / np.power(kappa_1_hat, k_prime / 2) / np.sqrt(np.pi) / scipy.special.hyp1f1(k_prime/2 - 0.5, k_prime/2 + 1, - kappa_1_hat / 2)
@@ -99,48 +99,49 @@ def anderson_rubin_test(
     Test the null hypothesis that the residuals are uncorrelated with the instruments.
     If ``W`` is ``None``, the test statistic is defined as
 
-    .. math:: AR := \\frac{n - q}{q} \\frac{\\| P_Z (y - X \\beta) \\|_2^2}{\\| M_Z  (y - X \\beta) \\|_2^2},
+    .. math:: AR := \\frac{n - k}{k} \\frac{\\| P_Z (y - X \\beta) \\|_2^2}{\\| M_Z (y - X \\beta) \\|_2^2},
 
     where :math:`P_Z` is the projection matrix onto the column space of :math:`Z` and
     :math:`M_Z = \\mathrm{Id} - P_Z`.
 
     Under the null and normally distributed errors, this test statistic is distributed as
-    :math:`F_{q, n - q}`, where :math:`q` is the number of instruments and :math:`n` is
+    :math:`F_{k, n - k}`, where :math:`k` is the number of instruments and :math:`n` is
     the number of observations. The statistic is asymptotically distributed as
-    :math:`\\chi^2(q) / q` under the null and non-normally distributed errors, even for
+    :math:`\\chi^2(k) / k` under the null and non-normally distributed errors, even for
     weak instruments.
 
     If ``W`` is not ``None``, the test statistic is
 
     .. math::
 
-       AR &:= \\min_\\gamma \\frac{n - q}{q - r} \\frac{\\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2} \\\\
-       &= \\frac{n - q}{q - r} \\frac{\\| P_Z (y - X \\beta - W \\hat\\gamma_\\mathrm{LIML}) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\hat\\gamma_\\mathrm{LIML}) \\|_2^2},
+       AR &:= \\min_\\gamma \\frac{n - k}{k - m_W} \\frac{\\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2} \\\\
+       &= \\frac{n - k}{k - m_W} \\frac{\\| P_Z (y - X \\beta - W \\hat\\gamma_\\mathrm{LIML}) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\hat\\gamma_\\mathrm{LIML}) \\|_2^2},
 
     where :math:`\\hat\\gamma_\\mathrm{LIML}` is the LIML estimate using instruments
     :math:`Z`, covariates :math:`W` and outcomes :math:`y - X \\beta`.
     Under the null, this test statistic is asymptotically bounded from above by a random
     variable that is distributed as
-    :math:`\\frac{1}{q - r} \\chi^2(q - r)`, where :math:`r = \\mathrm{dim}(W)`. See
+    :math:`\\frac{1}{k - m_W} \\chi^2(k - m_W)`, where :math:`r = \\mathrm{dim}(W)`. See
     :cite:p:`guggenberger2012asymptotic`.
 
     Parameters
     ----------
-    Z: np.ndarray of dimension (n, q)
+    Z: np.ndarray of dimension (n, k)
         Instruments.
-    X: np.ndarray of dimension (n, p)
+    X: np.ndarray of dimension (n, mx)
         Regressors.
     y: np.ndarray of dimension (n,)
         Outcomes.
-    beta: np.ndarray of dimension (p,)
+    beta: np.ndarray of dimension (mx,)
         Coefficients to test.
-    W: np.ndarray of dimension (n, r) or None
+    W: np.ndarray of dimension (n, mw) or None
         Endogenous regressors not of interest.
     critical_values: str, optional, default = "chi2"
-        If ``"chi2"``, use the :math:`\\chi^2(q)` distribution to compute the p-value.
-        If ``"f"`, use the :math:`F_{q, n - q}` distribution to compute the p-value.
+        If ``"chi2"``, use the :math:`\\chi^2(k - m_W)` distribution to compute the p-value.
+        If ``"f"`, use the :math:`F_{k - m_W, n - k}` distribution to compute the p-value.
         If ``"guggenberger"``, use the critical value function proposed by
-        :cite:t:`guggenberger2019more` to compute the p-value.
+        :cite:t:`guggenberger2019more` to compute the p-value. This is only available if
+        ``W`` is not ``None``.
     fit_intercept: bool, optional, default = True
         Whether to include an intercept. This is equivalent to centering the inputs.
 
@@ -224,37 +225,39 @@ def inverse_anderson_rubin_test(
     region for the causal parameter corresponding to the endogenous regressors of
     interest ``X``.
 
-    If ``W`` is ``None``, let :math:`q := \\frac{q}{n-q}F_{F(q, n-q)}(1 - \\alpha)`, where
-    :math:`F_{F(q, n-q)}` is the cumulative distribution function of the
-    :math:`F(q, n-q)` distribution. The quadric is defined as
+    If ``W`` is ``None``, let :math:`q := \\frac{k}{n-k}F_{F(k, n-k}(1 - \\alpha)`, where
+    :math:`F_{F(k, n-k)}` is the cumulative distribution function of the
+    :math:`F(k, n-k)` distribution. The quadric is defined as
 
     .. math::
 
-       AR(\\beta) = \\frac{n - q}{q} \\frac{\\| P_Z (y - X \\beta) \\|_2^2}{\\| M_Z  (y - X \\beta) \\|_2^2} \\leq F_{F(q, n-q)}(1 - \\alpha) \\\\
+       AR(\\beta) = \\frac{n - k}{k} \\frac{\\| P_Z (y - X \\beta) \\|_2^2}{\\| M_Z  (y - X \\beta) \\|_2^2} \\leq F_{F(k, n-k)}(1 - \\alpha) \\\\
        \\Leftrightarrow \\beta^T X^T (P_Z - q M_Z) X \\beta - 2 y^T (P_Z - q M_Z) X \\beta + y^T (P_Z - q M_Z) y \\leq 0.
 
-    If ``W`` is not ``None``, let :math:`q := \\frac{q - r}{n-q}F_{F(q - r, n-q)}(1 - \\alpha)`.
+    If ``W`` is not ``None``, let :math:`q := \\frac{k - m_W}{n-k}F_{F(k - m_W, n-k)}(1 - \\alpha)`.
     The quadric is defined as
 
     .. math::
-        AR(\\beta) = \\min_\\gamma \\frac{n - q}{q - r} \\frac{\\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2} \\leq F_{q - r, n-q}(1 - \\alpha).
+        AR(\\beta) = \\min_\\gamma \\frac{n - k}{k - m_W} \\frac{\\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z (y - X \\beta - W \\gamma) \\|_2^2} \\leq F_{k - m_W, n-k}(1 - \\alpha).
 
 
     Parameters
     ----------
-    Z: np.ndarray of dimension (n, q)
+    Z: np.ndarray of dimension (n, k)
         Instruments.
-    X: np.ndarray of dimension (n, p)
+    X: np.ndarray of dimension (n, mx)
         Regressors.
     y: np.ndarray of dimension (n,)
         Outcomes.
     alpha: float
         Significance level.
-    W: np.ndarray of dimension (n, r) or None
+    W: np.ndarray of dimension (n, mw) or None
         Endogenous regressors not of interest.
     critical_values: str, optional, default = "chi2"
-        If ``"chi2"``, use the :math:`\\chi^2(q)` distribution to compute the p-value.
-        If ``"f"`, use the :math:`F_{q, n - q}` distribution to compute the p-value.
+        If ``"chi2"``, use the :math:`\\chi^2(k - m_W)` distribution to compute the
+        p-value.
+        If ``"f"`, use the :math:`F_{k - m_W, n - k}` distribution to compute the
+        p-value.
     fit_intercept: bool, optional, default = True
         Whether to include an intercept. This is equivalent to centering the inputs.
 
@@ -271,11 +274,8 @@ def inverse_anderson_rubin_test(
 
     n, k = Z.shape
 
-    if W is not None:
-        X = np.concatenate([X, W], axis=1)
-        dfn = k - W.shape[1]
-    else:
-        dfn = k
+    X = np.concatenate([X, W], axis=1)
+    dfn = k - W.shape[1]
 
     if fit_intercept:
         Z = Z - Z.mean(axis=0)

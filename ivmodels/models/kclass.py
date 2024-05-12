@@ -483,7 +483,7 @@ class KClass(KClassMixin, GeneralizedLinearRegressor):
         k-class estimator is the two-stage least-squares estimator. If ``kappa="liml"``,
         then :math:`\\kappa = \\hat\\kappa_\\mathrm{LIML}` is used. If
         ``kappa="fuller(a)"``, then
-        :math:`\\kappa = \\hat\\kappa_\\mathrm{LIML} - a / (n - q)`, where
+        :math:`\\kappa = \\hat\\kappa_\\mathrm{LIML} - a / (n - k)`, where
         :math:`n` is the number of observations and :math:`q = \\mathrm{dim}(Z)` is the
         number of instruments. The string ``"fuller"`` is interpreted as
         ``"fuller(1.0)"``, yielding an estimator that is unbiased up to

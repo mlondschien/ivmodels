@@ -18,4 +18,5 @@ __all__ = [
     "inverse_pulse_test",
     "wald_test",
     "inverse_wald_test",
+    "rank_test",
 ]

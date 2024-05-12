@@ -12,19 +12,19 @@ def _LM(X, X_proj, Y, Y_proj, W, W_proj, beta):
 
     Parameters
     ----------
-    X: np.ndarray of dimension (n, p)
+    X: np.ndarray of dimension (n, mx)
         Regressors.
-    X_proj: np.ndarray of dimension (n, p)
+    X_proj: np.ndarray of dimension (n, mx)
         Projection of ``X`` onto the column space of ``Z``.
     Y: np.ndarray of dimension (n,)
         Outcomes.
     Y_proj: np.ndarray of dimension (n,)
         Projection of ``Y`` onto the column space of ``Z``.
-    W: np.ndarray of dimension (n, r)
+    W: np.ndarray of dimension (n, mw)
         Regressors.
-    W_proj: np.ndarray of dimension (n, r)
+    W_proj: np.ndarray of dimension (n, mw)
         Projection of ``W`` onto the column space of ``Z``.
-    beta: np.ndarray of dimension (p,)
+    beta: np.ndarray of dimension (mx,)
         Coefficients to test.
 
     Returns
@@ -74,7 +74,7 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None, fit_intercept=True):
 
     The test statistic is
 
-    .. math:: LM := (n - q) \\frac{\\| P_{P_Z \\tilde X(\\beta)} (y - X \\beta) \\|_2^2}{\\| M_Z  (y - X \\beta) \\|_2^2}.
+    .. math:: LM := (n - k) \\frac{\\| P_{P_Z \\tilde X(\\beta)} (y - X \\beta) \\|_2^2}{\\| M_Z  (y - X \\beta) \\|_2^2}.
 
     If ``W`` is not ``None``, let
 
@@ -82,9 +82,9 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None, fit_intercept=True):
 
     The test statistic is
 
-    .. math:: LM := (n - q) \\min_{\\gamma} \\frac{\\| P_{P_Z \\tilde S(\\beta, \\gamma)} (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2}.
+    .. math:: LM := (n - k) \\min_{\\gamma} \\frac{\\| P_{P_Z \\tilde S(\\beta, \\gamma)} (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2}.
 
-    This test statistic is asymptotically distributed as :math:`\\chi^2(p)` under the
+    This test statistic is asymptotically distributed as :math:`\\chi^2(m_X)` under the
     null, even if the instruments are weak.
 
     Parameters
@@ -107,9 +107,9 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None, fit_intercept=True):
     statistic: float
         The test statistic :math:`LM`.
     p_value: float
-        The p-value of the test. Equal to :math:`1 - F_{\\chi^2(p)}(LM)`, where
-        :math:`F_{\\chi^2(p)}` is the cumulative distribution function of the
-        :math:`\\chi^2(p)` distribution.
+        The p-value of the test. Equal to :math:`1 - F_{\\chi^2(m_X)}(LM)`, where
+        :math:`F_{\\chi^2(m_X)}` is the cumulative distribution function of the
+        :math:`\\chi^2(m_X)` distribution.
 
     Raises
     ------
@@ -127,7 +127,7 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None, fit_intercept=True):
     n, k = Z.shape
     mx = X.shape[1]
 
-    if W is not None and W.shape[1] > 0:
+    if W.shape[1] > 0:
         gamma_hat = KClass(kappa="liml").fit(X=W, y=y - X @ beta, Z=Z).coef_
         res = scipy.optimize.minimize(
             lambda gamma: _LM(

@@ -131,7 +131,15 @@ def _conditional_likelihood_ratio_critical_value_function(
 
 
 def conditional_likelihood_ratio_test(
-    Z, X, y, beta, W=None, fit_intercept=True, method="numerical_integration", tol=1e-6
+    Z,
+    X,
+    y,
+    beta,
+    W=None,
+    fit_intercept=True,
+    method="numerical_integration",
+    tol=1e-4,
+    critical_values="kleibergen",
 ):
     """
     Perform the conditional likelihood ratio test for ``beta``.
@@ -140,8 +148,8 @@ def conditional_likelihood_ratio_test(
 
     .. math::
 
-       \\mathrm{CLR(\\beta)} &:= (n - q) \\frac{ \\| P_Z (y - X \\beta) \\|_2^2}{ \\| M_Z (y - X \\beta) \\|_2^2} - (n - q) \\frac{ \\| P_Z (y - X \\hat\\beta_\\mathrm{LIML}) \\|_2^2 }{ \\| M_Z (y - X \\hat\\beta_\\mathrm{LIML}) \\|_2^2 } \\\\
-       &= q \\ \\mathrm{AR}(\\beta) - q \\ \\min_\\beta \\mathrm{AR}(\\beta),
+       \\mathrm{CLR(\\beta)} &:= (n - k) \\frac{ \\| P_Z (y - X \\beta) \\|_2^2}{ \\| M_Z (y - X \\beta) \\|_2^2} - (n - k) \\frac{ \\| P_Z (y - X \\hat\\beta_\\mathrm{LIML}) \\|_2^2 }{ \\| M_Z (y - X \\hat\\beta_\\mathrm{LIML}) \\|_2^2 } \\\\
+       &= k \\ \\mathrm{AR}(\\beta) - q \\ \\min_\\beta \\mathrm{AR}(\\beta),
 
     where :math:`P_Z` is the projection matrix onto the column space of :math:`Z`,
     :math:`M_Z = \\mathrm{Id} - P_Z`, and :math:`\\hat\\beta_\\mathrm{LIML}` is the LIML
@@ -149,7 +157,7 @@ def conditional_likelihood_ratio_test(
     Anderson-Rubin test statistic :math:`\\mathrm{AR}(\\beta)`
     (see :py:func:`~ivmodels.tests.anderson_rubin_test`) at
 
-    .. math:: \\mathrm{AR}(\\hat\\beta_\\mathrm{LIML}) = \\frac{n - q}{q} \\lambda_\\mathrm{min}( (X \\ y)^T M_Z (X \\ y))^{-1} (X \\ y)^T P_Z (X \\ y) ).
+    .. math:: \\mathrm{AR}(\\hat\\beta_\\mathrm{LIML}) = \\frac{n - k}{k} \\lambda_\\mathrm{min}( (X \\ y)^T M_Z (X \\ y))^{-1} (X \\ y)^T P_Z (X \\ y) ).
 
     Let
 
@@ -157,32 +165,32 @@ def conditional_likelihood_ratio_test(
 
     and
 
-    .. math:: s_\\mathrm{min}(\\beta) := (n - q) \\cdot \\lambda_\\mathrm{min}((\\tilde X(\\beta)^T M_Z \\tilde X(\\beta))^{-1} \\tilde X(\\beta)^T P_Z \\tilde X(\\beta)).
+    .. math:: s_\\mathrm{min}(\\beta) := (n - k) \\cdot \\lambda_\\mathrm{min}((\\tilde X(\\beta)^T M_Z \\tilde X(\\beta))^{-1} \\tilde X(\\beta)^T P_Z \\tilde X(\\beta)).
 
     Then, conditionally on :math:`s_\\mathrm{min}(\\beta_0)`, the statistic
     :math:`\\mathrm{CLR(\\beta_0)}` is asymptotically bounded from above by a random
     variable that is distributed as
 
-    .. math:: \\frac{1}{2} \\left( Q_p + Q_{q - p} - s_\\mathrm{min} + \\sqrt{ (Q_p + Q_{q - p}  - s_\\mathrm{min})^2 + 4 Q_{p} s_\\textrm{min} } \\right),
+    .. math:: \\frac{1}{2} \\left( Q_{m_X} + Q_{k - m_X} - s_\\mathrm{min} + \\sqrt{ (Q_{m_X} + Q_{k - m_X}  - s_\\mathrm{min})^2 + 4 Q_{m_X} s_\\textrm{min} } \\right),
 
-    where :math:`Q_p \\sim \\chi^2(p)` and
-    :math:`Q_{q - p} \\sim \\chi^2(q - p)` are independent chi-squared random
+    where :math:`Q_{m_X} \\sim \\chi^2(m_X)` and
+    :math:`Q_{k - m_X} \\sim \\chi^2(k - m_X)` are independent chi-squared random
     variables. This is robust to weak instruments. If identification is strong, that is
     :math:`s_\\mathrm{min}(\\beta_0) \\to \\infty`, the conditional likelihood ratio
     test is equivalent to the likelihood ratio test
-    (see :py:func:`~ivmodels.tests.likelihood_ratio_test`), with :math:`\\chi^2(p)`
+    (see :py:func:`~ivmodels.tests.likelihood_ratio_test`), with :math:`\\chi^2(m_X)`
     limiting distribution.
     If identification is weak, that is :math:`s_\\mathrm{min}(\\beta_0) \\to 0`, the
     conditional likelihood ratio test is equivalent to the Anderson-Rubin test
-    (see :py:func:`~ivmodels.tests.anderson_rubin_test`) with :math:`\\chi^2(q)` limiting
+    (see :py:func:`~ivmodels.tests.anderson_rubin_test`) with :math:`\\chi^2(k)` limiting
     distribution.
     See :cite:p:`moreira2003conditional` for details.
 
     If ``W`` is not ``None``, the test statistic is defined as
 
     .. math::
-       \\mathrm{CLR(\\beta)} &:= (n - q) \\min_\\gamma \\frac{ \\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{ \\| M_Z (y - X \\beta - W \\gamma) \\|_2^2} - (n - q) \\min_{\\beta, \\gamma} \\frac{ \\| P_Z (y - X \\beta - W \\gamma) \\|_2^2 }{ \\| M_Z (y - X \\beta - W \\gamma) \\|_2^2 } \\\\
-       &= (n - q) \\frac{ \\| P_Z (y - X \\beta - W \\hat\\gamma_\\textrm{liml}) \\|_2^2}{ \\| M_Z (y - X \\beta - W \\hat\\gamma_\\textrm{liml}) \\|_2^2} - (n - q) \\frac{ \\| P_Z (y - (X \\ W) \\hat\\delta_\\mathrm{liml}) \\|_2^2 }{ \\| M_Z (y - (X \\ W) \\hat\\delta_\\mathrm{liml}) \\|_2^2 },
+       \\mathrm{CLR(\\beta)} &:= (n - k) \\min_\\gamma \\frac{ \\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{ \\| M_Z (y - X \\beta - W \\gamma) \\|_2^2} - (n - k) \\min_{\\beta, \\gamma} \\frac{ \\| P_Z (y - X \\beta - W \\gamma) \\|_2^2 }{ \\| M_Z (y - X \\beta - W \\gamma) \\|_2^2 } \\\\
+       &= (n - k) \\frac{ \\| P_Z (y - X \\beta - W \\hat\\gamma_\\textrm{liml}) \\|_2^2}{ \\| M_Z (y - X \\beta - W \\hat\\gamma_\\textrm{liml}) \\|_2^2} - (n - k) \\frac{ \\| P_Z (y - (X \\ W) \\hat\\delta_\\mathrm{liml}) \\|_2^2 }{ \\| M_Z (y - (X \\ W) \\hat\\delta_\\mathrm{liml}) \\|_2^2 },
 
     where :math:`\\hat\\gamma_\\mathrm{LIML}` is the LIML estimator of :math:`\\gamma`
     (see :py:class:`~ivmodels.KClass`) using instruments :math:`Z`, endogenous
@@ -213,32 +221,32 @@ def conditional_likelihood_ratio_test(
     :math:`\\mathrm{CLR(\\beta_0)}` is asymptotically bounded from above by a random
     variable that is distributed as
 
-    .. math:: \\frac{1}{2} \\left( Q_p + Q_{q - p - r} - s_\\mathrm{min}(\\beta_0) + \\sqrt{ (Q_p + Q_{q - p - r}  - s_\\mathrm{min}(\\beta_0))^2 + 4 Q_{p} s_\\textrm{min} } \\right),
+    .. math:: \\frac{1}{2} \\left( Q_p + Q_{k - m_X - m_W} - s_\\mathrm{min}(\\beta_0) + \\sqrt{ (Q_p + Q_{k - m_X - m_W}  - s_\\mathrm{min}(\\beta_0))^2 + 4 Q_{p} s_\\textrm{min} } \\right),
 
-    where :math:`Q_p \\sim \\chi^2(p)` and
-    :math:`Q_{q - p - r} \\sim \\chi^2(q - p - r)` are independent chi-squared random
+    where :math:`Q_{m_X} \\sim \\chi^2(m_X)` and
+    :math:`Q_{k - m_X - m_W} \\sim \\chi^2(k - m_X - m_W)` are independent chi-squared random
     variables. This is robust to weak instruments. If identification is strong, that is
     :math:`s_\\mathrm{min}(\\beta_0) \\to \\infty`, the conditional likelihood ratio
     test is equivalent to the likelihood ratio test
-    (see :py:func:`~ivmodels.tests.likelihood_ratio_test`), with :math:`\\chi^2(p)`
+    (see :py:func:`~ivmodels.tests.likelihood_ratio_test`), with :math:`\\chi^2(m_X)`
     limiting distribution.
     If identification is weak, that is :math:`s_\\mathrm{min}(\\beta_0) \\to 0`, the
     conditional likelihood ratio test is equivalent to the Anderson-Rubin test
-    (see :py:func:`~ivmodels.tests.anderson_rubin_test`) with :math:`\\chi^2(q - r)`
+    (see :py:func:`~ivmodels.tests.anderson_rubin_test`) with :math:`\\chi^2(k - m_W)`
     limiting distribution.
     See :cite:p:`kleibergen2021efficient` for details.
 
     Parameters
     ----------
-    Z: np.ndarray of dimension (n, q)
+    Z: np.ndarray of dimension (n, k)
         Instruments.
-    X: np.ndarray of dimension (n, p)
+    X: np.ndarray of dimension (n, mx)
         Regressors.
     y: np.ndarray of dimension (n,)
         Outcomes.
-    beta: np.ndarray of dimension (p,)
+    beta: np.ndarray of dimension (mx,)
         Coefficients to test.
-    W: np.ndarray of dimension (n, r) or None
+    W: np.ndarray of dimension (n, mw) or None
         Endogenous regressors not of interest.
     fit_intercept: bool, optional, default: True
         Whether to include an intercept. This is equivalent to centering the inputs.
@@ -322,22 +330,28 @@ def conditional_likelihood_ratio_test(
 
         statistic = (n - k - fit_intercept) * (ar - XWy_eigenvals[0])
 
-        # if type_ == "k":
-        s_min = XWy_eigenvals[0] + XWy_eigenvals[1] - ar
-        # else:
-        #     XW = np.concatenate([X, W], axis=1)
-        #     XW_proj = np.concatenate([X_proj, W_proj], axis=1)
+        if critical_values == "kleibergen":
+            s_min = (n - k - fit_intercept) * (XWy_eigenvals[0] + XWy_eigenvals[1] - ar)
+        else:
+            XW = np.concatenate([X, W], axis=1)
+            XW_proj = np.concatenate([X_proj, W_proj], axis=1)
 
-        #     residuals = y - X @ beta - kclass.predict(X=W)
-        #     residuals_proj = proj(Z, residuals)
-        #     residuals_orth = residuals - residuals_proj
+            residuals = y - X @ beta - kclass.predict(X=W)
+            residuals_proj = proj(Z, residuals)
+            residuals_orth = residuals - residuals_proj
 
-        #     Sigma = (residuals_orth.T @ XW) / (residuals_orth.T @ residuals_orth)
-        #     XWt = XW - np.outer(residuals, Sigma)
-        #     XWt_proj = XW_proj - np.outer(residuals_proj, Sigma)
-        #     s_min = min(np.real(scipy.linalg.eigvals(np.linalg.solve((XWt - XWt_proj).T @ XWt, XWt_proj.T @ XWt))))
+            Sigma = (residuals_orth.T @ XW) / (residuals_orth.T @ residuals_orth)
+            XWt = XW - np.outer(residuals, Sigma)
+            XWt_proj = XW_proj - np.outer(residuals_proj, Sigma)
+            s_min = (n - k - fit_intercept) * min(
+                np.real(
+                    scipy.linalg.eigvals(
+                        np.linalg.solve((XWt - XWt_proj).T @ XWt, XWt_proj.T @ XWt)
+                    )
+                )
+            )
     p_value = _conditional_likelihood_ratio_critical_value_function(
-        mx, k, s_min, statistic, tol=tol
+        mx, k, s_min, statistic, method=method, tol=tol
     )
 
     return statistic, p_value
