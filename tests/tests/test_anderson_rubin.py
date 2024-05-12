@@ -35,7 +35,7 @@ from ivmodels.utils import proj
         ),
     ],
 )
-def testmore_powerful_subvector_anderson_rubin_critical_value_function(
+def test_more_powerful_subvector_anderson_rubin_critical_value_function(
     k, alpha, hat_kappa_1_cvs
 ):
     """Compare to tables 3, 7 in Guggenberger (2019)."""
@@ -43,13 +43,13 @@ def testmore_powerful_subvector_anderson_rubin_critical_value_function(
         # Through rounding to one decimal place
         assert (
             more_powerful_subvector_anderson_rubin_critical_value_function(
-                cv, hat_kappa_1, k, mW=0
+                cv, hat_kappa_1, k, mw=0
             )
             <= alpha
         )
         assert (
             more_powerful_subvector_anderson_rubin_critical_value_function(
-                cv - 0.1, hat_kappa_1, k, mW=0
+                cv - 0.1, hat_kappa_1, k, mw=0
             )
             >= alpha
         )
@@ -60,7 +60,7 @@ def testmore_powerful_subvector_anderson_rubin_critical_value_function(
 def test_more_powerful_sAR_critical_value_function_integrates_to_one(k, hat_kappa_1):
     assert np.isclose(
         more_powerful_subvector_anderson_rubin_critical_value_function(
-            hat_kappa_1, hat_kappa_1, k, mW=0
+            hat_kappa_1, hat_kappa_1, k, mw=0
         ),
         0,
         atol=2e-4,

@@ -202,7 +202,7 @@ def anderson_rubin_test(
 
         kappa_max = (n - k - fit_intercept) * np.max(spectrum)
         p_value = more_powerful_subvector_anderson_rubin_critical_value_function(
-            statistic * dfn, kappa_max, k, W.shape[1]
+            statistic * dfn, kappa_max, k, mw=W.shape[1]
         )
     else:
         raise ValueError(
