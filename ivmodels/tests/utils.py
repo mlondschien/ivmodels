@@ -7,29 +7,29 @@ def _check_test_inputs(Z, X, y, W=None, beta=None):
 
     Parameters
     ----------
-    Z: np.ndarray of dimension (n, q)
+    Z: np.ndarray of dimension (n, k)
         Instruments.
-    X: np.ndarray of dimension (n, p)
+    X: np.ndarray of dimension (n, mx)
         Regressors of interest.
     y: np.ndarray of dimension (n,)
         Outcomes.
-    W: np.ndarray of dimension (n, r), optional, default=None
+    W: np.ndarray of dimension (n, mw), optional, default=None
         Regressors to control for.
-    beta: np.ndarray of dimension (p,), optional, default=None
+    beta: np.ndarray of dimension (mx,), optional, default=None
         Coefficients.
 
     Returns
     -------
-    Z: np.ndarray of dimension (n, q)
+    Z: np.ndarray of dimension (n, k)
         Instruments.
-    X: np.ndarray of dimension (n, p)
+    X: np.ndarray of dimension (n, mx)
         Regressors of interest.
     y: np.ndarray of dimension (n,)
         Outcomes.
-    W: np.ndarray of dimension (n, r)
+    W: np.ndarray of dimension (n, mw)
         Regressors to control for. If input was None, returns an empty matrix of
         shape (n, 0).
-    beta: np.ndarray of dimension (p,) or None
+    beta: np.ndarray of dimension (mx,) or None
         Coefficients.
 
     Raises

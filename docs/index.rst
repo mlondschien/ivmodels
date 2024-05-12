@@ -28,6 +28,10 @@ Tests
 .. automodule:: ivmodels.tests
    :members:
 
+Other
+=====
+
+
 Bibliography
 ============
 

@@ -15,7 +15,7 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls", fit_intercept=True):
 
     .. math::
 
-       \\mathrm{Wald} := (\\beta - \\hat{\\beta})^T \\widehat{\\mathrm{Cov}}(\\hat\\beta)^{-1} (\\beta - \\hat{\\beta}) / \\hat{\\sigma}^2,
+       \\mathrm{Wald}(\\beta) := (\\beta - \\hat{\\beta})^T \\widehat{\\mathrm{Cov}}(\\hat\\beta)^{-1} (\\beta - \\hat{\\beta}) / \\hat{\\sigma}^2,
 
     where :math:`\\hat \\beta = \\hat \\beta(\\kappa)` is a k-class estimator with
     :math:`\\sqrt{n} (1 - \\kappa) \\to 0`,
@@ -30,22 +30,22 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls", fit_intercept=True):
 
     .. math::
 
-        \\mathrm{Wald} := (\\beta - \\hat{\\beta})^T (D ( (X W)^T (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) (X W) )^{-1} D)^{-1} (\\beta - \\hat{\\beta}) / \\hat{\\sigma}^2,
+        \\mathrm{Wald}(\\beta) := (\\beta - B \\hat{\\beta})^T (B ( (X W)^T (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) (X W) )^{-1} B)^{-1} (\\beta - B \\hat{\\beta}) / \\hat{\\sigma}^2,
 
-    where :math:`D \\in \\mathbb{R}^{(m_X + m_W) \\times (m_X + m_W)}` is diagonal with
-    :math:`D_{ii} = 1` if :math:`i \\leq m_X` and :math:`D_{ii} = 0` otherwise.
+    where :math:`B \\in \\mathbb{R}^{m_X \\times (m_X + m_W)}` is a diagonal matrix with
+    1 on the diagonal and 0 elsewhere.
 
     Parameters
     ----------
     Z: np.ndarray of dimension (n, k)
         Instruments.
-    X: np.ndarray of dimension (n, m_X)
+    X: np.ndarray of dimension (n, mx)
         Regressors.
     y: np.ndarray of dimension (n,)
         Outcomes.
-    W: np.ndarray of dimension (n, m_W) or None
+    W: np.ndarray of dimension (n, mw) or None
         Endogenous regressors not of interest.
-    beta: np.ndarray of dimension (p,)
+    beta: np.ndarray of dimension (mx,)
         Coefficients to test.
     estimator: str, optional, default = "tsls"
         Estimator to use. Must be one of ``"tsls"`` or ``"liml"``.
@@ -134,19 +134,22 @@ def inverse_wald_test(
 
     .. math::
 
-       (\\beta - B \\hat{\\beta})^T (B ((X W)^T (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) (X W))^{-1} B^T)^{-1} (\\beta - B \\hat{\\beta}) \\leq \\hat{\\sigma}^2 F_{\\chi^2(m_X)}(1 - \\alpha).
+       (\\beta - B \\hat{\\beta})^T (B ((X W)^T (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) (X W))^{-1} B^T)^{-1} (\\beta - B \\hat{\\beta}) \\leq \\hat{\\sigma}^2 F_{\\chi^2(m_X)}(1 - \\alpha),
+
+    where :math:`B \\in \\mathbb{R}^{m_X \\times (m_X + m_W)}` is a diagonal matrix with
+    1 on the diagonal and 0 elsewhere.
 
     Parameters
     ----------
     Z: np.ndarray of dimension (n, k)
         Instruments.
-    X: np.ndarray of dimension (n, m_X)
+    X: np.ndarray of dimension (n, mx)
         Regressors.
     y: np.ndarray of dimension (n,)
         Outcomes.
     alpha: float
         Significance level.
-    W: np.ndarray of dimension (n, m_W) or None
+    W: np.ndarray of dimension (n, mw) or None, optional, default = None
         Endogenous regressors not of interest.
     estimator: float or str, optional, default = "tsls"
         Estimator to use. Passed as ``kappa`` parameter to ``KClass``.
