@@ -20,13 +20,12 @@ Quadric
 =======
 
 .. autoclass:: ivmodels.Quadric
-   :members: project, volume, forward_map, inverse_map, __call__
+   :members: project, volume, forward_map, inverse_map
 
 Tests
 =====
 
 .. automodule:: ivmodels.tests
-   :members: conditional_likelihood_ratio_critical_value_function
 
 Bibliography
 ============

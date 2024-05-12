@@ -268,28 +268,28 @@ class KClassMixin:
            &=\\lambda_\\mathrm{min}(((X y)^T M_Z (X y))^{-1} (X y)^T P_Z (X y)),
 
         where :math:`P_Z` is the projection matrix onto the subspace spanned by
-        :math:`Z` and :math:`M_Z = Id - P_Z`.
+        :math:`Z` and :math:`M_Z = \\mathrm{Id} - P_Z`.
 
         Either ``Z`` or both ``X_proj`` and ``y_proj`` must be specified.
 
         Parameters
         ----------
-        X: np.ndarray of dimension (n, k)
+        X: np.ndarray of dimension (n, mx)
             Possibly endogenous regressors.
         y: np.ndarray of dimension (n,)
             Outcome.
-        Z: np.ndarray of dimension (n, l), optional, default=None.
+        Z: np.ndarray of dimension (n, k), optional, default=None.
             Instruments.
-        X_proj: np.ndarray of dimension (n, k), optional, default=None.
+        X_proj: np.ndarray of dimension (n, mx), optional, default=None.
             Projection of X onto the subspace orthogonal to Z.
-        y_proj: np.ndarray of dimension (n, 1), optional, default=None.
+        y_proj: np.ndarray of dimension (n,), optional, default=None.
             Projection of y onto the subspace orthogonal to Z.
 
         Returns
         -------
         ar_min: float
             The smallest eigenvalue of
-            :math:`((X y)^T M_Z (X y))^{-1} (X y)^T P_Z (X y)`.,
+            :math:`((X y)^T M_Z (X y))^{-1} (X y)^T P_Z (X y)`,
             where :math:`P_Z` is the projection matrix onto the subspace spanned by `Z`.
         """
         return min(KClassMixin()._spectrum(X=X, y=y, Z=Z, X_proj=X_proj, y_proj=y_proj))
