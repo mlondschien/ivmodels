@@ -3,7 +3,7 @@ import pytest
 import scipy
 
 from ivmodels.tests.conditional_likelihood_ratio import (
-    _conditional_likelihood_ratio_critical_value_function,
+    conditional_likelihood_ratio_critical_value_function,
 )
 
 
@@ -16,10 +16,10 @@ from ivmodels.tests.conditional_likelihood_ratio import (
 def test_conditional_likelihood_ratio_critical_value_function_tol(
     p, q, s_min, z, tol, method
 ):
-    approx = _conditional_likelihood_ratio_critical_value_function(
+    approx = conditional_likelihood_ratio_critical_value_function(
         p, q + p, s_min, z, tol=tol, method=method
     )
-    exact = _conditional_likelihood_ratio_critical_value_function(
+    exact = conditional_likelihood_ratio_critical_value_function(
         p, q + p, s_min, z, tol=1e-8, method=method
     )
     assert np.isclose(approx, exact, atol=3 * tol)
@@ -33,7 +33,7 @@ def test_conditional_likelihood_ratio_critical_value_function_equal_to_chi2(
 ):
     for z in np.linspace(0, 2 * (p + q), 10):
         assert np.isclose(
-            _conditional_likelihood_ratio_critical_value_function(
+            conditional_likelihood_ratio_critical_value_function(
                 p, q + p, 1e-6, z, method
             ),
             1 - scipy.stats.chi2(p + q).cdf(z),
@@ -44,7 +44,7 @@ def test_conditional_likelihood_ratio_critical_value_function_equal_to_chi2(
     if method == "numerical_integration":
         for z in np.linspace(0, 2 * (p + q), 10):
             assert np.isclose(
-                _conditional_likelihood_ratio_critical_value_function(p, q + p, 1e5, z),
+                conditional_likelihood_ratio_critical_value_function(p, q + p, 1e5, z),
                 1 - scipy.stats.chi2(p).cdf(z),
                 atol=1e-2,
             )
@@ -64,7 +64,7 @@ def test_conditional_likelihood_ratio_critical_value_function__(p, q, s_min, z, 
 
     assert np.isclose(
         p_value,
-        _conditional_likelihood_ratio_critical_value_function(
+        conditional_likelihood_ratio_critical_value_function(
             p, q + p, s_min, z, method
         ),
         atol=1e-2,
@@ -80,10 +80,10 @@ def test_conditional_likelihood_ratio_critical_value_function_some_by_method(
     p, q, s_min, z, tol
 ):
     assert np.isclose(
-        _conditional_likelihood_ratio_critical_value_function(
+        conditional_likelihood_ratio_critical_value_function(
             p, q + p, s_min, z, "numerical_integration"
         ),
-        _conditional_likelihood_ratio_critical_value_function(
+        conditional_likelihood_ratio_critical_value_function(
             p, q + p, s_min, z, "power_series"
         ),
         atol=2 * tol,

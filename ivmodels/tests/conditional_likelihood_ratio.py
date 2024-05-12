@@ -6,7 +6,7 @@ from ivmodels.tests.utils import _check_test_inputs
 from ivmodels.utils import proj
 
 
-def _conditional_likelihood_ratio_critical_value_function(
+def conditional_likelihood_ratio_critical_value_function(
     p, q, s_min, z, method="numerical_integration", tol=1e-6
 ):
     """
@@ -148,7 +148,7 @@ def conditional_likelihood_ratio_test(
 
     .. math::
 
-       \\mathrm{CLR(\\beta)} &:= (n - k) \\frac{ \\| P_Z (y - X \\beta) \\|_2^2}{ \\| M_Z (y - X \\beta) \\|_2^2} - (n - k) \\frac{ \\| P_Z (y - X \\hat\\beta_\\mathrm{LIML}) \\|_2^2 }{ \\| M_Z (y - X \\hat\\beta_\\mathrm{LIML}) \\|_2^2 } \\\\
+       \\mathrm{CLR}(\\beta) &:= (n - k) \\frac{ \\| P_Z (y - X \\beta) \\|_2^2}{ \\| M_Z (y - X \\beta) \\|_2^2} - (n - k) \\frac{ \\| P_Z (y - X \\hat\\beta_\\mathrm{LIML}) \\|_2^2 }{ \\| M_Z (y - X \\hat\\beta_\\mathrm{LIML}) \\|_2^2 } \\\\
        &= k \\ \\mathrm{AR}(\\beta) - k \\ \\min_\\beta \\mathrm{AR}(\\beta),
 
     where :math:`P_Z` is the projection matrix onto the column space of :math:`Z`,
@@ -253,7 +253,7 @@ def conditional_likelihood_ratio_test(
     method: str, optional, default: "numerical_integration"
         Method to approximate the critical value function. Must be
         ``"numerical_integration"`` or ``"power_series"``. See
-        :py:func:`~_conditional_likelihood_ratio_critical_value_function`.
+        :py:func:`~conditional_likelihood_ratio_critical_value_function`.
     tol: float, optional, default: 1e-6
         Tolerance for the approximation of the cdf of the critical value function and
         thus the p-value.
@@ -261,7 +261,7 @@ def conditional_likelihood_ratio_test(
     Returns
     -------
     statistic: float
-        The test statistic :math:`CLR(\\beta)`.
+        The test statistic :math:`\\mathrm{CLR}(\\beta)`.
     p_value: float
         The p-value of the test, correct up to tolerance ``tol``.
 
@@ -350,7 +350,7 @@ def conditional_likelihood_ratio_test(
                     )
                 )
             )
-    p_value = _conditional_likelihood_ratio_critical_value_function(
+    p_value = conditional_likelihood_ratio_critical_value_function(
         mx, k, s_min, statistic, method=method, tol=tol
     )
 
