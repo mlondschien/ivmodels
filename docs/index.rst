@@ -5,7 +5,7 @@ Estimators
 =============
 
 .. autoclass:: ivmodels.KClass
-   :members: fit, ar_min
+   :members: fit
 
 .. autoclass:: ivmodels.AnchorRegression
    :members: fit
@@ -20,8 +20,6 @@ Quadric
 =======
 
 .. autoclass:: ivmodels.Quadric
-   :members: project, volume, forward_map, inverse_map
-   :special-members: __call__
 
 Tests
 =====
