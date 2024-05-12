@@ -21,6 +21,7 @@ Quadric
 
 .. autoclass:: ivmodels.Quadric
    :members: project, volume, forward_map, inverse_map
+   :special-members: __call__
 
 Tests
 =====
