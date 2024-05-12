@@ -74,7 +74,7 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None, fit_intercept=True):
 
     The test statistic is
 
-    .. math:: LM := (n - k) \\frac{\\| P_{P_Z \\tilde X(\\beta)} (y - X \\beta) \\|_2^2}{\\| M_Z  (y - X \\beta) \\|_2^2}.
+    .. math:: \\mathrm{LM}(\\beta) := (n - k) \\frac{\\| P_{P_Z \\tilde X(\\beta)} (y - X \\beta) \\|_2^2}{\\| M_Z  (y - X \\beta) \\|_2^2}.
 
     If ``W`` is not ``None``, let
 
@@ -82,7 +82,7 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None, fit_intercept=True):
 
     The test statistic is
 
-    .. math:: LM := (n - k) \\min_{\\gamma} \\frac{\\| P_{P_Z \\tilde S(\\beta, \\gamma)} (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2}.
+    .. math:: \\mathrm{LM}(\\beta) := (n - k) \\min_{\\gamma} \\frac{\\| P_{P_Z \\tilde S(\\beta, \\gamma)} (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2}.
 
     This test statistic is asymptotically distributed as :math:`\\chi^2(m_X)` under the
     null, even if the instruments are weak.
@@ -105,9 +105,10 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None, fit_intercept=True):
     Returns
     -------
     statistic: float
-        The test statistic :math:`LM`.
+        The test statistic :math:`\\mathrm{LM}(\\beta)`.
     p_value: float
-        The p-value of the test. Equal to :math:`1 - F_{\\chi^2(m_X)}(LM)`, where
+        The p-value of the test. Equal to
+        :math:`1 - F_{\\chi^2(m_X)}(\\mathrm{LM}(\\beta)`, where
         :math:`F_{\\chi^2(m_X)}` is the cumulative distribution function of the
         :math:`\\chi^2(m_X)` distribution.
 

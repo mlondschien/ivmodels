@@ -14,7 +14,7 @@ def likelihood_ratio_test(Z, X, y, beta, W=None, fit_intercept=True):
 
     .. math::
 
-       \\mathrm{LR(\\beta)} &:= (n - k) \\frac{ \\| P_Z (y - X \\beta) \\|_2^2}{ \\| M_Z (y - X \\beta) \\|_2^2} - (n - k) \\frac{ \\| P_Z (y - X \\hat\\beta_\\mathrm{LIML}) \\|_2^2 }{ \\| M_Z (y - X \\hat\\beta_\\mathrm{LIML}) \\|_2^2 } \\\\
+       \\mathrm{LR}(\\beta) &:= (n - k) \\frac{ \\| P_Z (y - X \\beta) \\|_2^2}{ \\| M_Z (y - X \\beta) \\|_2^2} - (n - k) \\frac{ \\| P_Z (y - X \\hat\\beta_\\mathrm{LIML}) \\|_2^2 }{ \\| M_Z (y - X \\hat\\beta_\\mathrm{LIML}) \\|_2^2 } \\\\
        &= k \\ \\mathrm{AR}(\\beta)) - k \\ \\mathrm{AR}(\\hat\\beta_\\mathrm{LIML}),
 
     where :math:`P_Z` is the projection matrix onto the column space of :math:`Z`,
@@ -56,9 +56,10 @@ def likelihood_ratio_test(Z, X, y, beta, W=None, fit_intercept=True):
     Returns
     -------
     statistic: float
-        The test statistic :math:`LR`.
+        The test statistic :math:`\\mathrm{LR}(\\beta)`.
     p_value: float
-        The p-value of the test. Equal to :math:`1 - F_{\\chi^2(m_X)}(LR)`, where
+        The p-value of the test. Equal to
+        :math:`1 - F_{\\chi^2(m_X)}(\\mathrm{LR}(\\beta)`, where
         :math:`F_{\\chi^2(m_X)}` is the cumulative distribution function of the
         :math:`\\chi^2(m_X)` distribution.
 
@@ -111,11 +112,11 @@ def inverse_likelihood_ratio_test(Z, X, y, alpha=0.05, W=None, fit_intercept=Tru
     """
     Return the quadric for the inverse likelihood ratio test's acceptance region.
 
-    If ``W`` is ``None``, the quadric is defined as
+    The quadric is defined as
 
     .. math::
 
-       LR(\\beta) = (n - k) \\frac{\\| P_Z (y - X \\beta) \\|_2^2}{\\| M_Z  (y - X \\beta) \\|_2^2} \\leq \\frac{1}{n} \\| y - X \\hat \\beta \\|^2_2 \\leq F_{\\chi^2(m_X)}(1 - \\alpha).
+       \\mathrm{LR}(\\beta) \\leq F_{\\chi^2(m_X)}(1 - \\alpha).
 
     Parameters
     ----------

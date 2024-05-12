@@ -99,7 +99,7 @@ def anderson_rubin_test(
     Test the null hypothesis that the residuals are uncorrelated with the instruments.
     If ``W`` is ``None``, the test statistic is defined as
 
-    .. math:: AR := \\frac{n - k}{k} \\frac{\\| P_Z (y - X \\beta) \\|_2^2}{\\| M_Z (y - X \\beta) \\|_2^2},
+    .. math:: \\mathrm{AR}(\\beta) := \\frac{n - k}{k} \\frac{\\| P_Z (y - X \\beta) \\|_2^2}{\\| M_Z (y - X \\beta) \\|_2^2},
 
     where :math:`P_Z` is the projection matrix onto the column space of :math:`Z` and
     :math:`M_Z = \\mathrm{Id} - P_Z`.
@@ -114,7 +114,7 @@ def anderson_rubin_test(
 
     .. math::
 
-       AR &:= \\min_\\gamma \\frac{n - k}{k - m_W} \\frac{\\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2} \\\\
+       \\mathrm{AR}(\\beta) &:= \\min_\\gamma \\frac{n - k}{k - m_W} \\frac{\\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\gamma) \\|_2^2} \\\\
        &= \\frac{n - k}{k - m_W} \\frac{\\| P_Z (y - X \\beta - W \\hat\\gamma_\\mathrm{LIML}) \\|_2^2}{\\| M_Z  (y - X \\beta - W \\hat\\gamma_\\mathrm{LIML}) \\|_2^2},
 
     where :math:`\\hat\\gamma_\\mathrm{LIML}` is the LIML estimate using instruments
@@ -134,21 +134,20 @@ def anderson_rubin_test(
         Outcomes.
     beta: np.ndarray of dimension (mx,)
         Coefficients to test.
-    W: np.ndarray of dimension (n, mw) or None
+    W: np.ndarray of dimension (n, mw) or None, optional, default = None
         Endogenous regressors not of interest.
     critical_values: str, optional, default = "chi2"
         If ``"chi2"``, use the :math:`\\chi^2(k - m_W)` distribution to compute the p-value.
-        If ``"f"`, use the :math:`F_{k - m_W, n - k}` distribution to compute the p-value.
+        If ``"f"``, use the :math:`F_{k - m_W, n - k}` distribution to compute the p-value.
         If ``"guggenberger"``, use the critical value function proposed by
-        :cite:t:`guggenberger2019more` to compute the p-value. This is only available if
-        ``W`` is not ``None``.
+        :cite:t:`guggenberger2019more` to compute the p-value.
     fit_intercept: bool, optional, default = True
         Whether to include an intercept. This is equivalent to centering the inputs.
 
     Returns
     -------
     statistic: float
-        The test statistic :math:`AR`.
+        The test statistic :math:`\\mathrm{AR}(\\beta)`.
     p_value: float
         The p-value of the test.
 
@@ -231,14 +230,14 @@ def inverse_anderson_rubin_test(
 
     .. math::
 
-       AR(\\beta) = \\frac{n - k}{k} \\frac{\\| P_Z (y - X \\beta) \\|_2^2}{\\| M_Z  (y - X \\beta) \\|_2^2} \\leq F_{F(k, n-k)}(1 - \\alpha) \\\\
+       \\mathrm{AR}(\\beta) = \\frac{n - k}{k} \\frac{\\| P_Z (y - X \\beta) \\|_2^2}{\\| M_Z  (y - X \\beta) \\|_2^2} \\leq F_{F(k, n-k)}(1 - \\alpha) \\\\
        \\Leftrightarrow \\beta^T X^T (P_Z - q M_Z) X \\beta - 2 y^T (P_Z - q M_Z) X \\beta + y^T (P_Z - q M_Z) y \\leq 0.
 
     If ``W`` is not ``None``, let :math:`q := \\frac{k - m_W}{n-k}F_{F(k - m_W, n-k)}(1 - \\alpha)`.
     The quadric is defined as
 
     .. math::
-        AR(\\beta) = \\min_\\gamma \\frac{n - k}{k - m_W} \\frac{\\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z (y - X \\beta - W \\gamma) \\|_2^2} \\leq F_{k - m_W, n-k}(1 - \\alpha).
+        \\mathrm{AR}(\\beta) = \\min_\\gamma \\frac{n - k}{k - m_W} \\frac{\\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{\\| M_Z (y - X \\beta - W \\gamma) \\|_2^2} \\leq F_{F(k - m_W, n-k)}(1 - \\alpha).
 
 
     Parameters
@@ -251,12 +250,12 @@ def inverse_anderson_rubin_test(
         Outcomes.
     alpha: float
         Significance level.
-    W: np.ndarray of dimension (n, mw) or None
+    W: np.ndarray of dimension (n, mw) or None, optional, default = None
         Endogenous regressors not of interest.
     critical_values: str, optional, default = "chi2"
         If ``"chi2"``, use the :math:`\\chi^2(k - m_W)` distribution to compute the
         p-value.
-        If ``"f"`, use the :math:`F_{k - m_W, n - k}` distribution to compute the
+        If ``"f"``, use the :math:`F_{k - m_W, n - k}` distribution to compute the
         p-value.
     fit_intercept: bool, optional, default = True
         Whether to include an intercept. This is equivalent to centering the inputs.

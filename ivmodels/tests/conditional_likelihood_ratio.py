@@ -149,7 +149,7 @@ def conditional_likelihood_ratio_test(
     .. math::
 
        \\mathrm{CLR(\\beta)} &:= (n - k) \\frac{ \\| P_Z (y - X \\beta) \\|_2^2}{ \\| M_Z (y - X \\beta) \\|_2^2} - (n - k) \\frac{ \\| P_Z (y - X \\hat\\beta_\\mathrm{LIML}) \\|_2^2 }{ \\| M_Z (y - X \\hat\\beta_\\mathrm{LIML}) \\|_2^2 } \\\\
-       &= k \\ \\mathrm{AR}(\\beta) - q \\ \\min_\\beta \\mathrm{AR}(\\beta),
+       &= k \\ \\mathrm{AR}(\\beta) - k \\ \\min_\\beta \\mathrm{AR}(\\beta),
 
     where :math:`P_Z` is the projection matrix onto the column space of :math:`Z`,
     :math:`M_Z = \\mathrm{Id} - P_Z`, and :math:`\\hat\\beta_\\mathrm{LIML}` is the LIML
@@ -221,7 +221,7 @@ def conditional_likelihood_ratio_test(
     :math:`\\mathrm{CLR(\\beta_0)}` is asymptotically bounded from above by a random
     variable that is distributed as
 
-    .. math:: \\frac{1}{2} \\left( Q_p + Q_{k - m_X - m_W} - s_\\mathrm{min}(\\beta_0) + \\sqrt{ (Q_p + Q_{k - m_X - m_W}  - s_\\mathrm{min}(\\beta_0))^2 + 4 Q_{p} s_\\textrm{min} } \\right),
+    .. math:: \\frac{1}{2} \\left( Q_{m_X} + Q_{k - m_X - m_W} - s_\\mathrm{min}(\\beta_0) + \\sqrt{ (Q_{m_X} + Q_{k - m_X - m_W}  - s_\\mathrm{min}(\\beta_0))^2 + 4 Q_{m_X} s_\\textrm{min} } \\right),
 
     where :math:`Q_{m_X} \\sim \\chi^2(m_X)` and
     :math:`Q_{k - m_X - m_W} \\sim \\chi^2(k - m_X - m_W)` are independent chi-squared random
@@ -246,14 +246,14 @@ def conditional_likelihood_ratio_test(
         Outcomes.
     beta: np.ndarray of dimension (mx,)
         Coefficients to test.
-    W: np.ndarray of dimension (n, mw) or None
+    W: np.ndarray of dimension (n, mw) or None, optional, default = None
         Endogenous regressors not of interest.
     fit_intercept: bool, optional, default: True
         Whether to include an intercept. This is equivalent to centering the inputs.
     method: str, optional, default: "numerical_integration"
         Method to approximate the critical value function. Must be
         ``"numerical_integration"`` or ``"power_series"``. See
-        :py:func:`_conditional_likelihood_ratio_critical_value_function`.
+        :py:func:`~_conditional_likelihood_ratio_critical_value_function`.
     tol: float, optional, default: 1e-6
         Tolerance for the approximation of the cdf of the critical value function and
         thus the p-value.
