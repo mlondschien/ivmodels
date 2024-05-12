@@ -45,6 +45,23 @@ def conditional_likelihood_ratio_critical_value_function(
 
     Uses numerical integration by default.
 
+    Parameters
+    ----------
+    p: int
+        Degrees of freedom of the first chi-squared random variable.
+    q: int
+        Total degrees of freedom.
+    s_min: float
+        Identification measure.
+    z: float
+        Test statistic.
+    method: str, optional, default: "numerical_integration"
+        Method to approximate the critical value function. Must be
+        ``"numerical_integration"`` or ``"power_series"``.
+    tol: float, optional, default: 1e-6
+        Tolerance for the approximation of the cdf of the critical value function and
+        thus the p-value.
+
     References
     ----------
     .. bibliography::
