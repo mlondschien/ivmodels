@@ -185,7 +185,7 @@ def inverse_wald_test(
     A = X.T @ Xkappa
     if W.shape[1] > 0:
         Wkappa = kclass.kappa_ * proj(Z, W) + (1 - kclass.kappa_) * W
-        A = A - Xkappa.T @ W @ np.linalg.solve(Wkappa.T @ Wkappa, Wkappa.T @ Xkappa)
+        A = A - Xkappa.T @ W @ np.linalg.solve(Wkappa.T @ W, W.T @ Xkappa)
 
     b = -2 * A @ beta[: X.shape[1]]
     c = beta[: X.shape[1]].T @ A @ beta[: X.shape[1]] - hat_sigma_sq * z_alpha
