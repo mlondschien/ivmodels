@@ -72,7 +72,7 @@ def test_more_powerful_sAR_critical_value_function_integrates_to_one(k, hat_kapp
 def test_inverse_anderson_rubin_confidence_set_alternative_formulation(
     alpha, n, k, mx, u
 ):
-    Z, X, y, _, _ = simulate_gaussian_iv(n, mx, k, u)
+    Z, X, y, _, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u)
 
     inverse_ar = inverse_anderson_rubin_test(Z, X, y, alpha=alpha, fit_intercept=False)
     kappa_alpha = 1 + scipy.stats.chi2(df=k).ppf(1 - alpha) / (n - k)

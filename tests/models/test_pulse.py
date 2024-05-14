@@ -9,9 +9,9 @@ from ivmodels.tests.pulse import pulse_test
 
 @pytest.mark.parametrize("rtol", [0.1, 0.01])
 @pytest.mark.parametrize("p_min", [0.05, 0.01, 0.001])
-@pytest.mark.parametrize("n, p, q, u", [(1000, 5, 1, 1), (1000, 2, 1, 2)])
-def test_pulse(p_min, rtol, n, p, q, u):
-    A, X, Y, _, _ = simulate_gaussian_iv(n, p, q, u, seed=1)
+@pytest.mark.parametrize("n, mx, k, u", [(1000, 5, 1, 1), (1000, 2, 1, 2)])
+def test_pulse(p_min, rtol, n, mx, k, u):
+    A, X, Y, _, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, seed=1)
     pulse = PULSE(p_min=p_min, rtol=rtol, kappa_max=0.999).fit(X, Y.flatten(), A)
 
     # The PULSE selects the "smallest" kappa s.t. p_value(kappa) >= p_min, where

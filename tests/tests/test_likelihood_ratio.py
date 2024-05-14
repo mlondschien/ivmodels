@@ -13,7 +13,7 @@ from ivmodels.utils import proj
 def test_inverse_likelihood_ratio_confidence_set_alternative_formulation(
     alpha, n, k, mx, u
 ):
-    Z, X, y, _, _ = simulate_gaussian_iv(n, mx, k, u)
+    Z, X, y, _, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u)
 
     kappa_ = KClass(kappa="liml", fit_intercept=False).fit(X=X, y=y, Z=Z).kappa_
 

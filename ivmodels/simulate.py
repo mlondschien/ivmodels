@@ -2,7 +2,7 @@ import numpy as np
 
 
 def simulate_gaussian_iv(
-    n, mx, k, u, mw=0, r=0, seed=0, include_intercept=True, return_beta=False
+    n, *, mx, k, u, mw=0, r=0, seed=0, include_intercept=True, return_beta=False
 ):
     """Simulate a Gaussian IV dataset."""
     rng = np.random.RandomState(seed)
