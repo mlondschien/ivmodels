@@ -11,7 +11,7 @@ from ivmodels.simulate import simulate_gaussian_iv
 @pytest.mark.parametrize("n, mx, k, r, u", [(100, 2, 2, 1, 1), (100, 2, 5, 0, 2)])
 @pytest.mark.parametrize("kappa", ["liml", "tsls"])
 def test_compare_against_linearmodels(fit_intercept, n, mx, k, r, u, kappa):
-    Z, X, y, C, _ = simulate_gaussian_iv(n, mx, k, u, r=r)
+    Z, X, y, C, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, r=r)
 
     kclass = KClass(kappa=kappa, fit_intercept=fit_intercept)
     kclass.fit(X, y, Z=Z, C=C)

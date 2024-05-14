@@ -12,7 +12,7 @@ from ivmodels.tests import inverse_anderson_rubin_test, rank_test
 @pytest.mark.parametrize("fit_intercept", [True, False])
 def test_bounded_inverse_anderson_rubin_p_value(n, mx, k, u, fit_intercept):
     Z, X, y, _, _ = simulate_gaussian_iv(
-        n, mx, k, u, seed=0, include_intercept=fit_intercept
+        n=n, mx=mx, k=k, u=u, seed=0, include_intercept=fit_intercept
     )
 
     statistic = rank_test(Z, X, fit_intercept=fit_intercept)[0]
