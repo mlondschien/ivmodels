@@ -14,7 +14,7 @@ from ivmodels.utils import proj
 def test_linear_anchor_regression_equal_to_ols(alpha, l1_ratio, n, mx, k, u):
     n = 100
 
-    A, X, y, _, _ = simulate_gaussian_iv(n=n, mx=mx, u=u)
+    A, X, y, _, _ = simulate_gaussian_iv(n=n, mx=mx, u=u, k=k)
     df = pd.DataFrame(
         np.hstack([X, A]),
         columns=[f"X{i}" for i in range(mx)] + [f"anchor{i}" for i in range(k)],

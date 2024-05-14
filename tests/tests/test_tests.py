@@ -65,10 +65,10 @@ def test_subvector_test_size(test, n, mx, mw, k, u, fit_intercept):
 
     for seed in range(n_seeds):
         Z, X, y, _, W, beta = simulate_gaussian_iv(
-            n,
-            mw,
-            k,
-            u,
+            n=n,
+            mx=mx,
+            k=k,
+            u=u,
             mw=mw,
             seed=seed,
             include_intercept=fit_intercept,
@@ -300,10 +300,10 @@ def test_test_round_trip(test, inverse_test, n, mx, k, u, p_value):
     "test, inverse_test",
     [
         (wald_test, inverse_wald_test),
-        # (liml_wald_test, liml_inverse_wald_test),
-        # (anderson_rubin_test, inverse_anderson_rubin_test),
-        # (f_anderson_rubin_test, inverse_f_anderson_rubin_test),
-        # (likelihood_ratio_test, inverse_likelihood_ratio_test),
+        (liml_wald_test, liml_inverse_wald_test),
+        (anderson_rubin_test, inverse_anderson_rubin_test),
+        (f_anderson_rubin_test, inverse_f_anderson_rubin_test),
+        (likelihood_ratio_test, inverse_likelihood_ratio_test),
     ],
 )
 @pytest.mark.parametrize("n, mx, k, mw, u", [(100, 2, 3, 1, 2), (100, 2, 5, 2, 3)])
