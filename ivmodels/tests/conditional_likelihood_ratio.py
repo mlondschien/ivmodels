@@ -321,7 +321,6 @@ def conditional_likelihood_ratio_test(
         Xt_orth = Xt - Xt_proj
         mat_Xt = np.linalg.solve(Xt_orth.T @ Xt_orth, Xt_proj.T @ Xt_proj)
         s_min = min(np.real(np.linalg.eigvals(mat_Xt))) * (n - k - fit_intercept)
-
         # TODO: This can be done with efficient rank-1 updates.
         ar_min = KClass.ar_min(X=X, y=y, Z=Z)
         ar = residuals_proj.T @ residuals_proj / (residuals_orth.T @ residuals_orth)
@@ -367,8 +366,9 @@ def conditional_likelihood_ratio_test(
                     )
                 )
             )
+
     p_value = conditional_likelihood_ratio_critical_value_function(
-        mx, k, s_min, statistic, method=method, tol=tol
+        mx, k - mw, s_min, statistic, method=method, tol=tol
     )
 
     return statistic, p_value
