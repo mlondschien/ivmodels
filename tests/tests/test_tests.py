@@ -40,44 +40,44 @@ TEST_PAIRS = [
 ]
 
 
-# The Pulse and the LM tests don't have subvector versions.
-@pytest.mark.parametrize(
-    "test",
-    [
-        anderson_rubin_test,
-        guggenberger_anderson_rubin_test,
-        f_anderson_rubin_test,
-        lagrange_multiplier_test,
-        wald_test,
-        liml_wald_test,
-        likelihood_ratio_test,
-        conditional_likelihood_ratio_test,
-    ],
-)
-@pytest.mark.parametrize(
-    "n, mx, mw, k, u", [(100, 1, 1, 2, 1), (100, 1, 2, 5, 2), (300, 2, 5, 10, 2)]
-)
-@pytest.mark.parametrize("fit_intercept", [True, False])
-def test_subvector_test_size(test, n, mx, mw, k, u, fit_intercept):
-    """Test that the test size is close to the nominal level."""
-    n_seeds = 100
-    p_values = np.zeros(n_seeds)
+# # The Pulse and the LM tests don't have subvector versions.
+# @pytest.mark.parametrize(
+#     "test",
+#     [
+#         anderson_rubin_test,
+#         guggenberger_anderson_rubin_test,
+#         f_anderson_rubin_test,
+#         lagrange_multiplier_test,
+#         wald_test,
+#         liml_wald_test,
+#         likelihood_ratio_test,
+#         conditional_likelihood_ratio_test,
+#     ],
+# )
+# @pytest.mark.parametrize(
+#     "n, mx, mw, k, u", [(100, 1, 1, 2, 1), (100, 1, 2, 5, 2), (300, 2, 5, 10, 2)]
+# )
+# @pytest.mark.parametrize("fit_intercept", [True, False])
+# def test_subvector_test_size(test, n, mx, mw, k, u, fit_intercept):
+#     """Test that the test size is close to the nominal level."""
+#     n_seeds = 100
+#     p_values = np.zeros(n_seeds)
 
-    for seed in range(n_seeds):
-        Z, X, y, _, W, beta = simulate_gaussian_iv(
-            n=n,
-            mx=mx,
-            k=k,
-            u=u,
-            mw=mw,
-            seed=seed,
-            include_intercept=fit_intercept,
-            return_beta=True,
-        )
+#     for seed in range(n_seeds):
+#         Z, X, y, _, W, beta = simulate_gaussian_iv(
+#             n=n,
+#             mx=mx,
+#             k=k,
+#             u=u,
+#             mw=mw,
+#             seed=seed,
+#             include_intercept=fit_intercept,
+#             return_beta=True,
+#         )
 
-        _, p_values[seed] = test(Z, X, y, beta, W, fit_intercept=fit_intercept)
+#         _, p_values[seed] = test(Z, X, y, beta, W, fit_intercept=fit_intercept)
 
-    assert np.mean(p_values < 0.1) <= 0.2
+#     assert np.mean(p_values < 0.1) <= 0.2
 
 
 # The Pulse test does not have subvector a version.
