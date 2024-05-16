@@ -409,19 +409,21 @@ def test_inverse_test_sorted(inverse_test, n, mx, k, u, mc):
 
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
-@pytest.mark.parametrize("n, mx, mw, u", [(100, 2, 0, 2), (100, 2, 2, 2)])
-def test_ar_lm_clr_yield_same_result(n, mx, mw, u, fit_intercept):
+@pytest.mark.parametrize("n, mx, mw, u, mc", [(100, 2, 0, 2, 2), (100, 2, 2, 2, 2)])
+def test_ar_lm_clr_yield_same_result(n, mx, mw, u, mc, fit_intercept):
     """The AR, LM, and CLR tests should yield the same result if k = m."""
-    Z, X, y, _, W = simulate_gaussian_iv(n=n, mx=mx, k=mx + mw, u=u, mw=mw, r=0)
+    Z, X, y, C, W = simulate_gaussian_iv(n=n, mx=mx, k=mx + mw, u=u, mw=mw, mc=mc)
 
     for seed in range(5):
         rng = np.random.RandomState(seed)
         beta = rng.normal(size=(mx, 1))
 
-        ar = anderson_rubin_test(Z, X, y, beta, W, fit_intercept=fit_intercept)[1]
-        lm = lagrange_multiplier_test(Z, X, y, beta, W, fit_intercept=fit_intercept)[1]
+        ar = anderson_rubin_test(Z, X, y, beta, W, C=C, fit_intercept=fit_intercept)[1]
+        lm = lagrange_multiplier_test(
+            Z, X, y, beta, W, C=C, fit_intercept=fit_intercept
+        )[1]
         clr = conditional_likelihood_ratio_test(
-            Z, X, y, beta, W, fit_intercept=fit_intercept
+            Z, X, y, beta, W, C=C, fit_intercept=fit_intercept
         )[1]
 
         assert np.allclose(ar, lm)
