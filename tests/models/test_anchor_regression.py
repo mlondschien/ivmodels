@@ -63,15 +63,15 @@ def test_score():
 
 @pytest.mark.parametrize("gamma", [0.1, 1, 5])
 @pytest.mark.parametrize(
-    "n, mx, r, k, u", [(100, 2, 1, 2, 1), (100, 2, 0, 5, 2), (100, 0, 2, 0, 2)]
+    "n, mx, mc, k, u", [(100, 2, 1, 2, 1), (100, 2, 0, 5, 2), (100, 0, 2, 0, 2)]
 )
-def test_anchor_solution_minimizes_loss(n, mx, k, u, r, gamma):
+def test_anchor_solution_minimizes_loss(n, mx, k, u, mc, gamma):
     """
     Test that the anchor solution minimizes the loss function.
 
     This indirectly checks the mapping kappa <-> gamma for validity.
     """
-    Z, X, y, C, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, r=r)
+    Z, X, y, C, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, mc=mc)
 
     ar = AnchorRegression(gamma=gamma, fit_intercept=False).fit(X, y, Z, C=C)
 

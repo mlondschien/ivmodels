@@ -8,10 +8,10 @@ from ivmodels.simulate import simulate_gaussian_iv
 
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
-@pytest.mark.parametrize("n, mx, k, r, u", [(100, 2, 2, 1, 1), (100, 2, 5, 0, 2)])
+@pytest.mark.parametrize("n, mx, k, mc, u", [(100, 2, 2, 1, 1), (100, 2, 5, 0, 2)])
 @pytest.mark.parametrize("kappa", ["liml", "tsls"])
-def test_compare_against_linearmodels(fit_intercept, n, mx, k, r, u, kappa):
-    Z, X, y, C, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, r=r)
+def test_compare_against_linearmodels(fit_intercept, n, mx, k, mc, u, kappa):
+    Z, X, y, C, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, mc=mc)
 
     kclass = KClass(kappa=kappa, fit_intercept=fit_intercept)
     kclass.fit(X, y, Z=Z, C=C)
@@ -32,7 +32,7 @@ def test_compare_against_linearmodels(fit_intercept, n, mx, k, r, u, kappa):
 
     np.testing.assert_allclose(kclass.coef_[:mx], results.params[-mx:], rtol=1e-5)
     np.testing.assert_allclose(
-        kclass.coef_[mx:], results.params[-(mx + r) : -mx], rtol=1e-5
+        kclass.coef_[mx:], results.params[-(mx + mc) : -mx], rtol=1e-5
     )
     np.testing.assert_allclose(
         kclass.predict(X, C), results.fitted_values.to_numpy().flatten(), rtol=1e-5
