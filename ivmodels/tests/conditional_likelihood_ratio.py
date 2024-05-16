@@ -373,8 +373,9 @@ def conditional_likelihood_ratio_test(
                     )
                 )
             )
+
     p_value = conditional_likelihood_ratio_critical_value_function(
-        mx, k, s_min, statistic, method=method, tol=tol
+        mx, k - mw, s_min, statistic, method=method, tol=tol
     )
 
     return statistic, p_value
