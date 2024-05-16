@@ -94,8 +94,10 @@ def test_subvector_test_size(test, n, mx, mw, k, u, fit_intercept):
         conditional_likelihood_ratio_test,
     ],
 )
-@pytest.mark.parametrize("n, p, r, q, u", [(100, 2, 5, 10, 2)])
-def test_subvector_test_size_low_rank(test, n, p, r, q, u):
+@pytest.mark.parametrize(
+    "n, mx, mw, mc, k, u", [(100, 2, 5, 0, 10, 2), (100, 2, 2, 2, 5, 2)]
+)
+def test_subvector_test_size_low_rank(test, n, mx, mw, mc, k, u):
     """Test that the test size is close to the nominal level if Pi is low rank."""
     n_seeds = 200
     p_values = np.zeros(n_seeds)
@@ -103,24 +105,28 @@ def test_subvector_test_size_low_rank(test, n, p, r, q, u):
     for seed in range(n_seeds):
         rng = np.random.RandomState(seed)
 
-        delta_X = rng.normal(0, 1, (u, p))
-        delta_W = rng.normal(0, 1, (u, r))
+        delta_X = rng.normal(0, 1, (u, mx))
+        delta_W = rng.normal(0, 1, (u, mw))
         delta_y = rng.normal(0, 1, (u, 1))
 
-        beta = rng.normal(0, 0.1, (p, 1))
-        gamma = rng.normal(0, 1, (r, 1))
-        Pi = rng.normal(0, 1, (q, 1)) @ rng.normal(0, 1, (1, r + p))
-        Pi_X = Pi[:, :p]
-        Pi_W = Pi[:, p:]
+        beta_X = rng.normal(0, 0.1, (mx, 1))
+        beta_C = rng.normal(0, 0.1, (mc, 1))
+
+        gamma = rng.normal(0, 1, (mw, 1))
+        Pi = rng.normal(0, 1, (k, 1)) @ rng.normal(0, 1, (1, mw + mx))
+        Pi_X = Pi[:, :mx]
+        Pi_W = Pi[:, mx:]
 
         U = rng.normal(0, 1, (n, u))
 
-        Z = rng.normal(0, 1, (n, q))
-        X = Z @ Pi_X + U @ delta_X + rng.normal(0, 1, (n, p))
-        W = Z @ Pi_W + U @ delta_W + rng.normal(0, 1, (n, r))
-        y = X @ beta + W @ gamma + U @ delta_y + rng.normal(0, 1, (n, 1))
+        C = rng.normal(0, 1, (n, mc))
+        Z = rng.normal(0, 1, (n, k)) + C @ rng.normal(0, 0.1, (mc, k))
 
-        _, p_values[seed] = test(Z, X, y, beta, W, fit_intercept=False)
+        X = Z @ Pi_X + U @ delta_X + rng.normal(0, 1, (n, mx))
+        W = Z @ Pi_W + U @ delta_W + rng.normal(0, 1, (n, mw))
+        y = X @ beta_X + C @ beta_C + W @ gamma + U @ delta_y + rng.normal(0, 1, (n, 1))
+
+        _, p_values[seed] = test(Z, X, y, beta_X, W, fit_intercept=False)
 
     assert np.mean(p_values < 0.05) < 0.07  # 4 stds above 0.05 for n_seeds = 100
 
@@ -213,7 +219,7 @@ def test_test_size(test, n, mx, k, u, fit_intercept):
             mx=mx,
             k=k,
             u=u,
-            r=0,
+            mc=0,
             seed=seed,
             include_intercept=fit_intercept,
             return_beta=True,
