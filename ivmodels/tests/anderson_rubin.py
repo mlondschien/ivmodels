@@ -4,7 +4,7 @@ import scipy
 from ivmodels.models.kclass import KClass
 from ivmodels.quadric import Quadric
 from ivmodels.tests.utils import _check_test_inputs
-from ivmodels.utils import proj
+from ivmodels.utils import oproj, proj
 
 
 def more_powerful_subvector_anderson_rubin_critical_value_function(
@@ -91,7 +91,7 @@ def more_powerful_subvector_anderson_rubin_critical_value_function(
 
 
 def anderson_rubin_test(
-    Z, X, y, beta, W=None, critical_values="chi2", fit_intercept=True
+    Z, X, y, beta, W=None, C=None, critical_values="chi2", fit_intercept=True
 ):
     """
     Perform the Anderson Rubin test :cite:p:`anderson1949estimation`.
@@ -136,6 +136,8 @@ def anderson_rubin_test(
         Coefficients to test.
     W: np.ndarray of dimension (n, mw) or None, optional, default = None
         Endogenous regressors not of interest.
+    C: np.ndarray of dimension (n, mc) or None, optional, default = None
+        Exogenous regressors not of interest.
     critical_values: str, optional, default = "chi2"
         If ``"chi2"``, use the :math:`\\chi^2(k - m_W)` distribution to compute the p-value.
         If ``"f"``, use the :math:`F_{k - m_W, n - k}` distribution to compute the p-value.
@@ -165,14 +167,18 @@ def anderson_rubin_test(
        guggenberger2012asymptotic
        guggenberger2019more
     """
-    Z, X, y, W, beta = _check_test_inputs(Z, X, y, W=W, beta=beta)
+    Z, X, y, W, C, beta = _check_test_inputs(Z, X, y, W=W, C=C, beta=beta)
+
     n, k = Z.shape
 
     if fit_intercept:
-        Z = Z - Z.mean(axis=0)
-        X = X - X.mean(axis=0)
-        y = y - y.mean()
-        W = W - W.mean(axis=0)
+        C = np.hstack([np.ones((n, 1)), C])
+
+    if C.shape[1] > 0:
+        X = oproj(C, X)
+        y = oproj(C, y)
+        Z = oproj(C, Z)
+        W = oproj(C, W)
 
     if W.shape[1] == 0:
         residuals = y - X @ beta
@@ -187,12 +193,12 @@ def anderson_rubin_test(
         ar = np.min(spectrum)
         dfn = k - W.shape[1]
 
-    statistic = ar * (n - k - fit_intercept) / dfn
+    statistic = ar * (n - k - C.shape[1]) / dfn
 
     if critical_values == "chi2":
         p_value = 1 - scipy.stats.chi2.cdf(statistic * dfn, df=dfn)
     elif critical_values == "f":
-        p_value = 1 - scipy.stats.f.cdf(statistic, dfn=dfn, dfd=n - k - fit_intercept)
+        p_value = 1 - scipy.stats.f.cdf(statistic, dfn=dfn, dfd=n - k - C.shape[1])
     elif critical_values.startswith("guggenberger"):
         if W.shape[1] == 0:
             raise ValueError(
@@ -200,7 +206,7 @@ def anderson_rubin_test(
                 "only available for the subvector variant where W is not None."
             )
 
-        kappa_max = (n - k - fit_intercept) * np.max(spectrum)
+        kappa_max = (n - k - C.shape[1]) * np.max(spectrum)
         p_value = more_powerful_subvector_anderson_rubin_critical_value_function(
             statistic * dfn, kappa_max, k, mw=W.shape[1]
         )
@@ -214,7 +220,7 @@ def anderson_rubin_test(
 
 
 def inverse_anderson_rubin_test(
-    Z, X, y, alpha=0.05, W=None, critical_values="chi2", fit_intercept=True
+    Z, X, y, alpha=0.05, W=None, C=None, critical_values="chi2", fit_intercept=True
 ):
     """
     Return the quadric for to the inverse Anderson-Rubin test's acceptance region.
@@ -252,6 +258,8 @@ def inverse_anderson_rubin_test(
         Significance level.
     W: np.ndarray of dimension (n, mw) or None, optional, default = None
         Endogenous regressors not of interest.
+    C: np.ndarray of dimension (n, mc) or None, optional, default = None
+        Exogenous regressors not of interest.
     critical_values: str, optional, default = "chi2"
         If ``"chi2"``, use the :math:`\\chi^2(k - m_W)` distribution to compute the
         p-value.
@@ -269,25 +277,29 @@ def inverse_anderson_rubin_test(
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1).")
 
-    Z, X, y, W, _ = _check_test_inputs(Z, X, y, W=W)
+    Z, X, y, W, C, _ = _check_test_inputs(Z, X, y, W=W, C=C)
 
     n, k = Z.shape
+
+    if fit_intercept:
+        C = np.hstack([np.ones((n, 1)), C])
+
+    if C.shape[1] > 0:
+        X = oproj(C, X)
+        y = oproj(C, y)
+        Z = oproj(C, Z)
+        W = oproj(C, W)
 
     X = np.concatenate([X, W], axis=1)
     dfn = k - W.shape[1]
 
-    if fit_intercept:
-        Z = Z - Z.mean(axis=0)
-        X = X - X.mean(axis=0)
-        y = y - y.mean()
-
     if critical_values == "chi2":
-        quantile = scipy.stats.chi2.ppf(1 - alpha, df=dfn) / (n - k - fit_intercept)
+        quantile = scipy.stats.chi2.ppf(1 - alpha, df=dfn) / (n - k - C.shape[1])
     elif critical_values == "f":
         quantile = (
-            scipy.stats.f.ppf(1 - alpha, dfn=dfn, dfd=n - k - fit_intercept)
+            scipy.stats.f.ppf(1 - alpha, dfn=dfn, dfd=n - k - C.shape[1])
             * dfn
-            / (n - k - fit_intercept)
+            / (n - k - C.shape[1])
         )
     else:
         raise ValueError(

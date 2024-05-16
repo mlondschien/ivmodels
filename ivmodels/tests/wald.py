@@ -4,10 +4,10 @@ import scipy
 from ivmodels.models.kclass import KClass
 from ivmodels.quadric import Quadric
 from ivmodels.tests.utils import _check_test_inputs
-from ivmodels.utils import proj
+from ivmodels.utils import oproj, proj
 
 
-def wald_test(Z, X, y, beta, W=None, estimator="tsls", fit_intercept=True):
+def wald_test(Z, X, y, beta, W=None, C=None, estimator="tsls", fit_intercept=True):
     """
     Test based on asymptotic normality of the TSLS (or LIML) estimator.
 
@@ -45,6 +45,8 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls", fit_intercept=True):
         Outcomes.
     W: np.ndarray of dimension (n, mw) or None
         Endogenous regressors not of interest.
+    C: np.ndarray of dimension (n, mc) or None
+        Exogenous regressors not of interest.
     beta: np.ndarray of dimension (mx,)
         Coefficients to test.
     estimator: str, optional, default = "tsls"
@@ -69,15 +71,18 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls", fit_intercept=True):
         If the dimensions of the inputs are incorrect.
 
     """
-    Z, X, y, W, beta = _check_test_inputs(Z, X, y, W=W, beta=beta)
-
-    if fit_intercept:
-        X = X - X.mean(axis=0)
-        y = y - y.mean()
-        Z = Z - Z.mean(axis=0)
-        W = W - W.mean(axis=0)
+    Z, X, y, W, C, beta = _check_test_inputs(Z, X, y, W=W, C=C, beta=beta)
 
     n, mx = X.shape
+
+    if fit_intercept:
+        C = np.hstack([np.ones((n, 1)), C])
+
+    if C.shape[1] > 0:
+        X = oproj(C, X)
+        y = oproj(C, y)
+        Z = oproj(C, Z)
+        W = oproj(C, W)
 
     XW = np.concatenate([X, W], axis=1)
 
@@ -86,7 +91,7 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls", fit_intercept=True):
     beta_gamma_hat = estimator.coef_
 
     residuals = y - estimator.predict(XW)
-    sigma_hat_sq = np.sum(residuals**2) / (n - mx - W.shape[1] - fit_intercept)
+    sigma_hat_sq = np.sum(residuals**2) / (n - mx - W.shape[1] - C.shape[1])
 
     XW_proj = proj(Z, XW)
 
@@ -111,7 +116,7 @@ def wald_test(Z, X, y, beta, W=None, estimator="tsls", fit_intercept=True):
 
 
 def inverse_wald_test(
-    Z, X, y, alpha=0.05, W=None, estimator="tsls", fit_intercept=True
+    Z, X, y, alpha=0.05, W=None, C=None, estimator="tsls", fit_intercept=True
 ):
     """
     Return the quadric for the acceptance region based on asymptotic normality.
@@ -151,6 +156,8 @@ def inverse_wald_test(
         Significance level.
     W: np.ndarray of dimension (n, mw) or None, optional, default = None
         Endogenous regressors not of interest.
+    C: np.ndarray of dimension (n, mc) or None, optional, default = None
+        Exogenous regressors not of interest.
     estimator: float or str, optional, default = "tsls"
         Estimator to use. Passed as ``kappa`` parameter to ``KClass``.
     fit_intercept: bool, optional, default = True
@@ -162,15 +169,18 @@ def inverse_wald_test(
         raise ValueError("alpha must be in (0, 1).")
     n = Z.shape[0]
 
-    Z, X, y, W, _ = _check_test_inputs(Z, X, y, W)
+    Z, X, y, W, C, _ = _check_test_inputs(Z, X, y, W=W, C=C)
 
     z_alpha = scipy.stats.chi2.ppf(1 - alpha, df=X.shape[1])
 
     if fit_intercept:
-        Z = Z - Z.mean(axis=0)
-        X = X - X.mean(axis=0)
-        W = W - W.mean(axis=0)
-        y = y - y.mean()
+        C = np.hstack([np.ones((n, 1)), C])
+
+    if C.shape[1] > 0:
+        X = oproj(C, X)
+        y = oproj(C, y)
+        Z = oproj(C, Z)
+        W = oproj(C, W)
 
     XW = np.concatenate([X, W], axis=1)
 
@@ -178,7 +188,7 @@ def inverse_wald_test(
     beta = kclass.coef_
 
     residuals = y - kclass.predict(XW)
-    hat_sigma_sq = np.sum(residuals**2) / (n - XW.shape[1] - fit_intercept)
+    hat_sigma_sq = np.sum(residuals**2) / (n - XW.shape[1] - C.shape[1])
 
     Xkappa = kclass.kappa_ * proj(Z, X) + (1 - kclass.kappa_) * X
 

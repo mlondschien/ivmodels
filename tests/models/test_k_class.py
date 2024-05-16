@@ -30,12 +30,12 @@ def test__fuller_alpha(kappa, expected):
 @pytest.mark.parametrize("fit_intercept", [True, False])
 @pytest.mark.parametrize("alpha, l1_ratio", [(0, 0), (1, 0), (1, 0.5), (1, 1)])
 @pytest.mark.parametrize(
-    "n, mx, r, k, u", [(100, 2, 1, 4, 1), (100, 2, 0, 2, 2), (100, 2, 0, 2, 2)]
+    "n, mx, mc, k, u", [(100, 2, 1, 4, 1), (100, 2, 0, 2, 2), (100, 2, 0, 2, 2)]
 )
-def test_k_class_equal_to_ols(fit_intercept, alpha, l1_ratio, n, mx, r, k, u):
+def test_k_class_equal_to_ols(fit_intercept, alpha, l1_ratio, n, mx, mc, k, u):
     n = 100
 
-    Z, X, y, C, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, mw=0, r=r)
+    Z, X, y, C, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, mw=0, mc=mc)
     XC = np.hstack([X, C])
 
     kclass = KClass(
@@ -55,13 +55,13 @@ def test_k_class_equal_to_ols(fit_intercept, alpha, l1_ratio, n, mx, r, k, u):
 
 
 @pytest.mark.parametrize(
-    "n, mx, r, k, u", [(100, 2, 2, 5, 1), (100, 0, 3, 4, 3), (100, 2, 0, 3, 2)]
+    "n, mx, mc, k, u", [(100, 2, 2, 5, 1), (100, 0, 3, 4, 3), (100, 2, 0, 3, 2)]
 )
 @pytest.mark.parametrize("kappa", ["tsls", "ols", "liml", 0.5, 1.5])
-def test_k_class_intercept_equiv_to_all_ones_in_C(kappa, n, mx, r, k, u):
+def test_k_class_intercept_equiv_to_all_ones_in_C(kappa, n, mx, mc, k, u):
     n = 100
 
-    Z, X, y, C, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, r=r)
+    Z, X, y, C, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, mc=mc)
 
     kclass_with = KClass(kappa=kappa, fit_intercept=True)
     kclass_without = KClass(kappa=kappa, fit_intercept=False)
@@ -77,14 +77,14 @@ def test_k_class_intercept_equiv_to_all_ones_in_C(kappa, n, mx, r, k, u):
 
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
-@pytest.mark.parametrize("n, mx, k, r, u", [(100, 2, 2, 2, 1), (100, 3, 5, 2, 1)])
+@pytest.mark.parametrize("n, mx, k, mc, u", [(100, 2, 2, 2, 1), (100, 3, 5, 2, 1)])
 @pytest.mark.parametrize("kappa", ["tsls", "ols", "liml", 0.5, 1.5])
 def test_equivalence_exogenous_covariates_and_fitting_on_residuals(
-    fit_intercept, kappa, n, mx, k, r, u
+    fit_intercept, kappa, n, mx, k, mc, u
 ):
     # It should be equivalent to include exogenous covariates C or to fit a model on the
     # residuals M_C Z, M_C X, M_C y.
-    Z, X, y, C, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, r=r)
+    Z, X, y, C, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, mc=mc)
 
     if fit_intercept:
         C = C - C.mean(axis=0)
@@ -99,7 +99,7 @@ def test_equivalence_exogenous_covariates_and_fitting_on_residuals(
     np.testing.assert_allclose(kclass1.intercept_, kclass2.intercept_)
 
     # See comment in KClassMixin.fit
-    if r > 0:
+    if mc > 0:
         kclass3 = KClass(kappa=0, fit_intercept=fit_intercept)
         kclass3.fit(X=C, y=y - kclass2.predict(X))
         np.testing.assert_allclose(kclass1.coef_[mx:], kclass3.coef_)
@@ -168,11 +168,11 @@ def test_k_class_normal_equations(fit_intercept, kappa, n, mx, k, u):
 
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
-@pytest.mark.parametrize("n, mx, k, r, u", [(100, 2, 2, 0, 1), (100, 2, 5, 1, 2)])
-def test_k_class_normal_equations_2(fit_intercept, n, mx, k, r, u):
+@pytest.mark.parametrize("n, mx, k, mc, u", [(100, 2, 2, 0, 1), (100, 2, 5, 1, 2)])
+def test_k_class_normal_equations_2(fit_intercept, n, mx, k, mc, u):
     # If kappa <=1, then the algorithm uses OLS on transformed data. If kappa > 1, then
     # it uses the normal equations. The result should be the same
-    Z, X, y, C, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, r=r)
+    Z, X, y, C, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, mc=mc)
 
     kclass1 = KClass(kappa=1 - 1e-10, fit_intercept=fit_intercept)
     kclass2 = KClass(kappa=1 + 1e-10, fit_intercept=fit_intercept)
@@ -184,9 +184,9 @@ def test_k_class_normal_equations_2(fit_intercept, n, mx, k, r, u):
     assert np.allclose(kclass1.intercept_, kclass2.intercept_)
 
 
-@pytest.mark.parametrize("n, mx, k, r, u", [(100, 2, 2, 0, 1), (100, 4, 4, 1, 2)])
-def test_liml_equal_to_tsls_in_just_identified_setting(n, mx, k, r, u):
-    Z, X, y, C, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, r=r)
+@pytest.mark.parametrize("n, mx, k, mc, u", [(100, 2, 2, 0, 1), (100, 4, 4, 1, 2)])
+def test_liml_equal_to_tsls_in_just_identified_setting(n, mx, k, mc, u):
+    Z, X, y, C, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, mc=mc)
     y = y.flatten()
 
     liml = KClass(kappa="liml")
@@ -202,9 +202,9 @@ def test_liml_equal_to_tsls_in_just_identified_setting(n, mx, k, r, u):
 
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
-@pytest.mark.parametrize("n, mx, k, r, u", [(100, 2, 2, 0, 1), (100, 4, 4, 1, 2)])
-def test_anderson_rubin_at_liml_is_equal_to_ar_min(n, mx, k, r, u, fit_intercept):
-    Z, X, y, _, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, r=r)
+@pytest.mark.parametrize("n, mx, k, mc, u", [(100, 2, 2, 0, 1), (100, 4, 4, 1, 2)])
+def test_anderson_rubin_at_liml_is_equal_to_ar_min(n, mx, k, mc, u, fit_intercept):
+    Z, X, y, _, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, mc=mc)
     y = y.flatten()
 
     liml = KClass(kappa="liml", fit_intercept=fit_intercept)
