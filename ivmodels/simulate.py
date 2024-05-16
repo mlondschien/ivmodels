@@ -4,7 +4,45 @@ import numpy as np
 def simulate_gaussian_iv(
     n, *, mx, k, u=None, mw=0, mc=0, seed=0, include_intercept=True, return_beta=False
 ):
-    """Simulate a Gaussian IV dataset."""
+    """
+    Simulate a Gaussian IV dataset.
+
+    Parameters
+    ----------
+    n : int
+        Number of observations.
+    mx : int
+        Number of endogenous variables.
+    k : int
+        Number of instruments.
+    u : int, optional
+        Number of unobserved variables. If None, defaults to mx.
+    mw : int, optional
+        Number of endogenous variables not of interest.
+    mc : int, optional
+        Number of exogenous included variables.
+    seed : int, optional
+        Random seed.
+    include_intercept : bool, optional
+        Whether to include an intercept.
+    return_beta : bool, optional
+        Whether to return the true beta.
+
+    Returns
+    -------
+    Z : np.ndarray of dimension (n, k)
+        Instruments.
+    X : np.ndarray of dimension (n, mx)
+        Endogenous variables.
+    y : np.ndarray of dimension (n,)
+        Outcomes.
+    C : np.ndarray of dimension (n, mc)
+        Exogenous included variables.
+    W : np.ndarray of dimension (n, mw)
+        Endogenous variables not of interest.
+    beta : np.ndarray of dimension (mx,)
+        True beta. Only returned if ``return_beta`` is True.
+    """
     rng = np.random.RandomState(seed)
     beta = rng.normal(0, 1, (mx, 1))
 

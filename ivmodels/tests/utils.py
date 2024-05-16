@@ -76,6 +76,7 @@ def _check_test_inputs(Z, X, y, W=None, C=None, beta=None):
         else:
             beta = beta.flatten()
 
+    if beta is not None:
         if beta.shape[0] != X.shape[1]:
             raise ValueError(
                 "beta must have the same length or number of rows as X has columns. "

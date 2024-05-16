@@ -298,7 +298,7 @@ def conditional_likelihood_ratio_test(
        moreira2003conditional
        kleibergen2021efficient
     """
-    Z, X, y, W, C = C, beta = _check_test_inputs(Z, X, y, W=W, C=C, beta=beta)
+    Z, X, y, W, C, beta = _check_test_inputs(Z, X, y, W=W, C=C, beta=beta)
 
     n, k = Z.shape
     mx = X.shape[1]

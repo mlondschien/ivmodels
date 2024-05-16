@@ -70,7 +70,7 @@ def likelihood_ratio_test(Z, X, y, beta, W=None, C=None, fit_intercept=True):
     ValueError:
         If the dimensions of the inputs are incorrect.
     """
-    Z, X, y, W, C = C, beta = _check_test_inputs(Z, X, y, W=W, C=C, beta=beta)
+    Z, X, y, W, C, beta = _check_test_inputs(Z, X, y, W=W, C=C, beta=beta)
 
     n, mx = X.shape
     k = Z.shape[1]
@@ -146,7 +146,7 @@ def inverse_likelihood_ratio_test(
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1).")
 
-    Z, X, y, W, C = C, _ = _check_test_inputs(Z, X, y, W=W, C=C)
+    Z, X, y, W, C, _ = _check_test_inputs(Z, X, y, W=W, C=C)
 
     n, mx = X.shape
     k = Z.shape[1]

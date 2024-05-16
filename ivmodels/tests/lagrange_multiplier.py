@@ -119,7 +119,7 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None, C=None, fit_intercept=True):
     ValueError:
         If the dimensions of the inputs are incorrect.
     """
-    Z, X, y, W, C = C, _ = _check_test_inputs(Z, X, y, W=W, C=C, beta=beta)
+    Z, X, y, W, C, beta = _check_test_inputs(Z, X, y, W=W, C=C, beta=beta)
 
     n, k = Z.shape
     mx = X.shape[1]

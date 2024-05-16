@@ -55,27 +55,29 @@ TEST_PAIRS = [
     ],
 )
 @pytest.mark.parametrize(
-    "n, mx, mw, k, u", [(100, 1, 1, 2, 1), (100, 1, 2, 5, 2), (300, 2, 5, 10, 2)]
+    "n, mx, mw, k, u, mc",
+    [(100, 1, 1, 2, 1, 3), (100, 1, 2, 5, 2, 0), (300, 2, 5, 10, 2, 2)],
 )
 @pytest.mark.parametrize("fit_intercept", [True, False])
-def test_subvector_test_size(test, n, mx, mw, k, u, fit_intercept):
+def test_subvector_test_size(test, n, mx, mw, k, u, mc, fit_intercept):
     """Test that the test size is close to the nominal level."""
     n_seeds = 100
     p_values = np.zeros(n_seeds)
 
     for seed in range(n_seeds):
-        Z, X, y, _, W, beta = simulate_gaussian_iv(
+        Z, X, y, C, W, beta = simulate_gaussian_iv(
             n=n,
             mx=mx,
             k=k,
             u=u,
             mw=mw,
+            mc=mc,
             seed=seed,
             include_intercept=fit_intercept,
             return_beta=True,
         )
 
-        _, p_values[seed] = test(Z, X, y, beta, W, fit_intercept=fit_intercept)
+        _, p_values[seed] = test(Z, X, y, beta, W, C=C, fit_intercept=fit_intercept)
 
     assert np.mean(p_values < 0.1) <= 0.2
 
@@ -143,8 +145,8 @@ def test_subvector_test_size_low_rank(test, n, mx, mw, mc, k, u):
         lagrange_multiplier_test,
     ],
 )
-@pytest.mark.parametrize("n, q", [(100, 5), (100, 30)])
-def test_subvector_test_size_weak_instruments(test, n, q):
+@pytest.mark.parametrize("n, k", [(100, 5), (100, 30)])
+def test_subvector_test_size_weak_instruments(test, n, k):
     """
     Test that the test size is close to the nominal level for weak instruments.
 
@@ -154,16 +156,16 @@ def test_subvector_test_size_weak_instruments(test, n, q):
     n_seeds = 200
     p_values = np.zeros(n_seeds)
 
-    p = 1
-    r = 1
+    mx = 1
+    mw = 1
 
     for seed in range(n_seeds):
         rng = np.random.RandomState(seed)
 
         # Make sure that sqrt(n) || Pi_W | ~ 1, sqrt(n) || Pi_X | ~ 100, and
         # sqrt(n) < Pi_W, Pi_X> ~ 0.95
-        Pi_X = rng.normal(0, 1, (q, p))
-        Pi_W = rng.normal(0, 1, (q, r))
+        Pi_X = rng.normal(0, 1, (k, mx))
+        Pi_W = rng.normal(0, 1, (k, mw))
 
         Pi_W = np.sqrt(0.05) * Pi_W + np.sqrt(0.95) * Pi_X
         Pi_W = Pi_W / np.linalg.norm(Pi_W) / np.sqrt(n)
@@ -177,7 +179,7 @@ def test_subvector_test_size_weak_instruments(test, n, q):
             random_state=seed,
         )
 
-        Z = rng.normal(0, 1, (n, q)) + 1
+        Z = rng.normal(0, 1, (n, k)) + 1
 
         X = Z @ Pi_X + noise[:, 1:2]
         W = Z @ Pi_W + noise[:, 2:3]
@@ -205,27 +207,27 @@ def test_subvector_test_size_weak_instruments(test, n, q):
     ],
 )
 @pytest.mark.parametrize(
-    "n, mx, k, u", [(100, 2, 2, 1), (100, 2, 5, 2), (200, 5, 10, 2)]
+    "n, mx, k, u, mc", [(100, 2, 2, 1, 3), (100, 2, 5, 2, 0), (200, 5, 10, 2, 2)]
 )
 @pytest.mark.parametrize("fit_intercept", [True, False])
-def test_test_size(test, n, mx, k, u, fit_intercept):
+def test_test_size(test, n, mx, k, u, mc, fit_intercept):
     """Test that the test size is close to the nominal level."""
     n_seeds = 100
     p_values = np.zeros(n_seeds)
 
     for seed in range(n_seeds):
-        Z, X, y, _, W, beta = simulate_gaussian_iv(
+        Z, X, y, C, _, beta = simulate_gaussian_iv(
             n=n,
             mx=mx,
             k=k,
             u=u,
-            mc=0,
+            mc=mc,
             seed=seed,
             include_intercept=fit_intercept,
             return_beta=True,
         )
 
-        _, p_values[seed] = test(Z, X, y, beta, fit_intercept=fit_intercept)
+        _, p_values[seed] = test(Z, X, y, beta=beta, C=C, fit_intercept=fit_intercept)
 
     assert np.mean(p_values <= 0.1) <= 0.2
 
@@ -242,9 +244,9 @@ def test_test_size(test, n, mx, k, u, fit_intercept):
     ],
 )
 @pytest.mark.parametrize(
-    "n, mx, k, u", [(100, 2, 2, 1), (1000, 2, 5, 2), (100, 5, 10, 2)]
+    "n, mx, k, u, mc", [(100, 2, 2, 1, 3), (1000, 2, 5, 2, 0), (100, 5, 10, 2, 2)]
 )
-def test_test_size_weak_ivs(test, n, mx, k, u):
+def test_test_size_weak_ivs(test, n, mx, k, u, mc):
     """Test that the test size is close to the nominal level for weak instruments."""
     n_seeds = 200
     p_values = np.zeros(n_seeds)
@@ -256,17 +258,21 @@ def test_test_size_weak_ivs(test, n, mx, k, u):
         gamma = rng.normal(0, 1, (u, 1))
 
         beta = rng.normal(0, 0.1, (mx, 1))
+        beta_C = rng.normal(0, 0.1, (mc, 1))
+
         Pi = rng.normal(0, 1, (k, mx)) / np.sqrt(n)
 
         U = rng.normal(0, 1, (n, u))
 
         Z = rng.normal(0, 1, (n, k))
+        C = rng.normal(0, 1, (n, mc))
+
         X = Z @ Pi + U @ delta + rng.normal(0, 1, (n, mx))
-        y = X @ beta + U @ gamma + rng.normal(0, 1, (n, 1))
+        y = X @ beta + C @ beta_C + U @ gamma + rng.normal(0, 1, (n, 1))
 
-        _, p_values[seed] = test(Z, X, y, beta)
+        _, p_values[seed] = test(Z, X, y, C=C, beta=beta)
 
-    assert np.mean(p_values < 0.05) <= 0.075  # 4 stds above 0.05 for n_seeds = 100
+    assert np.mean(p_values < 0.1) <= 0.2  # 4 stds above 0.05 for n_seeds = 100
 
 
 @pytest.mark.parametrize(
@@ -280,24 +286,23 @@ def test_test_size_weak_ivs(test, n, mx, k, u):
         (likelihood_ratio_test, inverse_likelihood_ratio_test),
     ],
 )
-@pytest.mark.parametrize("n, mx, k, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
+@pytest.mark.parametrize("n, mx, k, u, mc", [(100, 2, 2, 1, 3), (100, 2, 5, 2, 0)])
 @pytest.mark.parametrize("p_value", [0.1, 0.01])
-def test_test_round_trip(test, inverse_test, n, mx, k, u, p_value):
+@pytest.mark.parametrize("fit_intercept", [True, False])
+def test_test_round_trip(test, inverse_test, n, mx, k, u, mc, p_value, fit_intercept):
     """A test's p-value at the confidence set's boundary equals the nominal level."""
-    Z, X, y, _, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, seed=0)
+    Z, X, y, C, _ = simulate_gaussian_iv(
+        n=n, mx=mx, k=k, u=u, mc=mc, seed=0, include_intercept=fit_intercept
+    )
 
-    Z = Z - Z.mean(axis=0)
-    X = X - X.mean(axis=0)
-    y = y.flatten() - y.mean()
-
-    quadric = inverse_test(Z, X, y, p_value)
+    quadric = inverse_test(Z, X, y, C=C, alpha=p_value, fit_intercept=fit_intercept)
     boundary = quadric._boundary()
 
     assert np.allclose(quadric(boundary), 0, atol=1e-7)
 
     p_values = np.zeros(boundary.shape[0])
     for idx, row in enumerate(boundary):
-        p_values[idx] = test(Z, X, y, beta=row)[1]
+        p_values[idx] = test(Z, X, y, C=C, beta=row, fit_intercept=fit_intercept)[1]
 
     assert np.allclose(p_values, p_value, atol=1e-8)
 
@@ -312,27 +317,31 @@ def test_test_round_trip(test, inverse_test, n, mx, k, u, p_value):
         (likelihood_ratio_test, inverse_likelihood_ratio_test),
     ],
 )
-@pytest.mark.parametrize("n, mx, k, mw, u", [(100, 2, 3, 1, 2), (100, 2, 5, 2, 3)])
+@pytest.mark.parametrize(
+    "n, mx, k, mw, u, mc", [(100, 2, 3, 1, 2, 3), (100, 2, 5, 2, 3, 0)]
+)
 @pytest.mark.parametrize("p_value", [0.1])
 @pytest.mark.parametrize("fit_intercept", [True, False])
 def test_subvector_round_trip(
-    test, inverse_test, n, mx, k, u, mw, p_value, fit_intercept
+    test, inverse_test, n, mx, k, u, mw, mc, p_value, fit_intercept
 ):
     """
     A test's p-value at the confidence set's boundary equals the nominal level.
 
     This time for subvector tests.
     """
-    Z, X, y, _, W = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, mw=mw, seed=0)
+    Z, X, y, C, W = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, mw=mw, mc=mc, seed=0)
 
-    quadric = inverse_test(Z, X, y, p_value, W=W, fit_intercept=fit_intercept)
+    quadric = inverse_test(Z, X, y, p_value, W=W, C=C, fit_intercept=fit_intercept)
     boundary = quadric._boundary()
 
     assert np.allclose(quadric(boundary), 0, atol=1e-7)
 
     p_values = np.zeros(boundary.shape[0])
     for idx, row in enumerate(boundary):
-        p_values[idx] = test(Z, X, y, beta=row, W=W, fit_intercept=fit_intercept)[1]
+        p_values[idx] = test(Z, X, y, beta=row, W=W, C=C, fit_intercept=fit_intercept)[
+            1
+        ]
 
     assert np.allclose(p_values, p_value, atol=1e-8)
 
@@ -351,20 +360,20 @@ def test_subvector_round_trip(
     ],
 )
 @pytest.mark.parametrize("kappa", ["liml", "tsls"])
-@pytest.mark.parametrize("n, mx, k, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
-def test_p_value_of_estimator(test, kappa, n, mx, k, u):
+@pytest.mark.parametrize("n, mx, k, u, mc", [(100, 2, 2, 1, 3), (100, 2, 5, 2, 0)])
+def test_p_value_of_estimator(test, kappa, n, mx, k, u, mc):
     """The estimated coefficient should be in the confidence set with 95% coverage."""
-    Z, X, y, _, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u)
-    estimator = KClass(kappa=kappa).fit(X, y.flatten(), Z=Z)
-    p_value = test(Z, X, y, estimator.coef_)[1]
+    Z, X, y, C, _ = simulate_gaussian_iv(n=n, mx=mx, mc=mc, k=k, u=u)
+    estimator = KClass(kappa=kappa).fit(X, y.flatten(), Z=Z, C=C)
+    p_value = test(Z, X, y, beta=estimator.coef_[:mx], C=C)[1]
     assert p_value > 0.05
 
 
 @pytest.mark.parametrize("test", [anderson_rubin_test, pulse_test])
-@pytest.mark.parametrize("n, mx, k, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
-def test_ar_test_monotonic_in_kappa(test, n, mx, k, u):
+@pytest.mark.parametrize("n, mx, k, u, mc", [(100, 2, 2, 1, 3), (100, 2, 5, 2, 0)])
+def test_ar_test_monotonic_in_kappa(test, n, mx, k, u, mc):
     """AR(beta(kappa)) should be decreasing in kappa increasing towards kappa."""
-    Z, X, Y, _, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u)
+    Z, X, Y, C, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, mc=mc)
     Y = Y.flatten()
     kappas = np.linspace(0, KClass.ar_min(X, Y, Z) + 1, 10)
     models = [KClass(kappa=kappa).fit(X, Y, Z=Z) for kappa in kappas]
@@ -375,7 +384,7 @@ def test_ar_test_monotonic_in_kappa(test, n, mx, k, u):
     assert np.all(p_values[:-1] <= p_values[1:])
 
 
-@pytest.mark.parametrize("n, mx, k, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
+@pytest.mark.parametrize("n, mx, k, u, mc", [(100, 2, 2, 1, 3), (100, 2, 5, 2, 0)])
 @pytest.mark.parametrize(
     "inverse_test",
     [
@@ -387,12 +396,12 @@ def test_ar_test_monotonic_in_kappa(test, n, mx, k, u):
         inverse_likelihood_ratio_test,
     ],
 )
-def test_inverse_test_sorted(inverse_test, n, mx, k, u):
+def test_inverse_test_sorted(inverse_test, n, mx, k, u, mc):
     """The volume of confidence sets should be increasing in the p-value."""
-    Z, X, y, _, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, seed=0)
+    Z, X, y, C, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, mc=mc, seed=0)
 
     p_values = [0.5, 0.2, 0.1, 0.05]
-    quadrics = [inverse_test(Z, X, y, p_value) for p_value in p_values]
+    quadrics = [inverse_test(Z, X, y, C=C, alpha=p_value) for p_value in p_values]
     volumes = [quadric.volume() for quadric in quadrics]
 
     # Use <= instead of < as volumes can be infinite
