@@ -6,7 +6,7 @@ from ivmodels.tests.utils import _check_test_inputs
 from ivmodels.utils import oproj, proj
 
 
-def pulse_test(Z, X, y, beta, C=None, fit_intercept=True):
+def pulse_test(Z, X, y, beta, C=None, W=None, fit_intercept=True):
     """
     Test proposed by :cite:t:`jakobsen2022distributional` with null hypothesis: :math:`Z` and :math:`y - X \\beta` are uncorrelated.
 
@@ -29,6 +29,8 @@ def pulse_test(Z, X, y, beta, C=None, fit_intercept=True):
         Coefficients to test.
     C: np.ndarray of dimension (n, mc) or None, optional, default=None
         Exogenous regressors not of interest.
+    W: np.ndarray of dimension (n, mw) or None, optional, default=None
+        Must be None or `mw` must be 0. No subvector variant of the test is implemented.
     fit_intercept: bool, optional, default=True
         Whether to fit an intercept. This is equivalent to centering the inputs.
 
@@ -53,7 +55,10 @@ def pulse_test(Z, X, y, beta, C=None, fit_intercept=True):
 
        jakobsen2022distributional
     """
-    Z, X, y, _, C, beta = _check_test_inputs(Z, X, y, C=C, beta=beta)
+    Z, X, y, W, C, beta = _check_test_inputs(Z, X, y, C=C, W=W, beta=beta)
+
+    if W.shape[1] > 0:
+        raise ValueError("No subvector variant of the pulse test is implemented.")
 
     n, k = Z.shape
 
