@@ -428,3 +428,29 @@ def test_ar_lm_clr_yield_same_result(n, mx, mw, u, mc, fit_intercept):
 
         assert np.allclose(ar, lm)
         assert np.allclose(ar, clr)
+
+
+# once with W=None, once with W!=None
+@pytest.mark.parametrize(
+    "test",
+    [
+        conditional_likelihood_ratio_test,
+        pulse_test,
+        lagrange_multiplier_test,
+        anderson_rubin_test,
+        wald_test,
+        likelihood_ratio_test,
+    ],
+)
+@pytest.mark.parametrize("n, mx, mw, u, mc", [(100, 2, 0, 2, 2), (100, 2, 2, 2, 2)])
+def test_test_output_type(n, mx, mw, u, mc, test):
+    if test == pulse_test and mw > 0:
+        pytest.skip("Pulse test does not have a subvector version.")
+
+    Z, X, y, C, W, beta = simulate_gaussian_iv(
+        n=n, mx=mx, k=mx + mw, u=u, mw=mw, mc=mc, return_beta=True
+    )
+
+    statistic, p_values = test(Z, X, y, beta=beta, W=W, C=C)
+    assert isinstance(statistic, float)
+    assert isinstance(p_values, float)

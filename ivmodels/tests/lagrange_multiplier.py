@@ -181,8 +181,9 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None, C=None, fit_intercept=True):
         proj_X_tilde = proj(Z, X_tilde)
         X_tilde_proj_residuals = proj(proj_X_tilde, residuals)
         # (y - X beta) P_{P_Z X_tilde} (y - X beta) / (y - X_beta) M_Z (y - X beta)
-        statistic = np.square(X_tilde_proj_residuals).sum() / (
-            residuals.T @ orth_residuals
+        statistic = (
+            np.square(X_tilde_proj_residuals).sum()
+            / (residuals.T @ orth_residuals).item()
         )
 
         statistic *= n - k - C.shape[1]
