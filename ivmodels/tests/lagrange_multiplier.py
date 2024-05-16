@@ -3,7 +3,7 @@ import scipy
 
 from ivmodels.models.kclass import KClass
 from ivmodels.tests.utils import _check_test_inputs
-from ivmodels.utils import proj
+from ivmodels.utils import oproj, proj
 
 
 def _LM(X, X_proj, Y, Y_proj, W, W_proj, beta):
@@ -63,7 +63,7 @@ def _LM(X, X_proj, Y, Y_proj, W, W_proj, beta):
     return (n * lm.item(), n * d_lm.flatten())
 
 
-def lagrange_multiplier_test(Z, X, y, beta, W=None, fit_intercept=True):
+def lagrange_multiplier_test(Z, X, y, beta, W=None, C=None, fit_intercept=True):
     """
     Perform the Lagrange multiplier test for ``beta`` by :cite:t:`kleibergen2002pivotal`.
 
@@ -99,6 +99,8 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None, fit_intercept=True):
         Coefficients to test.
     W: np.ndarray of dimension (n, mw) or None, optional, default=None
         Endogenous regressors not of interest.
+    C: np.ndarray of dimension (n, mc) or None, optional, default=None
+        Exogenous regressors not of interest.
     fit_intercept: bool, optional, default=True
         Whether to fit an intercept. This is equivalent to centering the inputs.
 
@@ -117,16 +119,19 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None, fit_intercept=True):
     ValueError:
         If the dimensions of the inputs are incorrect.
     """
-    Z, X, y, W, beta = _check_test_inputs(Z, X, y, beta=beta, W=W)
-
-    if fit_intercept:
-        Z = Z - Z.mean(axis=0)
-        W = W - W.mean(axis=0)
-        X = X - X.mean(axis=0)
-        y = y - y.mean()
+    Z, X, y, W, C = C, _ = _check_test_inputs(Z, X, y, W=W, C=C, beta=beta)
 
     n, k = Z.shape
     mx = X.shape[1]
+
+    if fit_intercept:
+        C = np.hstack([np.ones((n, 1)), C])
+
+    if C.shape[1] > 0:
+        X = oproj(C, X)
+        y = oproj(C, y)
+        Z = oproj(C, Z)
+        W = oproj(C, W)
 
     if W.shape[1] > 0:
         gamma_hat = KClass(kappa="liml").fit(X=W, y=y - X @ beta, Z=Z).coef_
@@ -160,7 +165,7 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None, fit_intercept=True):
 
         statistic = min(res.fun, res2.fun) / n
 
-        statistic *= n - k - fit_intercept
+        statistic *= n - k - C.shape[1]
 
         p_value = 1 - scipy.stats.chi2.cdf(statistic, df=mx)
 
@@ -180,7 +185,7 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None, fit_intercept=True):
             residuals.T @ orth_residuals
         )
 
-        statistic *= n - k - fit_intercept
+        statistic *= n - k - C.shape[1]
 
         p_value = 1 - scipy.stats.chi2.cdf(statistic, df=mx)
 

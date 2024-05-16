@@ -1,10 +1,11 @@
 import numpy as np
 import scipy
 
-from ivmodels.utils import proj
+from ivmodels.tests.utils import _check_test_inputs
+from ivmodels.utils import oproj, proj
 
 
-def rank_test(Z, X, fit_intercept=True):
+def rank_test(Z, X, C=None, fit_intercept=True):
     """
     Perform Anderson's test for reduced rank :cite:p:`anderson1951estimating`.
 
@@ -28,6 +29,8 @@ def rank_test(Z, X, fit_intercept=True):
         Instruments.
     X: np.ndarray of dimension (n, mx)
         Regressors.
+    C: np.ndarray of dimension (n, mc) or None, optional, default=None
+        Exogenous regressors not of interest.
     fit_intercept: bool
         Whether to fit an intercept.
 
@@ -41,6 +44,8 @@ def rank_test(Z, X, fit_intercept=True):
         of the :math:`\\chi^2(k - m_X + 1)` distribution.
 
     """
+    Z, X, _, _, C, _ = _check_test_inputs(Z, X, y=None, C=C)
+
     n, k = Z.shape
     m = X.shape[1]
 
@@ -48,13 +53,16 @@ def rank_test(Z, X, fit_intercept=True):
         raise ValueError("Need `Z.shape[1] >= X.shape[1]`.")
 
     if fit_intercept:
-        X = X - X.mean(axis=0)
-        Z = Z - Z.mean(axis=0)
+        C = np.hstack([np.ones((n, 1)), C])
+
+    if C.shape[1] > 0:
+        X = oproj(C, X)
+        Z = oproj(C, Z)
 
     X_proj = proj(Z, X)
 
     W = np.linalg.solve(X.T @ (X - X_proj), X.T @ X_proj)
-    statistic = (n - k - fit_intercept) * min(np.real(np.linalg.eigvals(W)))
+    statistic = (n - k - C.shape[1]) * min(np.real(np.linalg.eigvals(W)))
     cdf = scipy.stats.chi2.cdf(statistic, df=(k - m + 1))
 
     return statistic, 1 - cdf

@@ -3,10 +3,10 @@ import scipy
 
 from ivmodels.quadric import Quadric
 from ivmodels.tests.utils import _check_test_inputs
-from ivmodels.utils import proj
+from ivmodels.utils import oproj, proj
 
 
-def pulse_test(Z, X, y, beta, fit_intercept=True):
+def pulse_test(Z, X, y, beta, C=None, fit_intercept=True):
     """
     Test proposed by :cite:t:`jakobsen2022distributional` with null hypothesis: :math:`Z` and :math:`y - X \\beta` are uncorrelated.
 
@@ -27,6 +27,8 @@ def pulse_test(Z, X, y, beta, fit_intercept=True):
         Outcomes.
     beta: np.ndarray of dimension (mx,)
         Coefficients to test.
+    C: np.ndarray of dimension (n, mc) or None, optional, default=None
+        Exogenous regressors not of interest.
     fit_intercept: bool, optional, default=True
         Whether to fit an intercept. This is equivalent to centering the inputs.
 
@@ -51,43 +53,49 @@ def pulse_test(Z, X, y, beta, fit_intercept=True):
 
        jakobsen2022distributional
     """
-    Z, X, y, _, beta = _check_test_inputs(Z, X, y, beta=beta)
+    Z, X, y, _, C, beta = _check_test_inputs(Z, X, y, C=C, beta=beta)
 
     n, k = Z.shape
 
     if fit_intercept:
-        Z = Z - Z.mean(axis=0)
-        X = X - X.mean(axis=0)
-        y = y - y.mean()
+        C = np.hstack([np.ones((n, 1)), C])
+
+    if C.shape[1] > 0:
+        X = oproj(C, X)
+        y = oproj(C, y)
+        Z = oproj(C, Z)
 
     residuals = y - X @ beta
     proj_residuals = proj(Z, residuals)
     statistic = np.square(proj_residuals).sum() / np.square(residuals).sum()
-    statistic *= n - k - fit_intercept
+    statistic *= n - k - C.shape[1]
 
     p_value = 1 - scipy.stats.chi2.cdf(statistic, df=k)
     return statistic, p_value
 
 
-def inverse_pulse_test(Z, X, y, alpha=0.05, fit_intercept=True):
+def inverse_pulse_test(Z, X, y, C=None, alpha=0.05, fit_intercept=True):
     """Return the quadric for the inverse pulse test's acceptance region."""
-    Z, X, y, _, _ = _check_test_inputs(Z, X, y)
+    Z, X, y, _, C, _ = _check_test_inputs(Z, X, y, C=C)
 
     n, k = Z.shape
 
     quantile = scipy.stats.chi2.ppf(1 - alpha, df=k)
 
     if fit_intercept:
-        Z = Z - Z.mean(axis=0)
-        X = X - X.mean(axis=0)
-        y = y - y.mean()
+        C = np.hstack([np.ones((n, 1)), C])
+
+    if C.shape[1] > 0:
+        X = oproj(C, X)
+        y = oproj(C, y)
+        Z = oproj(C, Z)
 
     X_proj = proj(Z, X)
     y_proj = proj(Z, y)
 
-    A = X.T @ (X_proj - 1 / (n - k - fit_intercept) * quantile * X)
-    b = -2 * (X_proj - 1 / (n - k - fit_intercept) * quantile * X).T @ y
-    c = y.T @ (y_proj - 1 / (n - k - fit_intercept) * quantile * y)
+    A = X.T @ (X_proj - 1 / (n - k - C.shape[1]) * quantile * X)
+    b = -2 * (X_proj - 1 / (n - k - C.shape[1]) * quantile * X).T @ y
+    c = y.T @ (y_proj - 1 / (n - k - C.shape[1]) * quantile * y)
 
     if isinstance(c, np.ndarray):
         c = c.item()

@@ -3,7 +3,7 @@ import scipy
 
 from ivmodels.models.kclass import KClass
 from ivmodels.tests.utils import _check_test_inputs
-from ivmodels.utils import proj
+from ivmodels.utils import oproj, proj
 
 
 def conditional_likelihood_ratio_critical_value_function(
@@ -153,6 +153,7 @@ def conditional_likelihood_ratio_test(
     y,
     beta,
     W=None,
+    C=None,
     fit_intercept=True,
     method="numerical_integration",
     tol=1e-4,
@@ -265,6 +266,8 @@ def conditional_likelihood_ratio_test(
         Coefficients to test.
     W: np.ndarray of dimension (n, mw) or None, optional, default = None
         Endogenous regressors not of interest.
+    C: np.ndarray of dimension (n, mc) or None, optional, default = None
+        Exogenous regressors not of interest.
     fit_intercept: bool, optional, default: True
         Whether to include an intercept. This is equivalent to centering the inputs.
     method: str, optional, default: "numerical_integration"
@@ -295,17 +298,20 @@ def conditional_likelihood_ratio_test(
        moreira2003conditional
        kleibergen2021efficient
     """
-    Z, X, y, W, beta = _check_test_inputs(Z, X, y, beta=beta, W=W)
-
-    if fit_intercept:
-        Z = Z - Z.mean(axis=0)
-        X = X - X.mean(axis=0)
-        W = W - W.mean(axis=0)
-        y = y - y.mean()
+    Z, X, y, W, C = C, beta = _check_test_inputs(Z, X, y, W=W, C=C, beta=beta)
 
     n, k = Z.shape
     mx = X.shape[1]
     mw = W.shape[1]
+
+    if fit_intercept:
+        C = np.hstack([np.ones((n, 1)), C])
+
+    if C.shape[1] > 0:
+        X = oproj(C, X)
+        y = oproj(C, y)
+        Z = oproj(C, Z)
+        W = oproj(C, W)
 
     X_proj = proj(Z, X)
     y_proj = proj(Z, y)
@@ -320,13 +326,13 @@ def conditional_likelihood_ratio_test(
         Xt_proj = X_proj - np.outer(residuals_proj, Sigma)
         Xt_orth = Xt - Xt_proj
         mat_Xt = np.linalg.solve(Xt_orth.T @ Xt_orth, Xt_proj.T @ Xt_proj)
-        s_min = min(np.real(np.linalg.eigvals(mat_Xt))) * (n - k - fit_intercept)
+        s_min = min(np.real(np.linalg.eigvals(mat_Xt))) * (n - k - C.shape[1])
 
         # TODO: This can be done with efficient rank-1 updates.
         ar_min = KClass.ar_min(X=X, y=y, Z=Z)
         ar = residuals_proj.T @ residuals_proj / (residuals_orth.T @ residuals_orth)
 
-        statistic = (n - k - fit_intercept) * (ar - ar_min)
+        statistic = (n - k - C.shape[1]) * (ar - ar_min)
 
     elif mw > 0:
         W_proj = proj(Z, W)
@@ -345,10 +351,10 @@ def conditional_likelihood_ratio_test(
             X=W, y=y - X @ beta, X_proj=W_proj, y_proj=y_proj - X_proj @ beta
         )
 
-        statistic = (n - k - fit_intercept) * (ar - XWy_eigenvals[0])
+        statistic = (n - k - C.shape[1]) * (ar - XWy_eigenvals[0])
 
         if critical_values == "kleibergen":
-            s_min = (n - k - fit_intercept) * (XWy_eigenvals[0] + XWy_eigenvals[1] - ar)
+            s_min = (n - k - C.shape[1]) * (XWy_eigenvals[0] + XWy_eigenvals[1] - ar)
         else:
             XW = np.concatenate([X, W], axis=1)
             XW_proj = np.concatenate([X_proj, W_proj], axis=1)
@@ -360,7 +366,7 @@ def conditional_likelihood_ratio_test(
             Sigma = (residuals_orth.T @ XW) / (residuals_orth.T @ residuals_orth)
             XWt = XW - np.outer(residuals, Sigma)
             XWt_proj = XW_proj - np.outer(residuals_proj, Sigma)
-            s_min = (n - k - fit_intercept) * min(
+            s_min = (n - k - C.shape[1]) * min(
                 np.real(
                     scipy.linalg.eigvals(
                         np.linalg.solve((XWt - XWt_proj).T @ XWt, XWt_proj.T @ XWt)
