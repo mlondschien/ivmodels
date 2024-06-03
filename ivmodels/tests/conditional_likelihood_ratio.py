@@ -133,7 +133,7 @@ def conditional_likelihood_ratio_critical_value_function(
             p_value += delta
 
             j += 1
-            if j > 1000:
+            if j > 10000:
                 raise RuntimeError("Failed to converge.")
 
         p_value *= (1 - a) ** (p / 2)
