@@ -89,19 +89,19 @@ jobs:
       - name: Install repository
         run: python -m pip install --no-build-isolation --no-deps --disable-pip-version-check -e .
 
-      # - name: Run ASV benchmarks
-      #   run: |
-      #     cd benchmarks
-      #     asv machine --machine github-runner --yes
-      #     export OPENBLAS_NUM_THREADS=1
-      #     asv --config asv.conf.json run -m github-runner --quick --python=same
-      #     asv --config asv.conf.json publish
+      - name: Run ASV benchmarks
+        run: |
+          cd benchmarks
+          asv machine --machine github-runner --yes
+          export OPENBLAS_NUM_THREADS=1
+          asv --config asv.conf.json run -m github-runner --quick --python=same
+          asv --config asv.conf.json publish
 
-      # - name: Upload ASV results
-      #   uses: actions/upload-artifact@v4
-        # with:
-        #   name: asv-results
-        #   path: html
+      - name: Upload ASV results
+        uses: actions/upload-artifact@v4
+        with:
+          name: asv-results
+          path: html
 
       - name: asv continuous
         run: |
