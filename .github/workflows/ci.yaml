@@ -83,8 +83,9 @@ jobs:
       - name: Add micromamba to GITHUB_PATH
         run: echo "${HOME}/micromamba-bin" >> "$GITHUB_PATH"
 
+      # https://stackoverflow.com/questions/77617946/solve-conda-libmamba-solver-libarchive-so-19-error-after-updating-conda-to-23
       - name: force mamba reinstall
-        run: conda install -n base libarchive -c main --force-reinstall --solver classic
+        run: conda install -n base libarchive -c main --force-reinstall --solver classic -y
 
       - name: Install repository
         run: python -m pip install --no-build-isolation --no-deps --disable-pip-version-check -e .
