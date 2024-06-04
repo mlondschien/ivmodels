@@ -5,6 +5,11 @@ from ivmodels.models.kclass import KClass
 from ivmodels.tests.utils import _check_test_inputs
 from ivmodels.utils import oproj, proj
 
+import ctypes
+import numpy as np
+from scipy import integrate
+from pathlib import Path
+
 
 def conditional_likelihood_ratio_critical_value_function(
     p, q, s_min, z, method="numerical_integration", tol=1e-6
@@ -82,17 +87,37 @@ def conditional_likelihood_ratio_critical_value_function(
         return 1 - scipy.stats.chi2(q).cdf(z)
 
     if method in ["numerical_integration"]:
-        beta = scipy.stats.beta((q - p) / 2, p / 2)
-        chi2 = scipy.stats.chi2(q)
-        a = s_min / (z + s_min)
+        # Load the shared library
+        lib = ctypes.CDLL(Path(__file__).parent / "integrand.dylib")
 
-        def integrand(b):
-            return beta.pdf(b) * chi2.cdf(z / (1 - a * b))
+        # Define the parameter structure
+        class Params(ctypes.Structure):
+            _fields_ = [('a', ctypes.c_double),
+                        ('z', ctypes.c_double),
+                        ('alpha', ctypes.c_double),
+                        ('beta', ctypes.c_double)]
+
+        # Get the integrand function from the shared library
+        integrand = lib.integrand
+        integrand.restype = ctypes.c_double
+        integrand.argtypes = (ctypes.c_double, ctypes.POINTER(Params))
+
+        # Define a wrapper to match the LowLevelCallable signature
+        def integrand_wrapper(b, params):
+            return integrand(b, ctypes.cast(params, ctypes.POINTER(Params)))
+
+        # Convert the wrapper to a LowLevelCallable
+        low_level_callable = ctypes.CFUNCTYPE(ctypes.c_double, ctypes.c_double, ctypes.POINTER(Params))(integrand_wrapper)
+
+        a = s_min / (z + s_min)
+        # Create a Params object with the values of a and z
+        params = Params(a, z, (q - p) / 2, p / 2)
 
         res = scipy.integrate.quad(
-            integrand,
+            low_level_callable,
             0,
             1,
+            args=(params,),
             epsabs=tol,
         )
 
