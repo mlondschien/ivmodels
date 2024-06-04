@@ -153,7 +153,21 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None, C=None, fit_intercept=True):
             x0=gamma_hat,
         )
 
-        statistic = res.fun / n * (n - k - C.shape[1])
+        res2 = scipy.optimize.minimize(
+            lambda gamma: _LM(
+                X=W,
+                X_proj=W_proj,
+                Y=y - X @ beta,
+                Y_proj=y_proj - X_proj @ beta,
+                W=X,
+                W_proj=X_proj,
+                beta=gamma,
+            ),
+            jac=True,
+            x0=np.zeros_like(gamma_hat),
+        )
+
+        statistic = min(res.fun, res2.fun) / n * (n - k - C.shape[1])
 
         p_value = 1 - scipy.stats.chi2.cdf(statistic, df=mx)
 
