@@ -37,5 +37,4 @@
     // to the current version of Python used to run `asv`.
     "conda_channels": ["conda-forge"],
     "conda_environment_file": "environment.yml",
-    "plugins": [".asv_delegated_conda"],
 }
