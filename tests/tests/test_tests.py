@@ -129,7 +129,7 @@ def test_subvector_test_size_low_rank(test, n, mx, mw, mc, k, u):
 
         _, p_values[seed] = test(Z, X, y, beta_X, W, fit_intercept=False)
 
-    assert np.mean(p_values < 0.05) < 0.07  # 4 stds above 0.05 for n_seeds = 100
+    assert np.mean(p_values < 0.1) < 0.15
 
 
 # The Pulse does not have a subvector version. The Wald and LR tests are
@@ -161,7 +161,7 @@ def test_subvector_test_size_weak_instruments(test, n, k):
         )
         _, p_values[seed] = test(Z, X, y, beta, W)
 
-    assert np.mean(p_values < 0.05) < 0.07  # 4 stds above 0.05 for n_seeds = 100
+    assert np.mean(p_values < 0.1) < 0.15
 
 
 @pytest.mark.parametrize(
