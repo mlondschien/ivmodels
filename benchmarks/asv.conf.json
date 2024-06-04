@@ -11,7 +11,7 @@
 
     // The URL of the source code repository for the project being
     // benchmarked
-    "repo": ".",
+    "repo": "..",
     "branches": ["origin/main"],
 
     // The directory (relative to the current directory) that benchmarks are
@@ -36,5 +36,5 @@
     // The Pythons you'd like to test against.  If not provided, defaults
     // to the current version of Python used to run `asv`.
     "conda_channels": ["conda-forge"],
-    "conda_environment_file": "environment.yml",
+    "conda_environment_file": "../environment.yml",
 }
