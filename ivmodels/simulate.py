@@ -27,7 +27,7 @@ def simulate_guggenberger12(n, *, k, seed=0, return_beta=False):
         Endogenous variables.
     y : np.ndarray of dimension (n,)
         Outcomes.
-    C : np.ndarray of dimension (n, 0)
+    C : None
         Empty
     W : np.ndarray of dimension (n, 1)
         Endogenous variables not of interest.
@@ -70,9 +70,9 @@ def simulate_guggenberger12(n, *, k, seed=0, return_beta=False):
     y = X @ beta + W @ gamma + noise[:, 0:1]
 
     if return_beta:
-        return Z, X, y.flatten(), np.array((n, 0)), W, beta.flatten()
+        return Z, X, y.flatten(), None, W, beta.flatten()
     else:
-        return Z, X, y.flatten(), np.array((n, 0)), W
+        return Z, X, y.flatten(), None, W
 
 
 def simulate_gaussian_iv(
