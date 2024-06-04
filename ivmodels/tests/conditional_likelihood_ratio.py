@@ -7,7 +7,7 @@ from ivmodels.utils import oproj, proj
 
 
 def conditional_likelihood_ratio_critical_value_function(
-    p, q, s_min, z, method="numerical_integration", tol=1e-5
+    p, q, s_min, z, method="numerical_integration", tol=1e-6
 ):
     """
     Approximate the critical value function of the conditional likelihood ratio test.
