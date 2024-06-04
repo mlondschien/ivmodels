@@ -2,10 +2,9 @@ from functools import partial
 
 import numpy as np
 import pytest
-import scipy
 
 from ivmodels.models.kclass import KClass
-from ivmodels.simulate import simulate_gaussian_iv
+from ivmodels.simulate import simulate_gaussian_iv, simulate_guggenberger12
 from ivmodels.tests import (
     anderson_rubin_test,
     conditional_likelihood_ratio_test,
@@ -156,38 +155,10 @@ def test_subvector_test_size_weak_instruments(test, n, k):
     n_seeds = 200
     p_values = np.zeros(n_seeds)
 
-    mx = 1
-    mw = 1
-
     for seed in range(n_seeds):
-        rng = np.random.RandomState(seed)
-
-        # Make sure that sqrt(n) || Pi_W | ~ 1, sqrt(n) || Pi_X | ~ 100, and
-        # sqrt(n) < Pi_W, Pi_X> ~ 0.95
-        Pi_X = rng.normal(0, 1, (k, mx))
-        Pi_W = rng.normal(0, 1, (k, mw))
-
-        Pi_W = np.sqrt(0.05) * Pi_W + np.sqrt(0.95) * Pi_X
-        Pi_W = Pi_W / np.linalg.norm(Pi_W) / np.sqrt(n)
-        Pi_X = 100 * Pi_X / np.linalg.norm(Pi_X) / np.sqrt(n)
-
-        # Equal to [eps, V_X, V_W]. Have Cov(eps, V_X) = 0, Cov(eps, V_w = 0.95), and
-        # Cov(V_X, V_W) = 0.3.
-        noise = scipy.stats.multivariate_normal.rvs(
-            cov=np.array([[1, 0, 0.95], [0, 1, 0.3], [0.95, 0.3, 1]]),
-            size=n,
-            random_state=seed,
+        Z, X, y, _, W, beta = simulate_guggenberger12(
+            n, k=k, seed=seed, return_beta=True
         )
-
-        Z = rng.normal(0, 1, (n, k)) + 1
-
-        X = Z @ Pi_X + noise[:, 1:2]
-        W = Z @ Pi_W + noise[:, 2:3]
-        y = X + W + noise[:, 0:1]
-
-        # True beta
-        beta = np.array([[1]])
-
         _, p_values[seed] = test(Z, X, y, beta, W)
 
     assert np.mean(p_values < 0.05) < 0.07  # 4 stds above 0.05 for n_seeds = 100
