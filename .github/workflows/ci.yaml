@@ -99,3 +99,7 @@ jobs:
         with:
           name: asv-results
           path: html
+
+      - name: asv continuous
+        run: |
+          asv continous origin/main HEAD -e --factor 1.2 --machine github-runner --python same --config asv.conf.json
