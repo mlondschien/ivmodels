@@ -133,16 +133,20 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None, C=None, fit_intercept=True):
         Z = oproj(C, Z)
         W = oproj(C, W)
 
+    X_proj = proj(Z, X)
+    y_proj = proj(Z, y)
+    W_proj = proj(Z, W)
+
     if W.shape[1] > 0:
         gamma_hat = KClass(kappa="liml").fit(X=W, y=y - X @ beta, Z=Z).coef_
         res = scipy.optimize.minimize(
             lambda gamma: _LM(
                 X=W,
-                X_proj=proj(Z, W),
+                X_proj=W_proj,
                 Y=y - X @ beta,
-                Y_proj=proj(Z, y - X @ beta),
+                Y_proj=y_proj - X_proj @ beta,
                 W=X,
-                W_proj=proj(Z, X),
+                W_proj=X_proj,
                 beta=gamma,
             ),
             jac=True,
