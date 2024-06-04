@@ -107,4 +107,4 @@ jobs:
         run: |
           cd benchmarks
           asv machine --machine github-runner --yes
-          asv continuous origin/main HEAD --factor 1.2 --machine github-runner --python same --config asv.conf.json
+          asv continuous origin/main HEAD --factor 1.2 --machine github-runner --config asv.conf.json
