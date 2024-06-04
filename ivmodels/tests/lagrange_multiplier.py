@@ -133,16 +133,22 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None, C=None, fit_intercept=True):
         Z = oproj(C, Z)
         W = oproj(C, W)
 
+    X_proj = proj(Z, X)
+    W_proj = proj(Z, W)
+
+    residuals = y - X @ beta
+    residuals_proj = proj(Z, residuals)
+
     if W.shape[1] > 0:
         gamma_hat = KClass(kappa="liml").fit(X=W, y=y - X @ beta, Z=Z).coef_
         res = scipy.optimize.minimize(
             lambda gamma: _LM(
                 X=W,
-                X_proj=proj(Z, W),
-                Y=y - X @ beta,
-                Y_proj=proj(Z, y - X @ beta),
+                X_proj=W_proj,
+                Y=residuals,
+                Y_proj=residuals_proj,
                 W=X,
-                W_proj=proj(Z, X),
+                W_proj=X_proj,
                 beta=gamma,
             ),
             jac=True,
@@ -152,20 +158,18 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None, C=None, fit_intercept=True):
         res2 = scipy.optimize.minimize(
             lambda gamma: _LM(
                 X=W,
-                X_proj=proj(Z, W),
-                Y=y - X @ beta,
-                Y_proj=proj(Z, y - X @ beta),
+                X_proj=W_proj,
+                Y=residuals,
+                Y_proj=residuals_proj,
                 W=X,
-                W_proj=proj(Z, X),
+                W_proj=X_proj,
                 beta=gamma,
             ),
             jac=True,
             x0=np.zeros_like(gamma_hat),
         )
 
-        statistic = min(res.fun, res2.fun) / n
-
-        statistic *= n - k - C.shape[1]
+        statistic = min(res.fun, res2.fun) / n * (n - k - C.shape[1])
 
         p_value = 1 - scipy.stats.chi2.cdf(statistic, df=mx)
 
