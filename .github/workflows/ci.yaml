@@ -112,5 +112,6 @@ jobs:
 
       - name: asv continuous
         run: |
+          cd benchmarks
           asv machine --machine github-runner --yes
           asv continuous origin/main HEAD -e -v --factor 1.2 --machine github-runner --config asv.conf.json
