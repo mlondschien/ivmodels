@@ -134,8 +134,10 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None, C=None, fit_intercept=True):
         W = oproj(C, W)
 
     X_proj = proj(Z, X)
-    y_proj = proj(Z, y)
     W_proj = proj(Z, W)
+
+    residuals = y - X @ beta
+    residuals_proj = proj(Z, residuals)
 
     if W.shape[1] > 0:
         gamma_hat = KClass(kappa="liml").fit(X=W, y=y - X @ beta, Z=Z).coef_
@@ -143,8 +145,8 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None, C=None, fit_intercept=True):
             lambda gamma: _LM(
                 X=W,
                 X_proj=W_proj,
-                Y=y - X @ beta,
-                Y_proj=y_proj - X_proj @ beta,
+                Y=residuals,
+                Y_proj=residuals_proj,
                 W=X,
                 W_proj=X_proj,
                 beta=gamma,
@@ -157,8 +159,8 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None, C=None, fit_intercept=True):
             lambda gamma: _LM(
                 X=W,
                 X_proj=W_proj,
-                Y=y - X @ beta,
-                Y_proj=y_proj - X_proj @ beta,
+                Y=residuals,
+                Y_proj=residuals_proj,
                 W=X,
                 W_proj=X_proj,
                 beta=gamma,
