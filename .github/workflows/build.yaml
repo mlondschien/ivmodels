@@ -33,29 +33,37 @@ jobs:
     needs: [python-build]
     runs-on: ubuntu-latest
     if: github.event_name == 'release' && github.event.action == 'published'
+    environment:
+      name: test_release
+      url: https://test.pypi.org/p/ivmodels
+    permissions:
+      id-token: write
+
     steps:
       - uses: actions/download-artifact@v3
         with:
           name: wheels
           path: dist
 
-      - uses: pypa/gh-action-pypi-publish@v1.8.8
+      - uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          user: __token__
-          password: ${{ secrets.TESTPYPI_GH_TOKEN }}
-          repository_url: https://test.pypi.org/legacy/
+          repository-url: https://test.pypi.org/legacy/
+
 
   upload-pypi:
     needs: [python-build, upload-testpypi]
     runs-on: ubuntu-latest
     if: github.event_name == 'release' && github.event.action == 'published'
+    environment:
+      name: release
+      url: https://pypi.org/p/ivmodels
+    permissions:
+      id-token: write
+
     steps:
       - uses: actions/download-artifact@v3
         with:
           name: wheels
           path: dist
 
-      - uses: pypa/gh-action-pypi-publish@v1.8.8
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_GH_TOKEN }}
+      - uses: pypa/gh-action-pypi-publish@release/v1
