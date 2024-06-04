@@ -77,7 +77,7 @@ jobs:
         with:
           environment-file: environment.yml
           cache-environment: true
-          init-shell: bash -l {0}
+          init-shell: bash
           create-args: python=3.10 asv
 
       - name: Install repository
