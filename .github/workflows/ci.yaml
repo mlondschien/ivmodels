@@ -113,4 +113,4 @@ jobs:
       - name: asv continuous
         run: |
           asv machine --machine github-runner --yes
-          asv continuous origin/main HEAD -e --factor 1.2 --machine github-runner --config asv.conf.json
+          asv continuous origin/main HEAD -e -v --factor 1.2 --machine github-runner --config asv.conf.json
