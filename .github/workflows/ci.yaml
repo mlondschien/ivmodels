@@ -55,3 +55,60 @@ jobs:
           python-version: "3.10"
       - name: Run pre-commit checks
         uses: pre-commit/action@v3.0.0
+
+  asv-benchmarks:
+    name: ASV benchmarks
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        # see https://github.com/conda-incubator/setup-miniconda/#important
+        shell: bash -l {0}
+
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v3
+
+      - name: Fetch git history
+        run: git fetch --prune --unshallow
+
+      - name: Set up Conda env
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          micromamba-version: '1.5.6-0'
+          environment-file: environment.yml
+          cache-environment: true
+          init-shell: bash
+          create-args: python=3.10 asv
+
+      # https://github.com/airspeed-velocity/asv/pull/1403
+      - name: Downgrade conda
+        run: conda install -n base -c conda-forge -y conda=23
+
+      # - name: Add micromamba to GITHUB_PATH
+      #   run: echo "${HOME}/micromamba-bin" >> "$GITHUB_PATH"
+
+      # # https://stackoverflow.com/questions/77617946/solve-conda-libmamba-solver-libarchive-so-19-error-after-updating-conda-to-23
+      # - name: force mamba reinstall
+      #   run: conda install -n base libarchive -c main --force-reinstall --solver classic -y
+
+      # - name: Install repository
+      #   run: python -m pip install --no-build-isolation --no-deps --disable-pip-version-check -e .
+
+      # - name: Run ASV benchmarks
+      #   run: |
+      #     asv machine --machine github-runner --yes
+      #     export OPENBLAS_NUM_THREADS=1
+      #     asv --config asv.conf.json run -m github-runner --quick --python=same
+      #     asv --config asv.conf.json publish
+
+      # - name: Upload ASV results
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: asv-results
+      #     path: html
+
+      - name: asv continuous
+        run: |
+          asv machine --machine github-runner --yes
+          asv continuous origin/main HEAD --factor 1.2 --machine github-runner --config asv.conf.json -v
