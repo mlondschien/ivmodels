@@ -45,7 +45,6 @@ class Tests:
         ]
     )
     def time_anderson_rubin_test_guggenberger19(self, n, dims):
-        _, _, mw, _ = dims
         _, _ = anderson_rubin_test(**self.data, critical_values="guggenberger19")
 
     def time_lagrange_multiplier_test(self, n, dims):
