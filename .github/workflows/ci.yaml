@@ -68,6 +68,8 @@ jobs:
     steps:
       - name: Checkout branch
         uses: actions/checkout@v3
+        with:
+          ref: ${{ github.head_ref }}
 
       - name: Fetch git history
         run: git fetch --prune --unshallow
@@ -111,4 +113,4 @@ jobs:
       - name: asv continuous
         run: |
           asv machine --machine github-runner --yes
-          asv continuous origin/main HEAD --factor 1.2 --machine github-runner --config asv.conf.json -v -e
+          asv continuous origin/main HEAD -e --factor 1.2 --machine github-runner --config asv.conf.json
