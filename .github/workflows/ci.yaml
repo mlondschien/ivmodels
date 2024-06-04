@@ -82,7 +82,7 @@ jobs:
           create-args: python=3.10 asv
 
       - name: Downgrade conda
-        run: conda install -n base conda=conda install conda=23 -y
+        run: conda install -n base -c conda-forge -y conda=23
 
       # - name: Add micromamba to GITHUB_PATH
       #   run: echo "${HOME}/micromamba-bin" >> "$GITHUB_PATH"
