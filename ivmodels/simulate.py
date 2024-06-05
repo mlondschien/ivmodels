@@ -55,6 +55,9 @@ def simulate_guggenberger12(
     beta : np.ndarray of dimension (1,)
         True beta. Only returned if ``return_beta`` is True.
     """
+    if k < 2:
+        raise ValueError("k must be at least 2")
+
     beta = np.array([[1]])
     gamma = np.array([[1]])
 
