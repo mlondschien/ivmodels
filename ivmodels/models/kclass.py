@@ -5,7 +5,7 @@ import numpy as np
 import scipy
 from glum import GeneralizedLinearRegressor
 
-from ivmodels.utils import proj, oproj, to_numpy
+from ivmodels.utils import oproj, proj, to_numpy
 
 try:
     import pandas as pd

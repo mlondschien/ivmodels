@@ -183,8 +183,8 @@ def inverse_wald_test(
 
     residuals = y - kclass.predict(XW)
     hat_sigma_sq = np.sum(residuals**2) / (n - XW.shape[1] - C.shape[1])
-    
-    X_proj, Z_proj = proj(Z, X, W)
+
+    X_proj, W_proj = proj(Z, X, W)
 
     Xkappa = kclass.kappa_ * X_proj + (1 - kclass.kappa_) * X
 

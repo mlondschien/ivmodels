@@ -128,11 +128,11 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None, C=None, fit_intercept=True):
         C = np.hstack([np.ones((n, 1)), C])
 
     if C.shape[1] > 0:
-        X, y, Z, W = oproj(C, X, y, Z ,W)
+        X, y, Z, W = oproj(C, X, y, Z, W)
 
     residuals = y - X @ beta
 
-    X_proj, W_proj, residuals_proj = proj(Z, X, W, residuals)   
+    X_proj, W_proj, residuals_proj = proj(Z, X, W, residuals)
 
     if W.shape[1] > 0:
         gamma_hat = KClass(kappa="liml").fit(X=W, y=y - X @ beta, Z=Z).coef_
@@ -169,21 +169,17 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None, C=None, fit_intercept=True):
         p_value = 1 - scipy.stats.chi2.cdf(statistic, df=mx)
 
     else:
-        orth_residuals = residuals - proj_residuals
+        orth_residuals = residuals - residuals_proj
 
         sigma_hat = residuals.T @ orth_residuals
         Sigma = orth_residuals.T @ X / sigma_hat
 
         # X - (y - X beta) * (y - X beta)^T M_Z X / (y - X beta)^T M_Z (y - X beta)
-        X_tilde = X - np.outer(residuals, Sigma)
         X_tilde_proj = X_proj - np.outer(residuals_proj, Sigma)
 
-        X_tilde_proj_residuals = proj(proj_X_tilde, residuals)
+        X_tilde_proj_residuals = proj(X_tilde_proj, residuals)
         # (y - X beta) P_{P_Z X_tilde} (y - X beta) / (y - X_beta) M_Z (y - X beta)
-        statistic = (
-            np.square(X_tilde_proj_residuals).sum()
-            / sigma_hat
-        )
+        statistic = np.square(X_tilde_proj_residuals).sum() / sigma_hat
 
         statistic *= n - k - C.shape[1]
 
