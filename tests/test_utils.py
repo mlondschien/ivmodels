@@ -64,13 +64,13 @@ def test_proj_raises():
     X = rng.normal(0, 1, (100, 2))
     z = rng.normal(0, 1, (100, 5))
 
-    with pytest.raises(match="Shape mismatch:"):
+    with pytest.raises(ValueError, match="Shape mismatch:"):
         proj(X, z[1:, :], z)
 
-    with pytest.raises(match="Shape mismatch:"):
+    with pytest.raises(ValueError, match="Shape mismatch:"):
         proj(X, z[1:, 0], z)
 
-    with pytest.raises(match="*args should have shapes (n, d_f)"):
+    with pytest.raises(ValueError, match="*args should have shapes (n, d_f)"):
         proj(X, z.reshape(10, 10, 5), z)
 
 
@@ -80,11 +80,11 @@ def test_oproj_raises():
     X = rng.normal(0, 1, (100, 2))
     z = rng.normal(0, 1, (100, 5))
 
-    with pytest.raises(match="Shape mismatch:"):
+    with pytest.raises(ValueError, match="Shape mismatch:"):
         oproj(X, z[1:, :], z)
 
-    with pytest.raises(match="Shape mismatch:"):
+    with pytest.raises(ValueError, match="Shape mismatch:"):
         oproj(X, z[1:, 0], z)
 
-    with pytest.raises(match="*args should have shapes (n, d_f)"):
+    with pytest.raises(ValueError, match="*args should have shapes (n, d_f)"):
         oproj(X, z.reshape(10, 10, 5), z)
