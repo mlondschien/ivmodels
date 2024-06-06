@@ -189,8 +189,7 @@ def anderson_rubin_test(
         )
         dfn = k
     else:
-        spectrum = KClass._spectrum(X=W, y=y - X @ beta, Z=Z)
-        ar = np.min(spectrum)
+        ar = KClass._spectrum(X=W, y=y - X @ beta, Z=Z, subset_by_index=[0, 0])[0]
         dfn = k - W.shape[1]
 
     statistic = ar * (n - k - C.shape[1]) / dfn
@@ -206,7 +205,10 @@ def anderson_rubin_test(
                 "only available for the subvector variant where W is not None."
             )
 
-        kappa_max = (n - k - C.shape[1]) * np.max(spectrum)
+        mw = W.shape[1]
+        kappa_max = (n - k - C.shape[1]) * KClass._spectrum(
+            X=W, y=y - X @ beta, Z=Z, subset_by_index=[mw, mw]
+        )[0]
         p_value = more_powerful_subvector_anderson_rubin_critical_value_function(
             statistic * dfn, kappa_max, k, mw=W.shape[1]
         )
