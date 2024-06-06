@@ -76,6 +76,8 @@ def simulate_guggenberger12(
 
     if rho >= 1:
         Pi_W = Pi_X
+    elif rho <= -1:
+        Pi_W = -Pi_X
     else:
         Pi_W = rho * Pi_X + np.sqrt(1 - rho**2) * Pi_W
 
