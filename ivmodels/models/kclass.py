@@ -2,6 +2,7 @@ import logging
 import re
 
 import numpy as np
+import scipy
 from glum import GeneralizedLinearRegressor
 
 from ivmodels.utils import proj, to_numpy
@@ -242,7 +243,7 @@ class KClassMixin:
             return 0.0
 
     @staticmethod
-    def _spectrum(X, y, Z=None, X_proj=None, y_proj=None):
+    def _spectrum(X, y, Z=None, X_proj=None, y_proj=None, subset_by_index=None):
         if (y_proj is None or X_proj is None) and Z is None:
             raise ValueError("Either Z or both X_proj and y_proj must be specified.")
         if X_proj is None:
@@ -252,8 +253,9 @@ class KClassMixin:
 
         Xy = np.concatenate([X, y.reshape(-1, 1)], axis=1)
         Xy_proj = np.concatenate([X_proj, y_proj.reshape(-1, 1)], axis=1)
-        W = np.linalg.solve((Xy - Xy_proj).T @ Xy, Xy.T @ Xy_proj)
-        return np.sort(np.real(np.linalg.eigvals(W)))
+        return scipy.linalg.eigvalsh(
+            a=Xy.T @ Xy_proj, b=(Xy - Xy_proj).T @ Xy, subset_by_index=subset_by_index
+        )
 
     @staticmethod
     def ar_min(X, y, Z=None, X_proj=None, y_proj=None):
@@ -292,7 +294,9 @@ class KClassMixin:
             :math:`((X y)^T M_Z (X y))^{-1} (X y)^T P_Z (X y)`,
             where :math:`P_Z` is the projection matrix onto the subspace spanned by `Z`.
         """
-        return min(KClassMixin()._spectrum(X=X, y=y, Z=Z, X_proj=X_proj, y_proj=y_proj))
+        return KClassMixin()._spectrum(
+            X=X, y=y, Z=Z, X_proj=X_proj, y_proj=y_proj, subset_by_index=[0, 0]
+        )[0]
 
     def _solve_normal_equations(self, X, y, X_proj, alpha=0):
         if alpha != 0:

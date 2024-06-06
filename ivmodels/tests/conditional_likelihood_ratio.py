@@ -313,8 +313,9 @@ def conditional_likelihood_ratio_test(
         Z = oproj(C, Z)
         W = oproj(C, W)
 
-    X_proj = proj(Z, X)
-    y_proj = proj(Z, y)
+    # Z = scipy.linalg.qr(Z, mode="economic")[0]
+    X_proj = proj(Z, X)  # , orthogonal=True)
+    y_proj = proj(Z, y)  # , orthogonal=True)
 
     if mw == 0:
         residuals = y - X @ beta
@@ -325,8 +326,11 @@ def conditional_likelihood_ratio_test(
         Xt = X - np.outer(residuals, Sigma)
         Xt_proj = X_proj - np.outer(residuals_proj, Sigma)
         Xt_orth = Xt - Xt_proj
-        mat_Xt = np.linalg.solve(Xt_orth.T @ Xt_orth, Xt_proj.T @ Xt_proj)
-        s_min = min(np.real(np.linalg.eigvals(mat_Xt))) * (n - k - C.shape[1])
+        s_min = np.real(
+            scipy.linalg.eigvalsh(
+                a=Xt_proj.T @ Xt_proj, b=Xt_orth.T @ Xt_orth, subset_by_index=[0, 0]
+            )[0]
+        ) * (n - k - C.shape[1])
 
         # TODO: This can be done with efficient rank-1 updates.
         ar_min = KClass.ar_min(X=X, y=y, Z=Z)
@@ -341,8 +345,10 @@ def conditional_likelihood_ratio_test(
 
         XWy_eigenvals = np.sort(
             np.real(
-                scipy.linalg.eigvals(
-                    np.linalg.solve((XWy - XWy_proj).T @ XWy, XWy_proj.T @ XWy)
+                scipy.linalg.eigvalsh(
+                    a=XWy_proj.T @ XWy,
+                    b=(XWy - XWy_proj).T @ XWy,
+                    subset_by_index=[0, 1],
                 )
             )
         )
@@ -368,8 +374,10 @@ def conditional_likelihood_ratio_test(
             XWt_proj = XW_proj - np.outer(residuals_proj, Sigma)
             s_min = (n - k - C.shape[1]) * min(
                 np.real(
-                    scipy.linalg.eigvals(
-                        np.linalg.solve((XWt - XWt_proj).T @ XWt, XWt_proj.T @ XWt)
+                    scipy.linalg.eigvalsh(
+                        a=XWt_proj.T @ XWt,
+                        b=(XWt - XWt_proj).T @ XWt,
+                        subset_by_index=[0, 0],
                     )
                 )
             )
