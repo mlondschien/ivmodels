@@ -308,14 +308,10 @@ def conditional_likelihood_ratio_test(
         C = np.hstack([np.ones((n, 1)), C])
 
     if C.shape[1] > 0:
-        X = oproj(C, X)
-        y = oproj(C, y)
-        Z = oproj(C, Z)
-        W = oproj(C, W)
+        X, y, Z, W = oproj(C, X, y, Z, W)
 
     # Z = scipy.linalg.qr(Z, mode="economic")[0]
-    X_proj = proj(Z, X)  # , orthogonal=True)
-    y_proj = proj(Z, y)  # , orthogonal=True)
+    X_proj, y_proj, W_proj = proj(Z, X, y, W)  # , orthogonal=True)
 
     if mw == 0:
         residuals = y - X @ beta
@@ -339,7 +335,6 @@ def conditional_likelihood_ratio_test(
         statistic = (n - k - C.shape[1]) * (ar - ar_min)
 
     elif mw > 0:
-        W_proj = proj(Z, W)
         XWy = np.concatenate([X, W, y.reshape(-1, 1)], axis=1)
         XWy_proj = np.concatenate([X_proj, W_proj, y_proj.reshape(-1, 1)], axis=1)
 
@@ -366,7 +361,7 @@ def conditional_likelihood_ratio_test(
             XW_proj = np.concatenate([X_proj, W_proj], axis=1)
 
             residuals = y - X @ beta - kclass.predict(X=W)
-            residuals_proj = proj(Z, residuals)
+            residuals_proj = proj(Z, y_proj - X_proj @ beta - kclass.predict(X=W_proj))
             residuals_orth = residuals - residuals_proj
 
             Sigma = (residuals_orth.T @ XW) / (residuals_orth.T @ residuals_orth)

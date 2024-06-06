@@ -66,9 +66,7 @@ def pulse_test(Z, X, y, beta, C=None, W=None, fit_intercept=True):
         C = np.hstack([np.ones((n, 1)), C])
 
     if C.shape[1] > 0:
-        X = oproj(C, X)
-        y = oproj(C, y)
-        Z = oproj(C, Z)
+        X, y, Z = oproj(C, X, y, Z)
 
     residuals = y - X @ beta
     proj_residuals = proj(Z, residuals)
@@ -91,12 +89,9 @@ def inverse_pulse_test(Z, X, y, C=None, alpha=0.05, fit_intercept=True):
         C = np.hstack([np.ones((n, 1)), C])
 
     if C.shape[1] > 0:
-        X = oproj(C, X)
-        y = oproj(C, y)
-        Z = oproj(C, Z)
+        X, y, Z = oproj(C, X, y, Z)
 
-    X_proj = proj(Z, X)
-    y_proj = proj(Z, y)
+    X_proj, y_proj = proj(Z, X, y)
 
     A = X.T @ (X_proj - 1 / (n - k - C.shape[1]) * quantile * X)
     b = -2 * (X_proj - 1 / (n - k - C.shape[1]) * quantile * X).T @ y
