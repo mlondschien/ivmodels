@@ -79,14 +79,9 @@ def likelihood_ratio_test(Z, X, y, beta, W=None, C=None, fit_intercept=True):
         C = np.hstack([np.ones((n, 1)), C])
 
     if C.shape[1] > 0:
-        X = oproj(C, X)
-        y = oproj(C, y)
-        Z = oproj(C, Z)
-        W = oproj(C, W)
+        X, y, Z, W = oproj(C, X, y, Z, W)
 
-    X_proj = proj(Z, X)
-    y_proj = proj(Z, y)
-    W_proj = proj(Z, W)
+    X_proj, y_proj, W_proj = proj(Z, X, y, W)
 
     XWy = np.concatenate([X, W, y.reshape(-1, 1)], axis=1)
     XWy_proj = np.concatenate([X_proj, W_proj, y_proj.reshape(-1, 1)], axis=1)
@@ -159,16 +154,12 @@ def inverse_likelihood_ratio_test(
         C = np.hstack([np.ones((n, 1)), C])
 
     if C.shape[1] > 0:
-        X = oproj(C, X)
-        y = oproj(C, y)
-        Z = oproj(C, Z)
-        W = oproj(C, W)
+        X, y, Z, W = oproj(C, X, y, Z, W)
 
     X = np.concatenate([X, W], axis=1)
 
-    X_proj = proj(Z, X)
+    X_proj, y_proj = proj(Z, X, y)
     X_orth = X - X_proj
-    y_proj = proj(Z, y)
     y_orth = y - y_proj
 
     Xy_proj = np.concatenate([X_proj, y_proj.reshape(-1, 1)], axis=1)

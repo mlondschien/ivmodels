@@ -175,10 +175,7 @@ def anderson_rubin_test(
         C = np.hstack([np.ones((n, 1)), C])
 
     if C.shape[1] > 0:
-        X = oproj(C, X)
-        y = oproj(C, y)
-        Z = oproj(C, Z)
-        W = oproj(C, W)
+        X, y, Z, W = oproj(C, X, y, Z, W)
 
     if W.shape[1] == 0:
         residuals = y - X @ beta
@@ -287,10 +284,7 @@ def inverse_anderson_rubin_test(
         C = np.hstack([np.ones((n, 1)), C])
 
     if C.shape[1] > 0:
-        X = oproj(C, X)
-        y = oproj(C, y)
-        Z = oproj(C, Z)
-        W = oproj(C, W)
+        X, y, Z, W = oproj(C, X, y, Z, W)
 
     X = np.concatenate([X, W], axis=1)
     dfn = k - W.shape[1]
@@ -308,9 +302,8 @@ def inverse_anderson_rubin_test(
             "critical_values must be one of 'chi2', 'f'. Got " f"{critical_values}."
         )
 
-    X_proj = proj(Z, X)
+    X_proj, y_proj = proj(Z, X, y)
     X_orth = X - X_proj
-    y_proj = proj(Z, y)
     y_orth = y - y_proj
 
     A = X.T @ (X_proj - quantile * X_orth)

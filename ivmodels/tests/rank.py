@@ -56,8 +56,7 @@ def rank_test(Z, X, C=None, fit_intercept=True):
         C = np.hstack([np.ones((n, 1)), C])
 
     if C.shape[1] > 0:
-        X = oproj(C, X)
-        Z = oproj(C, Z)
+        X, Z = oproj(C, X, Z)
 
     X_proj = proj(Z, X)
 
