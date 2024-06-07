@@ -36,6 +36,11 @@ def test_proj_multiple_args():
     )
     assert np.allclose(proj(X, z1), X @ np.linalg.inv(X.T @ X) @ X.T @ z1)
     assert np.allclose(proj(X, z2), X @ np.linalg.inv(X.T @ X) @ X.T @ z2)
+    assert np.allclose(
+        proj(X, z2, z2),
+        X @ np.linalg.inv(X.T @ X) @ X.T @ z2,
+        X @ np.linalg.inv(X.T @ X) @ X.T @ z2,
+    )
     assert np.allclose(proj(X, z3), X @ np.linalg.inv(X.T @ X) @ X.T @ z3)
 
 

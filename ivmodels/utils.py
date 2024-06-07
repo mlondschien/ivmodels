@@ -37,6 +37,10 @@ def proj(Z, *args):
             raise ValueError(f"Shape mismatch: Z.shape={Z.shape}, f.shape={f.shape}.")
 
     if len(args) == 1:
+        # The gelsy driver raises in this case - we handle it separately
+        if len(args[0].shape) == 2 and args[0].shape[1] == 0:
+            return np.zeros_like(args[0])
+
         return np.dot(
             Z, scipy.linalg.lstsq(Z, args[0], cond=None, lapack_driver="gelsy")[0]
         )
@@ -45,6 +49,11 @@ def proj(Z, *args):
     csum = [0] + csum.tolist()
 
     fs = np.hstack([f.reshape(Z.shape[0], -1) for f in args])
+
+    if fs.shape[1] == 0:
+        # The gelsy driver raises in this case - we handle it separately
+        return (*(np.zeros_like(f) for f in args),)
+
     fs = np.dot(Z, scipy.linalg.lstsq(Z, fs, cond=None, lapack_driver="gelsy")[0])
 
     return (
