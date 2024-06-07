@@ -1,14 +1,12 @@
+import ctypes
+from pathlib import Path
+
 import numpy as np
 import scipy
 
 from ivmodels.models.kclass import KClass
 from ivmodels.tests.utils import _check_test_inputs
 from ivmodels.utils import oproj, proj
-
-import ctypes
-import numpy as np
-from scipy import integrate
-from pathlib import Path
 
 
 def conditional_likelihood_ratio_critical_value_function(
@@ -89,35 +87,27 @@ def conditional_likelihood_ratio_critical_value_function(
     if method in ["numerical_integration"]:
         # Load the shared library
         lib = ctypes.CDLL(Path(__file__).parent / "integrand.dylib")
-
-        # Define the parameter structure
-        class Params(ctypes.Structure):
-            _fields_ = [('a', ctypes.c_double),
-                        ('z', ctypes.c_double),
-                        ('alpha', ctypes.c_double),
-                        ('beta', ctypes.c_double)]
-
-        # Get the integrand function from the shared library
         integrand = lib.integrand
         integrand.restype = ctypes.c_double
-        integrand.argtypes = (ctypes.c_double, ctypes.POINTER(Params))
-
-        # Define a wrapper to match the LowLevelCallable signature
-        def integrand_wrapper(b, params):
-            return integrand(b, ctypes.cast(params, ctypes.POINTER(Params)))
-
-        # Convert the wrapper to a LowLevelCallable
-        low_level_callable = ctypes.CFUNCTYPE(ctypes.c_double, ctypes.c_double, ctypes.POINTER(Params))(integrand_wrapper)
+        integrand.argtypes = (ctypes.c_double, ctypes.c_void_p)
 
         a = s_min / (z + s_min)
-        # Create a Params object with the values of a and z
-        params = Params(a, z, (q - p) / 2, p / 2)
+        # Create a NumPy array with the parameter values
+        params = np.array([a, z, (q - p) / 2, p / 2, q], dtype=np.double)
+
+        # Convert the parameter array to a ctypes pointer
+        params_ctypes = params.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
+
+        # Cast the ctypes pointer to a void pointer
+        user_data = ctypes.cast(params_ctypes, ctypes.c_void_p)
+
+        # Create the LowLevelCallable with the user_data
+        integrand_callable = scipy.LowLevelCallable(integrand, user_data)
 
         res = scipy.integrate.quad(
-            low_level_callable,
+            integrand_callable,
             0,
             1,
-            args=(params,),
             epsabs=tol,
         )
 

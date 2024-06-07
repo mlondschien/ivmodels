@@ -12,18 +12,20 @@ typedef struct {
 } Params;
 
 // C function to compute the integrand
-double integrand(double b, void *params) {
-    Params *x = (Params *) params;
-    double a = x->a;
-    double z = x->z;
-    double alpha = x->alpha;
-    double beta = x->beta;
-    
-    // Compute beta pdf (assuming alpha=2 and beta=2 for this example)
-    double beta_pdf = gsl_ran_beta_pdf(b, alpha, beta);
-    
+double integrand(double x, void *user_data) {
+    double *p = (double *)user_data;
+
+    double a = p[0];
+    double z = p[1];
+    double alpha = p[2];
+    double beta = p[3];
+    int k = (int) p[4];
+
+    // Compute beta pdf using the provided alpha and beta
+    double beta_pdf = gsl_ran_beta_pdf(x, alpha, beta);
+
     // Compute chi-squared cdf
-    double chi2_cdf = gsl_cdf_chisq_P(z / (1.0 - a * b), 1);
-    
+    double chi2_cdf = gsl_cdf_chisq_P(z / (1.0 - a * x), k);
+
     return beta_pdf * chi2_cdf;
 }
