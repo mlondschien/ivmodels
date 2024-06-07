@@ -92,8 +92,10 @@ def conditional_likelihood_ratio_critical_value_function(
         integrand.argtypes = (ctypes.c_double, ctypes.c_void_p)
 
         a = s_min / (z + s_min)
+        alpha = (q - p) / 2
+        beta = p / 2
         # Create a NumPy array with the parameter values
-        params = np.array([a, z, (q - p) / 2, p / 2, q], dtype=np.double)
+        params = np.array([a, z, alpha, beta, q], dtype=np.double)
 
         # Convert the parameter array to a ctypes pointer
         params_ctypes = params.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
@@ -111,7 +113,7 @@ def conditional_likelihood_ratio_critical_value_function(
             epsabs=tol,
         )
 
-        return 1 - res[0]
+        return 1 - res[0] / scipy.special.beta(alpha, beta)
 
     elif method == "power_series":
         a = s_min / (z + s_min)

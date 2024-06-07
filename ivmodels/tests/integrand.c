@@ -21,10 +21,7 @@ double integrand(double x, void *user_data) {
     double beta = p[3];
     int k = (int) p[4];
 
-    // Compute beta pdf using the provided alpha and beta
-    double beta_pdf = gsl_ran_beta_pdf(x, alpha, beta);
-
-    // Compute chi-squared cdf
+    double beta_pdf = exp(log(x) * (alpha - 1) + log(1 - x) * (beta - 1));
     double chi2_cdf = gsl_cdf_chisq_P(z / (1.0 - a * x), k);
 
     return beta_pdf * chi2_cdf;
