@@ -175,10 +175,7 @@ def anderson_rubin_test(
         C = np.hstack([np.ones((n, 1)), C])
 
     if C.shape[1] > 0:
-        X = oproj(C, X)
-        y = oproj(C, y)
-        Z = oproj(C, Z)
-        W = oproj(C, W)
+        X, y, Z, W = oproj(C, X, y, Z, W)
 
     if W.shape[1] == 0:
         residuals = y - X @ beta
@@ -189,8 +186,7 @@ def anderson_rubin_test(
         )
         dfn = k
     else:
-        spectrum = KClass._spectrum(X=W, y=y - X @ beta, Z=Z)
-        ar = np.min(spectrum)
+        ar = KClass._spectrum(X=W, y=y - X @ beta, Z=Z, subset_by_index=[0, 0])[0]
         dfn = k - W.shape[1]
 
     statistic = ar * (n - k - C.shape[1]) / dfn
@@ -206,7 +202,10 @@ def anderson_rubin_test(
                 "only available for the subvector variant where W is not None."
             )
 
-        kappa_max = (n - k - C.shape[1]) * np.max(spectrum)
+        mw = W.shape[1]
+        kappa_max = (n - k - C.shape[1]) * KClass._spectrum(
+            X=W, y=y - X @ beta, Z=Z, subset_by_index=[mw, mw]
+        )[0]
         p_value = more_powerful_subvector_anderson_rubin_critical_value_function(
             statistic * dfn, kappa_max, k, mw=W.shape[1]
         )
@@ -285,10 +284,7 @@ def inverse_anderson_rubin_test(
         C = np.hstack([np.ones((n, 1)), C])
 
     if C.shape[1] > 0:
-        X = oproj(C, X)
-        y = oproj(C, y)
-        Z = oproj(C, Z)
-        W = oproj(C, W)
+        X, y, Z, W = oproj(C, X, y, Z, W)
 
     X = np.concatenate([X, W], axis=1)
     dfn = k - W.shape[1]
@@ -306,9 +302,8 @@ def inverse_anderson_rubin_test(
             "critical_values must be one of 'chi2', 'f'. Got " f"{critical_values}."
         )
 
-    X_proj = proj(Z, X)
+    X_proj, y_proj = proj(Z, X, y)
     X_orth = X - X_proj
-    y_proj = proj(Z, y)
     y_orth = y - y_proj
 
     A = X.T @ (X_proj - quantile * X_orth)

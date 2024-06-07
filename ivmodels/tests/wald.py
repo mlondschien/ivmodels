@@ -79,10 +79,7 @@ def wald_test(Z, X, y, beta, W=None, C=None, estimator="tsls", fit_intercept=Tru
         C = np.hstack([np.ones((n, 1)), C])
 
     if C.shape[1] > 0:
-        X = oproj(C, X)
-        y = oproj(C, y)
-        Z = oproj(C, Z)
-        W = oproj(C, W)
+        X, y, Z, W = oproj(C, X, y, Z, W)
 
     XW = np.concatenate([X, W], axis=1)
 
@@ -177,10 +174,7 @@ def inverse_wald_test(
         C = np.hstack([np.ones((n, 1)), C])
 
     if C.shape[1] > 0:
-        X = oproj(C, X)
-        y = oproj(C, y)
-        Z = oproj(C, Z)
-        W = oproj(C, W)
+        X, y, Z, W = oproj(C, X, y, Z, W)
 
     XW = np.concatenate([X, W], axis=1)
 
@@ -190,11 +184,13 @@ def inverse_wald_test(
     residuals = y - kclass.predict(XW)
     hat_sigma_sq = np.sum(residuals**2) / (n - XW.shape[1] - C.shape[1])
 
-    Xkappa = kclass.kappa_ * proj(Z, X) + (1 - kclass.kappa_) * X
+    X_proj, W_proj = proj(Z, X, W)
+
+    Xkappa = kclass.kappa_ * X_proj + (1 - kclass.kappa_) * X
 
     A = X.T @ Xkappa
     if W.shape[1] > 0:
-        Wkappa = kclass.kappa_ * proj(Z, W) + (1 - kclass.kappa_) * W
+        Wkappa = kclass.kappa_ * W_proj + (1 - kclass.kappa_) * W
         A = A - Xkappa.T @ W @ np.linalg.solve(Wkappa.T @ W, W.T @ Xkappa)
 
     b = -2 * A @ beta[: X.shape[1]]

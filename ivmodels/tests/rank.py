@@ -56,13 +56,15 @@ def rank_test(Z, X, C=None, fit_intercept=True):
         C = np.hstack([np.ones((n, 1)), C])
 
     if C.shape[1] > 0:
-        X = oproj(C, X)
-        Z = oproj(C, Z)
+        X, Z = oproj(C, X, Z)
 
     X_proj = proj(Z, X)
 
-    W = np.linalg.solve(X.T @ (X - X_proj), X.T @ X_proj)
-    statistic = (n - k - C.shape[1]) * min(np.real(np.linalg.eigvals(W)))
+    statistic = (n - k - C.shape[1]) * np.real(
+        scipy.linalg.eigvalsh(
+            a=X.T @ X_proj, b=X.T @ (X - X_proj), subset_by_index=[0, 0]
+        )[0]
+    )
     cdf = scipy.stats.chi2.cdf(statistic, df=(k - m + 1))
 
     return statistic, 1 - cdf

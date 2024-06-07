@@ -2,9 +2,10 @@ import logging
 import re
 
 import numpy as np
+import scipy
 from glum import GeneralizedLinearRegressor
 
-from ivmodels.utils import proj, to_numpy
+from ivmodels.utils import oproj, proj, to_numpy
 
 try:
     import pandas as pd
@@ -242,18 +243,21 @@ class KClassMixin:
             return 0.0
 
     @staticmethod
-    def _spectrum(X, y, Z=None, X_proj=None, y_proj=None):
+    def _spectrum(X, y, Z=None, X_proj=None, y_proj=None, subset_by_index=None):
         if (y_proj is None or X_proj is None) and Z is None:
             raise ValueError("Either Z or both X_proj and y_proj must be specified.")
-        if X_proj is None:
+        if X_proj is None and y_proj is None:
+            X_proj, y_proj = proj(Z, X, y)
+        elif X_proj is None:
             X_proj = proj(Z, X)
         if y_proj is None:
             y_proj = proj(Z, y)
 
         Xy = np.concatenate([X, y.reshape(-1, 1)], axis=1)
         Xy_proj = np.concatenate([X_proj, y_proj.reshape(-1, 1)], axis=1)
-        W = np.linalg.solve((Xy - Xy_proj).T @ Xy, Xy.T @ Xy_proj)
-        return np.sort(np.real(np.linalg.eigvals(W)))
+        return scipy.linalg.eigvalsh(
+            a=Xy.T @ Xy_proj, b=(Xy - Xy_proj).T @ Xy, subset_by_index=subset_by_index
+        )
 
     @staticmethod
     def ar_min(X, y, Z=None, X_proj=None, y_proj=None):
@@ -292,7 +296,9 @@ class KClassMixin:
             :math:`((X y)^T M_Z (X y))^{-1} (X y)^T P_Z (X y)`,
             where :math:`P_Z` is the projection matrix onto the subspace spanned by `Z`.
         """
-        return min(KClassMixin()._spectrum(X=X, y=y, Z=Z, X_proj=X_proj, y_proj=y_proj))
+        return KClassMixin()._spectrum(
+            X=X, y=y, Z=Z, X_proj=X_proj, y_proj=y_proj, subset_by_index=[0, 0]
+        )[0]
 
     def _solve_normal_equations(self, X, y, X_proj, alpha=0):
         if alpha != 0:
@@ -375,14 +381,13 @@ class KClassMixin:
         if C.shape[1] > 0:
             Z = np.hstack([Z, C])
             # save some compute here, as proj([Z, C], C) = C
-            X_proj = np.hstack([proj(Z, X), C])
+            X_proj, y_proj = proj(Z, X, y)
+            X_proj = np.hstack([X_proj, C])
             X = np.hstack([X, C])
             x_mean = np.hstack([x_mean, c_mean])
 
         else:
-            X_proj = proj(Z, X)
-
-        y_proj = proj(Z, y)
+            X_proj, y_proj = proj(Z, X, y)
 
         if isinstance(self.kappa, str):
             if self.kappa.lower() in {"tsls", "2sls"}:
@@ -394,9 +399,10 @@ class KClassMixin:
                 # If C!=None, we compute the ar_min as if we removed C from all design
                 # matrices. I.e., we replace Z <- M_C Z, X <- M_C X, y <- M_C y.
                 # We also exclude the columns in X coming from C.
+                X_orth_C, y_orth_C = oproj(C, X[:, :mx], y)
                 self.ar_min_ = self.ar_min(
-                    X[:, :mx] - proj(C, X[:, :mx]),
-                    y - proj(C, y),
+                    X_orth_C,
+                    y_orth_C,
                     X_proj=X_proj[:, :mx],
                     y_proj=y_proj,
                 )

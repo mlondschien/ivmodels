@@ -82,20 +82,37 @@ def conditional_likelihood_ratio_critical_value_function(
         return 1 - scipy.stats.chi2(q).cdf(z)
 
     if method in ["numerical_integration"]:
-        beta = scipy.stats.beta((q - p) / 2, p / 2)
-        chi2 = scipy.stats.chi2(q)
+        alpha = (q - p) / 2.0
+        beta = p / 2.0
         a = s_min / (z + s_min)
 
-        def integrand(b):
-            return beta.pdf(b) * chi2.cdf(z / (1 - a * b))
+        # We wish to integrate
+        # beta = beta(alpha, beta); chi2 = chi2(q)
+        # int_0^1 chi2.cdf(z / (1 - a * x)) * beta.pdf(x, (q - p) / 2, p / 2) dx
+        #
+        # use
+        #  beta(alpha, beta).pdf = 1/B(alpha, beta) * x^{alpha - 1} * (1 - x)^{beta - 1}
+        # and
+        #  chi2(q).cdf(x) = 1/Gamma(k/2) * gamma(k/2, x/2)
+        #                 = scipy.special.gammainc(k/2, x/2).
+        # substitute y <- 1 - a * x and use the QUADPACK routine qawse
+        # (see scipy.special.gammainc)
+        k = q / 2.0
+        z_over_2 = z / 2.0
+
+        const = np.power(a, -alpha - beta + 1) / scipy.special.beta(alpha, beta)
+
+        def integrand(y):
+            return const * scipy.special.gammainc(k, z_over_2 / y)
 
         res = scipy.integrate.quad(
             integrand,
-            0,
+            1 - a,
             1,
+            weight="alg",
+            wvar=(beta - 1, alpha - 1),
             epsabs=tol,
         )
-
         return 1 - res[0]
 
     elif method == "power_series":
@@ -308,13 +325,10 @@ def conditional_likelihood_ratio_test(
         C = np.hstack([np.ones((n, 1)), C])
 
     if C.shape[1] > 0:
-        X = oproj(C, X)
-        y = oproj(C, y)
-        Z = oproj(C, Z)
-        W = oproj(C, W)
+        X, y, Z, W = oproj(C, X, y, Z, W)
 
-    X_proj = proj(Z, X)
-    y_proj = proj(Z, y)
+    # Z = scipy.linalg.qr(Z, mode="economic")[0]
+    X_proj, y_proj, W_proj = proj(Z, X, y, W)  # , orthogonal=True)
 
     if mw == 0:
         residuals = y - X @ beta
@@ -325,8 +339,11 @@ def conditional_likelihood_ratio_test(
         Xt = X - np.outer(residuals, Sigma)
         Xt_proj = X_proj - np.outer(residuals_proj, Sigma)
         Xt_orth = Xt - Xt_proj
-        mat_Xt = np.linalg.solve(Xt_orth.T @ Xt_orth, Xt_proj.T @ Xt_proj)
-        s_min = min(np.real(np.linalg.eigvals(mat_Xt))) * (n - k - C.shape[1])
+        s_min = np.real(
+            scipy.linalg.eigvalsh(
+                a=Xt_proj.T @ Xt_proj, b=Xt_orth.T @ Xt_orth, subset_by_index=[0, 0]
+            )[0]
+        ) * (n - k - C.shape[1])
 
         # TODO: This can be done with efficient rank-1 updates.
         ar_min = KClass.ar_min(X=X, y=y, Z=Z)
@@ -335,14 +352,15 @@ def conditional_likelihood_ratio_test(
         statistic = (n - k - C.shape[1]) * (ar - ar_min)
 
     elif mw > 0:
-        W_proj = proj(Z, W)
         XWy = np.concatenate([X, W, y.reshape(-1, 1)], axis=1)
         XWy_proj = np.concatenate([X_proj, W_proj, y_proj.reshape(-1, 1)], axis=1)
 
         XWy_eigenvals = np.sort(
             np.real(
-                scipy.linalg.eigvals(
-                    np.linalg.solve((XWy - XWy_proj).T @ XWy, XWy_proj.T @ XWy)
+                scipy.linalg.eigvalsh(
+                    a=XWy_proj.T @ XWy,
+                    b=(XWy - XWy_proj).T @ XWy,
+                    subset_by_index=[0, 1],
                 )
             )
         )
@@ -360,7 +378,7 @@ def conditional_likelihood_ratio_test(
             XW_proj = np.concatenate([X_proj, W_proj], axis=1)
 
             residuals = y - X @ beta - kclass.predict(X=W)
-            residuals_proj = proj(Z, residuals)
+            residuals_proj = proj(Z, y_proj - X_proj @ beta - kclass.predict(X=W_proj))
             residuals_orth = residuals - residuals_proj
 
             Sigma = (residuals_orth.T @ XW) / (residuals_orth.T @ residuals_orth)
@@ -368,8 +386,10 @@ def conditional_likelihood_ratio_test(
             XWt_proj = XW_proj - np.outer(residuals_proj, Sigma)
             s_min = (n - k - C.shape[1]) * min(
                 np.real(
-                    scipy.linalg.eigvals(
-                        np.linalg.solve((XWt - XWt_proj).T @ XWt, XWt_proj.T @ XWt)
+                    scipy.linalg.eigvalsh(
+                        a=XWt_proj.T @ XWt,
+                        b=(XWt - XWt_proj).T @ XWt,
+                        subset_by_index=[0, 0],
                     )
                 )
             )
