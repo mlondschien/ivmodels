@@ -82,20 +82,25 @@ def conditional_likelihood_ratio_critical_value_function(
         return 1 - scipy.stats.chi2(q).cdf(z)
 
     if method in ["numerical_integration"]:
-        beta = scipy.stats.beta((q - p) / 2, p / 2)
-        chi2 = scipy.stats.chi2(q)
-        a = s_min / (z + s_min)
+        alpha = (q - p) / 2.0
+        beta = p / 2.0
+        k = q / 2.0
+        z_over_2 = z / 2.0
 
-        def integrand(b):
-            return beta.pdf(b) * chi2.cdf(z / (1 - a * b))
+        a = s_min / (z + s_min)
+        const = np.power(a, -alpha - beta + 1) / scipy.special.beta(alpha, beta)
+
+        def integrand(y):
+            return const * scipy.special.gammainc(k, z_over_2 / y)
 
         res = scipy.integrate.quad(
             integrand,
-            0,
+            1 - a,
             1,
+            weight="alg",
+            wvar=(beta - 1, alpha - 1),
             epsabs=tol,
         )
-
         return 1 - res[0]
 
     elif method == "power_series":
