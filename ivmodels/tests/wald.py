@@ -90,7 +90,8 @@ def wald_test(Z, X, y, beta, W=None, C=None, estimator="tsls", fit_intercept=Tru
     residuals = y - estimator.predict(XW)
     sigma_hat_sq = np.sum(residuals**2) / (n - mx - W.shape[1] - C.shape[1])
 
-    XW_proj = proj(Z, XW)
+    X_proj, W_proj = proj(Z, X, W)
+    XW_proj = np.concatenate([X_proj, W_proj], axis=1)
 
     kappa = estimator.kappa_
     cov_hat = (kappa * XW_proj + (1 - kappa) * XW).T @ XW
