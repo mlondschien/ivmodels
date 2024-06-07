@@ -8,10 +8,7 @@ try:
 except ImportError:
     _PANDAS_INSTALLED = False
 
-import line_profiler
 
-
-@line_profiler.profile
 def proj(Z, *args):
     """Project f onto the subspace spanned by Z.
 
