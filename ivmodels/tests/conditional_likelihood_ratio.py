@@ -1,5 +1,4 @@
-import numba
-import numba_scipy  # noqa: F401
+import line_profiler
 import numpy as np
 import scipy
 
@@ -8,6 +7,7 @@ from ivmodels.tests.utils import _check_test_inputs
 from ivmodels.utils import oproj, proj
 
 
+@line_profiler.profile
 def conditional_likelihood_ratio_critical_value_function(
     p, q, s_min, z, method="numerical_integration", tol=1e-6
 ):
@@ -84,16 +84,16 @@ def conditional_likelihood_ratio_critical_value_function(
         return 1 - scipy.stats.chi2(q).cdf(z)
 
     if method in ["numerical_integration"]:
-        alpha = (q - p) / 2
-        beta = p / 2
-        # beta = scipy.stats.beta((q - p) / 2, p / 2)
+        alpha = (q - p) / 2.0
+        beta = p / 2.0
+        k = q / 2.0
+        z_over_2 = z / 2.0
 
         a = s_min / (z + s_min)
         const = np.power(a, -alpha - beta + 1) / scipy.special.beta(alpha, beta)
 
-        @numba.njit
         def integrand(y):
-            return const * scipy.special.gammainc(q / 2.0, z / 2.0 / y)
+            return const * scipy.special.gammainc(k, z_over_2 / y)
 
         res = scipy.integrate.quad(
             integrand,
@@ -103,8 +103,7 @@ def conditional_likelihood_ratio_critical_value_function(
             wvar=(beta - 1, alpha - 1),
             epsabs=tol,
         )
-
-        return 1 - np.abs(res[0])
+        return 1 - res[0]
 
     elif method == "power_series":
         a = s_min / (z + s_min)
@@ -155,6 +154,7 @@ def conditional_likelihood_ratio_critical_value_function(
         )
 
 
+@line_profiler.profile
 def conditional_likelihood_ratio_test(
     Z,
     X,
