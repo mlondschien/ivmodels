@@ -84,10 +84,22 @@ def conditional_likelihood_ratio_critical_value_function(
     if method in ["numerical_integration"]:
         alpha = (q - p) / 2.0
         beta = p / 2.0
+        a = s_min / (z + s_min)
+
+        # We wish to integrate
+        # beta = beta(alpha, beta); chi2 = chi2(q)
+        # int_0^1 chi2.cdf(z / (1 - a * x)) * beta.pdf(x, (q - p) / 2, p / 2) dx
+        #
+        # use
+        #  beta(alpha, beta).pdf = 1/B(alpha, beta) * x^{alpha - 1} * (1 - x)^{beta - 1}
+        # and
+        #  chi2(q).cdf(x) = 1/Gamma(k/2) * gamma(k/2, x/2)
+        #                 = scipy.special.gammainc(k/2, x/2).
+        # substitute y <- 1 - a * x and use the QUADPACK routine qawse
+        # (see scipy.special.gammainc)
         k = q / 2.0
         z_over_2 = z / 2.0
 
-        a = s_min / (z + s_min)
         const = np.power(a, -alpha - beta + 1) / scipy.special.beta(alpha, beta)
 
         def integrand(y):
