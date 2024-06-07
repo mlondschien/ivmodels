@@ -18,4 +18,4 @@ dependencies:
   - sphinx_rtd_theme  # docs
   - sphinxcontrib-bibtex  # docs
   - pip  # docs
-  - numba_scipy  # Speed up CLR critical value function
+  - numba-scipy  # Speed up CLR critical value function
