@@ -6,7 +6,7 @@ class KClass:
     # dims is (n, mx, k, mc)
     params = [
         ["liml", "tsls", 0.5],
-        [(1000, 1, 1, 0), (1000, 2, 4, 0), (1000, 2, 4, 2), "guggenberger12 (k=10)"],
+        [(1000, 1, 1, 0), (1000, 2, 100, 0), (1000, 2, 4, 2), "guggenberger12 (k=10)"],
     ]
     param_names = ["kappa", "data"]
 

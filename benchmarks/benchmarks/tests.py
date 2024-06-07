@@ -15,7 +15,7 @@ class Tests:
     # data is (k, mx, mw, mc)
     params = [
         [1000],
-        [(1, 1, 0, 0), (10, 1, 4, 0), (4, 2, 2, 2), "guggenberger12 (k=10)"],
+        [(1, 1, 0, 0), (100, 1, 4, 0), (4, 2, 2, 2), "guggenberger12 (k=10)"],
     ]
     param_names = ["n", "data"]
 

@@ -4,9 +4,22 @@ import scipy
 from ivmodels.utils import oproj
 
 
-def simulate_guggenberger12(n, *, k, seed=0, return_beta=False):
+def simulate_guggenberger12(
+    n, *, k, seed=0, h11=100, h12=1, rho=0.95, cov=None, return_beta=False
+):
     """
     Generate data by process as proposed by :cite:t:`guggenberger2012asymptotic`.
+
+    Will generate data
+
+    .. math::
+
+            X = Z \\Pi_X + V_X
+            W = Z \\Pi_W + V_W
+            y = X \\beta + W \\gamma + \\epsilon
+
+        where :math:`\\epsilon, V_X, V_W` are jointly Gaussian with covariance matrix `cov` and `Z` is a matrix of independent
+        centered Gaussian instruments.
 
     Parameters
     ----------
@@ -16,6 +29,14 @@ def simulate_guggenberger12(n, *, k, seed=0, return_beta=False):
         Number of instruments.
     seed : int, optional, default 0
         Random seed.
+    h11 : float, optional, default 100
+        Equal to :math:`\\sqrt{n} || \\Pi_X ||`.
+    h12 : float, optional, default 1
+        Equal to :math:`\\sqrt{n} || \\Pi_W ||`.
+    rho : float, optional, default 0.95
+        Equal to :math:`< \\Pi_X, \\Pi_W > / (|| \\Pi_X || || \\Pi_W ||)`.
+    cov : np.ndarray, optional, default None
+        Covariance matrix of the noise. If None, defaults to `[[1, 0, 0.95], [0, 1, 0.3], [0.95, 0.3, 1]]`.
     return_beta : bool, optional, default False
         Whether to return the true beta.
 
@@ -34,13 +55,16 @@ def simulate_guggenberger12(n, *, k, seed=0, return_beta=False):
     beta : np.ndarray of dimension (1,)
         True beta. Only returned if ``return_beta`` is True.
     """
+    if k < 2:
+        raise ValueError("k must be at least 2")
+
     beta = np.array([[1]])
     gamma = np.array([[1]])
 
     rng = np.random.RandomState(seed)
 
-    # Make sure that sqrt(n) || Pi_W | ~ 1 , sqrt(n) || Pi_X | ~ 100, and
-    # n < Pi_W, Pi_X> ~ 0.95 * 100
+    # Make sure that sqrt(n) || Pi_W || = h12 , sqrt(n) || Pi_X | = h11, and
+    # < Pi_W, Pi_X> / (|| Pi_W || || Pi_X ||) = rho
     Pi_X = rng.normal(0, 1, (k, 1))
     Pi_X = Pi_X - Pi_X.mean(axis=0)
     Pi_X = Pi_X / np.linalg.norm(Pi_X)
@@ -50,13 +74,20 @@ def simulate_guggenberger12(n, *, k, seed=0, return_beta=False):
     Pi_W = oproj(Pi_X, Pi_W)
     Pi_W = Pi_W / np.linalg.norm(Pi_W)
 
-    Pi_W = 0.95 * Pi_X + np.sqrt(1 - 0.95**2) * Pi_W
+    if rho >= 1:
+        Pi_W = Pi_X
+    elif rho <= -1:
+        Pi_W = -Pi_X
+    else:
+        Pi_W = rho * Pi_X + np.sqrt(1 - rho**2) * Pi_W
 
-    Pi_X = Pi_X / np.sqrt(n) * 100
-    Pi_W = Pi_W / np.sqrt(n) * 1
+    Pi_X = Pi_X / np.sqrt(n) * h11
+    Pi_W = Pi_W / np.sqrt(n) * h12
 
     # Equal to Cov([eps, V_X, V_W]).
-    cov = np.array([[1, 0, 0.95], [0, 1, 0.3], [0.95, 0.3, 1]])
+    if cov is None:
+        cov = np.array([[1, 0, 0.95], [0, 1, 0.3], [0.95, 0.3, 1]])
+
     noise = scipy.stats.multivariate_normal.rvs(
         cov=cov,
         size=n,

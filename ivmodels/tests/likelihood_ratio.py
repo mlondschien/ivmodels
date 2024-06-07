@@ -79,20 +79,18 @@ def likelihood_ratio_test(Z, X, y, beta, W=None, C=None, fit_intercept=True):
         C = np.hstack([np.ones((n, 1)), C])
 
     if C.shape[1] > 0:
-        X = oproj(C, X)
-        y = oproj(C, y)
-        Z = oproj(C, Z)
-        W = oproj(C, W)
+        X, y, Z, W = oproj(C, X, y, Z, W)
 
-    X_proj = proj(Z, X)
-    y_proj = proj(Z, y)
-    W_proj = proj(Z, W)
+    X_proj, y_proj, W_proj = proj(Z, X, y, W)
 
     XWy = np.concatenate([X, W, y.reshape(-1, 1)], axis=1)
     XWy_proj = np.concatenate([X_proj, W_proj, y_proj.reshape(-1, 1)], axis=1)
 
-    matrix = np.linalg.solve(XWy.T @ (XWy - XWy_proj), XWy_proj.T @ XWy)
-    ar_min = (n - k - C.shape[1]) * min(np.abs(scipy.linalg.eigvals(matrix)))
+    ar_min = (n - k - C.shape[1]) * np.real(
+        scipy.linalg.eigvalsh(
+            a=XWy.T @ XWy_proj, b=XWy.T @ (XWy - XWy_proj), subset_by_index=[0, 0]
+        )[0]
+    )
 
     if W.shape[1] == 0:
         statistic = (n - k - C.shape[1]) * np.linalg.norm(
@@ -103,9 +101,10 @@ def likelihood_ratio_test(Z, X, y, beta, W=None, C=None, fit_intercept=True):
         Wy_proj = np.concatenate(
             [W_proj, (y_proj - X_proj @ beta).reshape(-1, 1)], axis=1
         )
-        matrix = np.linalg.solve(Wy.T @ (Wy - Wy_proj), Wy_proj.T @ Wy)
-        statistic = (n - k - C.shape[1]) * min(
-            np.abs(scipy.linalg.eigvals(matrix))
+        statistic = (n - k - C.shape[1]) * np.real(
+            scipy.linalg.eigvalsh(
+                a=Wy.T @ Wy_proj, b=Wy.T @ (Wy - Wy_proj), subset_by_index=[0, 0]
+            )[0]
         ) - ar_min
 
     p_value = 1 - scipy.stats.chi2.cdf(statistic, df=mx)
@@ -155,23 +154,22 @@ def inverse_likelihood_ratio_test(
         C = np.hstack([np.ones((n, 1)), C])
 
     if C.shape[1] > 0:
-        X = oproj(C, X)
-        y = oproj(C, y)
-        Z = oproj(C, Z)
-        W = oproj(C, W)
+        X, y, Z, W = oproj(C, X, y, Z, W)
 
     X = np.concatenate([X, W], axis=1)
 
-    X_proj = proj(Z, X)
+    X_proj, y_proj = proj(Z, X, y)
     X_orth = X - X_proj
-    y_proj = proj(Z, y)
     y_orth = y - y_proj
 
     Xy_proj = np.concatenate([X_proj, y_proj.reshape(-1, 1)], axis=1)
     Xy = np.concatenate([X, y.reshape(-1, 1)], axis=1)
 
-    matrix = np.linalg.solve(Xy.T @ (Xy - Xy_proj), Xy.T @ Xy_proj)
-    kappa_liml = min(np.abs(np.linalg.eigvals(matrix)))
+    kappa_liml = np.real(
+        scipy.linalg.eigvalsh(
+            a=Xy.T @ Xy_proj, b=Xy.T @ (Xy - Xy_proj), subset_by_index=[0, 0]
+        )[0]
+    )
 
     dfd = n - k - C.shape[1]
     quantile = scipy.stats.chi2.ppf(1 - alpha, df=mx) + dfd * kappa_liml
