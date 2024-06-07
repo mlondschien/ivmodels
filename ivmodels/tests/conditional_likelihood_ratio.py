@@ -1,4 +1,3 @@
-import line_profiler
 import numpy as np
 import scipy
 
@@ -7,7 +6,6 @@ from ivmodels.tests.utils import _check_test_inputs
 from ivmodels.utils import oproj, proj
 
 
-@line_profiler.profile
 def conditional_likelihood_ratio_critical_value_function(
     p, q, s_min, z, method="numerical_integration", tol=1e-6
 ):
@@ -154,7 +152,6 @@ def conditional_likelihood_ratio_critical_value_function(
         )
 
 
-@line_profiler.profile
 def conditional_likelihood_ratio_test(
     Z,
     X,
