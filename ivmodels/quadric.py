@@ -123,18 +123,18 @@ class Quadric:
                         self.center - np.sqrt(-self.c_standardized / self.D[0]),
                         self.center + np.sqrt(-self.c_standardized / self.D[0]),
                     ]
-                ).T
+                )
 
         if np.all(self.D > 0) and (self.c_standardized > 0):
             if error:
                 raise ValueError("Quadric is empty.")
             else:
-                return np.zeros(shape=(0, 2))
+                return np.zeros(shape=(0, 1))
         if np.all(self.D < 0) and (self.c_standardized <= 0):
             if error:
                 raise ValueError("The quadric is the whole space.")
             else:
-                return np.zeros(shape=(0, 2))
+                return np.zeros(shape=(0, 1))
 
         # If both entries of D have the opposite sign as c_standardized, the
         # boundary of the quadric is an ellipse.
