@@ -107,7 +107,17 @@ def simulate_guggenberger12(
 
 
 def simulate_gaussian_iv(
-    n, *, mx, k, u=None, mw=0, mc=0, seed=0, include_intercept=True, return_beta=False
+    n,
+    *,
+    mx,
+    k,
+    u=None,
+    mw=0,
+    mc=0,
+    seed=0,
+    include_intercept=True,
+    return_beta=False,
+    return_gamma=False,
 ):
     """
     Simulate a Gaussian IV dataset.
@@ -132,6 +142,8 @@ def simulate_gaussian_iv(
         Whether to include an intercept.
     return_beta : bool, optional
         Whether to return the true beta.
+    return_gamma : bool, optional
+        Whether to return the true gamma.
 
     Returns
     -------
@@ -147,6 +159,8 @@ def simulate_gaussian_iv(
         Endogenous variables not of interest.
     beta : np.ndarray of dimension (mx,)
         True beta. Only returned if ``return_beta`` is True.
+    gamma : np.ndarray of dimension (mw,)
+        True gamma. Only returned if ``return_gamma`` is True.
     """
     rng = np.random.RandomState(seed)
     beta = rng.normal(0, 1, (mx, 1))
@@ -183,7 +197,11 @@ def simulate_gaussian_iv(
     y = C @ alpha + X @ beta + W @ gamma + U @ uy
     y += rng.normal(0, 1, (n, 1)) + include_intercept * rng.normal(0, 1, (1, 1))
 
-    if return_beta:
+    if return_beta and return_gamma:
+        return Z, X, y.flatten(), C, W, beta.flatten(), gamma.flatten()
+    elif return_beta:
         return Z, X, y.flatten(), C, W, beta.flatten()
+    elif return_gamma:
+        return Z, X, y.flatten(), C, W, gamma.flatten()
     else:
         return Z, X, y.flatten(), C, W
