@@ -289,7 +289,8 @@ def test_test_round_trip(test, inverse_test, n, mx, k, u, mc, p_value, fit_inter
     ],
 )
 @pytest.mark.parametrize(
-    "n, mx, k, mw, u, mc", [(100, 2, 3, 1, 2, 3), (100, 2, 5, 2, 3, 0)]
+    "n, mx, k, mw, u, mc",
+    [(100, 2, 3, 1, 2, 3), (100, 2, 5, 2, 3, 0), (100, 1, 3, 1, None, 0)],
 )
 @pytest.mark.parametrize("p_value", [0.1])
 @pytest.mark.parametrize("fit_intercept", [True, False])
