@@ -5,10 +5,11 @@ import scipy
 from ivmodels.models.kclass import KClass
 from ivmodels.simulate import simulate_gaussian_iv
 from ivmodels.tests.anderson_rubin import (
+    anderson_rubin_test,
     inverse_anderson_rubin_test,
     more_powerful_subvector_anderson_rubin_critical_value_function,
 )
-from ivmodels.utils import proj
+from ivmodels.utils import oproj, proj
 
 
 @pytest.mark.parametrize(
@@ -68,23 +69,37 @@ def test_more_powerful_sAR_critical_value_function_integrates_to_one(k, hat_kapp
 
 
 @pytest.mark.parametrize("alpha", [0.1, 0.05, 0.01])
-@pytest.mark.parametrize("n, k, mx, u", [(100, 1, 1, 1), (100, 20, 5, 5)])
+@pytest.mark.parametrize(
+    "n, k, mx, mw", [(100, 2, 1, 0), (100, 2, 2, 1), (100, 20, 5, 5)]
+)
 def test_inverse_anderson_rubin_confidence_set_alternative_formulation(
-    alpha, n, k, mx, u
+    alpha, n, k, mx, mw
 ):
-    Z, X, y, _, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u)
+    Z, X, y, _, W = simulate_gaussian_iv(n=n, mx=mx, mw=mw, k=k)
+    S = np.hstack([X, W])
 
-    inverse_ar = inverse_anderson_rubin_test(Z, X, y, alpha=alpha, fit_intercept=False)
-    kappa_alpha = 1 + scipy.stats.chi2(df=k).ppf(1 - alpha) / (n - k)
-    kclass_kappa_alpha = KClass(kappa=kappa_alpha, fit_intercept=False).fit(
-        X=X, y=y, Z=Z
+    inverse_ar = inverse_anderson_rubin_test(
+        Z, X, y, W=W, alpha=alpha, fit_intercept=False
     )
-    assert np.allclose(inverse_ar.center, kclass_kappa_alpha.coef_, rtol=1e-6)
+    kappa_alpha = 1 + scipy.stats.chi2(df=k - mw).ppf(1 - alpha) / (n - k)
+    kclass_kappa_alpha = KClass(kappa=kappa_alpha, fit_intercept=False).fit(
+        X=S, y=y, Z=Z
+    )
+    assert np.allclose(inverse_ar.center, kclass_kappa_alpha.coef_[:mx], rtol=1e-6)
 
-    A = (kappa_alpha * proj(Z, X) + (1 - kappa_alpha) * X).T @ X
+    A = (kappa_alpha * proj(Z, S) + (1 - kappa_alpha) * S).T @ S
+    if mw > 0:
+        A = np.linalg.inv(np.linalg.inv(A)[:mx, :mx])
+
+    residuals = y - kclass_kappa_alpha.predict(S)
+    sigma_hat_sq = np.linalg.norm(oproj(Z, residuals)) ** 2 / (n - k)
+    ar = anderson_rubin_test(
+        Z, S, y, beta=kclass_kappa_alpha.coef_, fit_intercept=False
+    )[0]
+    c = sigma_hat_sq * (scipy.stats.chi2(df=k - mw).ppf(1 - alpha) - ar * k)
 
     assert np.allclose(
-        A,
-        inverse_ar.A,
+        -A / c,
+        inverse_ar.A / inverse_ar.c_standardized,
         rtol=1e-8,
     )
