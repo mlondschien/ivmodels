@@ -2,46 +2,88 @@ import numpy as np
 import pytest
 import scipy
 
+from ivmodels.simulate import simulate_gaussian_iv
 from ivmodels.tests.lagrange_multiplier import _LM
 from ivmodels.utils import proj
 
 
 @pytest.mark.parametrize(
-    "n, mx, mc, k, u",
-    [(100, 1, 1, 2, 1), (100, 1, 2, 5, 2), (1000, 2, 5, 10, 2), (1000, 5, 2, 10, 2)],
+    "n, mx, mw",
+    [(100, 1, 1)],
 )
-def test_lm_gradient(n, mx, mc, k, u):
+def test__LM_raises(n, mx, mw):
     rng = np.random.RandomState(0)
+    X, W, y = rng.randn(n, mx), rng.randn(n, mw), rng.randn(n)
 
-    delta_X = rng.normal(0, 1, (u, mx))
-    delta_W = rng.normal(0, 1, (u, mc))
-    delta_y = rng.normal(0, 1, (u, 1))
+    with pytest.raises(ValueError, match="Z must"):
+        _LM(X=X, y=y, W=W, dof=7)
 
-    beta = rng.normal(0, 0.1, (mx, 1))
-    gamma = 10 * rng.normal(0, 0.1, (mc, 1))
 
-    Pi_X = rng.normal(0, 1, (k, mx))
-    Pi_W = rng.normal(0, 1, (k, mc))
+@pytest.mark.parametrize(
+    "n, mx, mw, k",
+    [(100, 1, 1, 2), (100, 1, 2, 5), (1000, 2, 5, 10), (1000, 5, 2, 10)],
+)
+def test__LM__init__(n, mx, mw, k):
+    rng = np.random.RandomState(0)
+    X, W, y, Z = rng.randn(n, mx), rng.randn(n, mw), rng.randn(n), rng.randn(n, k)
 
-    U = rng.normal(0, 1, (n, u))
+    X_proj, W_proj, y_proj = proj(Z, X, W, y)
 
-    Z = rng.normal(0, 1, (n, k))
-    X = Z @ Pi_X + U @ delta_X + rng.normal(0, 1, (n, mx))
-    W = Z @ Pi_W + U @ delta_W + rng.normal(0, 1, (n, mc))
-    y = X @ beta + W @ gamma + U @ delta_y + rng.normal(0, 1, (n, 1))
+    lm1 = _LM(X=X, y=y, W=W, dof=7, X_proj=X_proj, y_proj=y_proj, W_proj=W_proj)
+    lm2 = _LM(X=X, y=y, W=W, dof=7, Z=Z)
+    assert lm1.__dict__.keys() == lm2.__dict__.keys()
+    assert all(
+        [
+            np.all(np.isclose(lm1.__dict__[k], lm2.__dict__[k]))
+            for k in lm1.__dict__.keys()
+        ]
+    )
 
-    X_proj = proj(Z, X)
-    W_proj = proj(Z, W)
-    y_proj = proj(Z, y)
 
+@pytest.mark.parametrize(
+    "n, mx, mw, k",
+    [(100, 1, 1, 2), (100, 1, 2, 5), (1000, 2, 5, 10), (1000, 5, 2, 10)],
+)
+def test_lm_gradient(n, mx, mw, k):
+    Z, X, y, _, W = simulate_gaussian_iv(
+        n=n, mx=mx, k=k, mw=mw, include_intercept=False
+    )
+    lm = _LM(X=X, y=y, W=W, dof=7, Z=Z)
+
+    rng = np.random.RandomState(0)
     for _ in range(5):
-        beta_test = rng.normal(0, 0.1, (mx, 1))
+        beta_gamma_test = rng.normal(0, 1, (mx + mw))
 
         grad_approx = scipy.optimize.approx_fprime(
-            beta_test.flatten(),
-            lambda b: _LM(X, X_proj, y, y_proj, W, W_proj, b.reshape(-1, 1))[0],
+            beta_gamma_test,
+            lambda b: lm.derivative(b)[0],
             1e-6,
         )
-        grad = _LM(X, X_proj, y, y_proj, W, W_proj, beta_test.reshape(-1, 1))[1]
+        grad = lm.derivative(beta_gamma_test)[1]
 
-        assert np.allclose(grad.flatten(), grad_approx, rtol=1e-4, atol=1e-4)
+        assert np.allclose(grad, grad_approx, rtol=5e-5, atol=5e-5)
+
+
+@pytest.mark.parametrize(
+    "n, mx, mw, k",
+    [(100, 2, 5, 10), (100, 5, 2, 10)],
+)
+def test_lm_gradient_beta_gamma(n, mx, mw, k):
+    Z, X, y, _, W = simulate_gaussian_iv(
+        n=n, mx=mx, k=k, mw=mw, include_intercept=False
+    )
+    lm = _LM(X=X, y=y, W=W, dof=7, Z=Z)
+
+    rng = np.random.RandomState(0)
+    beta = rng.normal(0, 1, mx)
+    gamma = rng.normal(0, 1, mw)
+
+    assert np.allclose(
+        lm.derivative(np.concatenate([beta, gamma]))[0],
+        lm.derivative(beta, gamma)[0],
+    )
+
+    assert np.allclose(
+        lm.derivative(np.concatenate([beta, gamma]))[1],
+        lm.derivative(beta, gamma)[1],
+    )
