@@ -1,8 +1,36 @@
 import numpy as np
 import scipy
+import scipy.interpolate
+import scipy.optimize
+from scipy.optimize.optimize import MemoizeJac
 
+from ivmodels.confidence_set import ConfidenceSet
+from ivmodels.quadric import Quadric
 from ivmodels.tests.utils import _check_test_inputs
 from ivmodels.utils import oproj, proj
+
+
+# https://stackoverflow.com/a/68608349/10586763
+class MemoizeJacHess(MemoizeJac):
+    """Cache the return values of a function returning (fun, grad, hess)."""
+
+    def __init__(self, fun):
+        super().__init__(fun)
+        self.hess = None
+
+    def _compute_if_needed(self, x, *args):
+        if (
+            not np.all(x == self.x)
+            or self._value is None
+            or self.jac is None
+            or self.hess is None
+        ):
+            self.x = np.asarray(x).copy()
+            self._value, self.jac, self.hess = self.fun(x, *args)
+
+    def hessian(self, x, *args):  # noqa D
+        self._compute_if_needed(x, *args)
+        return self.hess
 
 
 class _LM:
@@ -60,6 +88,35 @@ class _LM:
         # for liml
         self.yS_proj_at_yS = self.yS_proj.T @ self.yS_proj
 
+    def liml(self, beta=None):
+        """
+        Efficiently compute the LIML.
+
+        This is the LIML using outcomes y (or y - X beta if beta is not none),
+        covariates S (or W), and instruments Z.
+        """
+        if beta is not None:
+            beta = beta.reshape(-1, 1)
+
+            one_beta_id = np.zeros((1 + self.mx + self.mw, 1 + self.mw))
+            one_beta_id[0, 0] = 1
+            one_beta_id[1 : (1 + self.mx), 0] = -beta[:, 0]
+            one_beta_id[(1 + self.mx) :, 1:] = np.diag(np.ones(self.mw))
+
+            X_proj_X = one_beta_id.T @ self.yS_proj_at_yS @ one_beta_id
+            X_orth_X = one_beta_id.T @ self.yS_orth_at_yS @ one_beta_id
+        else:
+            X_proj_X = self.yS_proj_at_yS
+            X_orth_X = self.yS_orth_at_yS
+
+        eigval = scipy.linalg.eigh(
+            a=X_proj_X,
+            b=X_orth_X,
+            subset_by_index=[0, 0],
+        )[1]
+
+        return -eigval[1:, 0] / eigval[0, 0]
+
     def derivative(self, beta, gamma=None):
         """Return LM and derivative of LM at beta, gamma w.r.t. (beta, gamma)."""
         if gamma is not None:
@@ -69,16 +126,18 @@ class _LM:
 
         residuals = self.yS @ one_beta_gamma
         residuals_proj = self.yS_proj @ one_beta_gamma
-        # residuals_orth = residuals - residuals_proj
 
         Sigma = one_beta_gamma.T @ self.yS_orth_at_yS
+
         sigma_hat = Sigma @ one_beta_gamma
         Sigma = Sigma[1:] / sigma_hat
 
         St = self.yS[:, 1:] - np.outer(residuals, Sigma)
         St_proj = self.yS_proj[:, 1:] - np.outer(residuals_proj, Sigma)
+        St_orth = St - St_proj
 
-        solved = np.linalg.solve(St_proj.T @ St_proj, St_proj.T @ residuals_proj)
+        St_proj_inv = np.linalg.inv(St_proj.T @ St_proj)
+        solved = St_proj_inv @ St_proj.T @ residuals_proj
         residuals_proj_St = St_proj @ solved
 
         lm = residuals_proj_St.T @ residuals_proj_St / sigma_hat
@@ -86,133 +145,68 @@ class _LM:
         kappa = ar - lm
 
         first_term = -St_proj.T @ residuals_proj
-        second_term = kappa * (St - St_proj).T @ St @ solved
+        second_term = (St - St_proj).T @ St @ solved
+        S = self.yS[:, 1:]
+        S_proj = self.yS_proj[:, 1:]
+        S_orth = S - S_proj
 
-        d_lm = 2 * (first_term + second_term) / sigma_hat
+        d_lm = 2 * (first_term + kappa * second_term) / sigma_hat
 
-        return (self.dof * lm.item(), self.dof * d_lm.flatten())
+        dd_lm = (
+            2
+            * (
+                -3 * kappa * np.outer(second_term, second_term) / sigma_hat
+                - kappa
+                * St_orth.T
+                @ St_orth
+                @ St_proj_inv
+                @ (St_proj - kappa * St_orth).T
+                @ S
+                + St.T @ (S_proj - ar * S_orth)
+                - np.outer(Sigma, (St_proj - kappa * St_orth).T @ St @ solved)
+                + 2 * kappa * np.outer(S_orth.T @ St @ solved, Sigma)
+                - 2 * np.outer(St_proj.T @ residuals, Sigma)
+            )
+            / sigma_hat
+        )
+
+        return (self.dof * lm.item(), self.dof * d_lm.flatten(), self.dof * dd_lm)
 
     def lm(self, beta):
-        beta = beta.reshape(-1, 1)
+        """
+        Compute the Lagrange multiplier test statistic at ``beta``.
 
-        one_beta_id = np.zeros((1 + self.mx + self.mw, 1 + self.mw))
-        one_beta_id[0, 0] = 1
-        one_beta_id[1 : (1 + self.mx), 0] = -beta[:, 0]
-        one_beta_id[(1 + self.mx) :, 1:] = np.diag(np.ones(self.mw))
+        Computed by minimization over ``gamma``.
+        """
+        if isinstance(beta, float):
+            beta = np.array([[beta]])
 
-        gamma_liml = scipy.linalg.eigh(
-            b=one_beta_id.T @ self.yS_orth_at_yS @ one_beta_id,
-            a=one_beta_id.T @ self.yS_proj_at_yS @ one_beta_id,
-            subset_by_index=[0, 0],
-        )[1][:, 0]
-        gamma_liml = -gamma_liml[1:] / gamma_liml[0]
+        gamma_0 = self.liml(beta=beta)
+
+        if self.mw == 0:
+            return self.derivative(beta, gamma_0)[0]
 
         def _derivative(gamma):
             result = self.derivative(beta, gamma)
-            return (result[0], result[1][self.mx :])
+            return (result[0], result[1][self.mx :], result[2][self.mx :, self.mx :])
+
+        objective = MemoizeJacHess(_derivative)
+        jac = objective.derivative
+        hess = objective.hessian
 
         res1 = scipy.optimize.minimize(
-            _derivative,
-            jac=True,
-            x0=gamma_liml,
+            objective, jac=jac, hess=hess, x0=gamma_0, method="newton-cg"
         )
 
         res2 = scipy.optimize.minimize(
-            _derivative,
-            jac=True,
-            x0=np.zeros_like(gamma_liml),
+            objective,
+            jac=jac,
+            hess=hess,
+            method="newton-cg",
+            x0=np.zeros_like(gamma_0),
         )
 
-        return min(res1.fun, res2.fun)
-
-    def lm_and_derivative(self, betas, gamma_0):
-        assert len(betas.shape) == 2
-        assert betas.shape[1] == self.mx
-
-        lms = np.zeros(betas.shape[0])
-        derivatives = np.zeros((betas.shape[0], self.mx))
-
-        class _derivatives:
-            """Helper class to recover last derivative called in the optimization."""
-
-            def __init__(self, beta):
-                self.beta = beta
-                self.jac = None
-
-            def __call__(self, gamma):
-                self.derivative = self.derivative(self.beta, gamma)
-                return (self.derivative[0], self.derivative[1][self.mx :])
-
-        for idx in betas.shape[0]:
-            _derivative = _derivatives(betas[idx, :])
-            res = scipy.optimize.minimize(
-                _derivative,
-                jac=True,
-                x0=gamma_0,
-            )
-
-            lms[idx] = res.fun
-            derivatives[idx, :] = _derivative.derivative[: self.mx]
-            gamma_0 = res.x
-
-        return lms, derivatives
-
-
-# def _LM(X, X_proj, Y, Y_proj, W, W_proj, beta):
-#     """
-#     Compute the Lagrange multiplier test statistic and its derivative at ``beta``.
-
-#     Parameters
-#     ----------
-#     X: np.ndarray of dimension (n, mx)
-#         Regressors.
-#     X_proj: np.ndarray of dimension (n, mx)
-#         Projection of ``X`` onto the column space of ``Z``.
-#     Y: np.ndarray of dimension (n,)
-#         Outcomes.
-#     Y_proj: np.ndarray of dimension (n,)
-#         Projection of ``Y`` onto the column space of ``Z``.
-#     W: np.ndarray of dimension (n, mw)
-#         Regressors.
-#     W_proj: np.ndarray of dimension (n, mw)
-#         Projection of ``W`` onto the column space of ``Z``.
-#     beta: np.ndarray of dimension (mx,)
-#         Coefficients to test.
-
-#     Returns
-#     -------
-#     lm: float
-#         The Lagrange multiplier test statistic.
-#     d_lm: float
-#         The derivative of the Lagrange multiplier test statistic at ``beta``.
-#     """
-#     n = X.shape[0]
-
-#     residuals = Y - X @ beta
-#     residuals_proj = Y_proj - X_proj @ beta
-#     residuals_orth = residuals - residuals_proj
-
-#     sigma_hat = residuals_orth.T @ residuals_orth
-
-#     S = np.hstack((X, W))
-#     S_proj = np.hstack((X_proj, W_proj))
-#     Sigma = residuals_orth.T @ S / sigma_hat
-#     St = S - np.outer(residuals, Sigma)
-#     St_proj = S_proj - np.outer(residuals_proj, Sigma)
-
-#     solved = np.linalg.solve(St_proj.T @ St_proj, St_proj.T @ residuals_proj)
-#     residuals_proj_St = St_proj @ solved
-
-#     lm = residuals_proj_St.T @ residuals_proj_St / sigma_hat
-#     ar = residuals_proj.T @ residuals_proj / sigma_hat
-#     kappa = ar - lm
-
-#     first_term = -St_proj[:, : X.shape[1]].T @ residuals_proj
-#     second_term = kappa * (St - St_proj)[:, : X.shape[1]].T @ St @ solved
-
-#     d_lm = 2 * (first_term + second_term) / sigma_hat
-
-#     return (n * lm.item(), n * d_lm.flatten())
+        return np.min([res1.fun, res2.fun])
 
 
 def lagrange_multiplier_test(Z, X, y, beta, W=None, C=None, fit_intercept=True):
@@ -283,13 +277,7 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None, C=None, fit_intercept=True):
         X, y, Z, W = oproj(C, X, y, Z, W)
 
     if W.shape[1] > 0:
-        statistic = _LM(
-            X=X,
-            y=y,
-            W=W,
-            Z=Z,
-            dof=n - k - C.shape[1],
-        ).lm(beta)
+        statistic = _LM(X=X, y=y, W=W, Z=Z, dof=n - k - C.shape[1]).lm(beta)
 
         p_value = 1 - scipy.stats.chi2.cdf(statistic, df=mx)
 
@@ -314,3 +302,99 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None, C=None, fit_intercept=True):
         p_value = 1 - scipy.stats.chi2.cdf(statistic, df=mx)
 
     return statistic, p_value
+
+
+def inverse_lagrange_multiplier_test(
+    Z, X, y, alpha=0.05, W=None, C=None, fit_intercept=True
+):
+    """
+    Return an approximation of the confidence set by inversion of the LM test.
+
+    This is only implemented if ``X.shape[1] == 1``. The confidence set is essentially
+    computed by a grid search plus a root finding algorithm to improve the precision.
+    Due to the numerical nature, this is in no way guaranteed to return the true
+    confidence set, or contain it.
+    """
+    if not 0 < alpha < 1:
+        raise ValueError("alpha must be in (0, 1).")
+
+    Z, X, y, W, C, _ = _check_test_inputs(Z, X, y, W=W, C=C)
+
+    n, mx = X.shape
+    if not mx == 1:
+        raise ValueError("mx must be 1.")
+
+    k = Z.shape[1]
+
+    if fit_intercept:
+        C_ = np.hstack([np.ones((n, 1)), C])
+    else:
+        C_ = C
+
+    if C_.shape[1] > 0:
+        X_, y_, Z_, W_ = oproj(C_, X, y, Z, W)
+    else:
+        X_, y_, Z_, W_ = X, y, Z, W
+
+    dof = n - k - C_.shape[1]
+    lm = _LM(X=X_, W=W_, y=y_, Z=Z_, dof=dof)
+    critical_value = scipy.stats.chi2(df=mx).ppf(1 - alpha)
+
+    A = lm.yS_proj_at_yS - critical_value / dof * lm.yS_orth_at_yS
+    # This is the inverse LM test confidence set if using S instead of S_tilde. This
+    # is not robust to weak instruments though.
+    approx = Quadric(
+        A=A[1:, 1:],
+        b=-2 * A[1:, 0],
+        c=np.sum(proj(lm.yS_proj[:, 1:], lm.y_proj) ** 2)
+        - critical_value / dof * lm.yS_orth_at_yS[0, 0],
+    ).project([0])
+    left, right = approx.left, approx.right
+
+    step = right - left
+
+    while lm.lm(right) < critical_value:
+        right += step
+    right += 2 * step
+
+    while lm.lm(left) < critical_value:
+        left -= step
+    left -= 2 * step
+
+    n_points = 200
+    x_ = np.linspace(left, right, n_points)
+    y__ = np.zeros(n_points)
+
+    for idx in range(n_points):
+        y__[idx] = lm.lm(x_[idx])
+
+    where = np.where(y__ < critical_value)[0]
+    left_bracket = x_[where[0] - 1], x_[where[where > where[0] + 1][0]]
+    right_bracket = x_[where[-1] + 1], x_[where[where < where[-1] - 1][-1]]
+
+    def f(x):
+        arr = np.ones(1)
+        arr[0] = x
+        return lm.lm(arr) - critical_value
+
+    new_left = scipy.optimize.root_scalar(
+        f, bracket=left_bracket, maxiter=1000, xtol=1e-5
+    ).root
+
+    new_right = scipy.optimize.root_scalar(
+        f,
+        bracket=right_bracket,
+        maxiter=1000,
+        xtol=1e-5,
+    ).root
+
+    if not max(np.abs([f(new_left), f(new_right)])) < 1e-3:
+        return ConfidenceSet(
+            left=new_left,
+            right=new_right,
+            convex=True,
+            empty=False,
+            message="No roots found.",
+        )
+    else:
+        return ConfidenceSet(left=new_left, right=new_right, convex=True, empty=False)

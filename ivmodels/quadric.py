@@ -2,8 +2,10 @@
 import numpy as np
 import scipy
 
+from ivmodels.confidence_set import ConfidenceSet
 
-class Quadric:
+
+class Quadric(ConfidenceSet):
     """
     A class to represent a quadric :math:`x^T A x + b^T x + c \\leq 0`.
 
@@ -56,6 +58,21 @@ class Quadric:
 
         self.D = eigenvalues
         self.V = eigenvectors
+
+        if A.shape[0] == 1:
+            if (self.D[0] < 0) and (self.c_standardized <= 0):
+                left, right = -np.inf, np.inf
+            elif self.D[0] * self.c_standardized > 0:
+                left, right = np.nan, np.nan
+            else:
+                boundary = self._boundary()
+                left, right = boundary[0], boundary[1]
+
+            volume = self.volume()
+            super().__init__(left, right, convex=np.isfinite(volume), empty=volume == 0)
+        else:
+            volume = self.volume()
+            super().__init__(None, None, np.isfinite(volume), empty=volume == 0)
 
     def __call__(self, x):
         """Evaluate the quadric at :math:`x`.

@@ -63,6 +63,15 @@ def test_lm_gradient(n, mx, mw, k):
 
         assert np.allclose(grad, grad_approx, rtol=5e-5, atol=5e-5)
 
+        hess_approx = scipy.optimize.approx_fprime(
+            beta_gamma_test,
+            lambda b: lm.derivative(b)[1],
+            1e-6,
+        )
+        hess = lm.derivative(beta_gamma_test)[2]
+
+        assert np.allclose(hess, hess_approx, rtol=5e-5, atol=5e-5)
+
 
 @pytest.mark.parametrize(
     "n, mx, mw, k",
