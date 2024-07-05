@@ -5,8 +5,8 @@ import scipy.optimize
 from scipy.optimize._optimize import MemoizeJac
 
 from ivmodels.confidence_set import ConfidenceSet
-from ivmodels.quadric import Quadric
 from ivmodels.tests.utils import _check_test_inputs
+from ivmodels.tests.wald import inverse_wald_test
 from ivmodels.utils import oproj, proj
 
 
@@ -350,15 +350,10 @@ def inverse_lagrange_multiplier_test(
     lm = _LM(X=X_, W=W_, y=y_, Z=Z_, dof=dof)
     critical_value = scipy.stats.chi2(df=mx).ppf(1 - alpha)
 
-    A = lm.yS_proj_at_yS - critical_value / dof * lm.yS_orth_at_yS
-    # This is the inverse LM test confidence set if using S instead of S_tilde. This
-    # is not robust to weak instruments though.
-    approx = Quadric(
-        A=A[1:, 1:],
-        b=-2 * A[1:, 0],
-        c=np.sum(proj(lm.yS_proj[:, 1:], lm.y_proj) ** 2)
-        - critical_value / dof * lm.yS_orth_at_yS[0, 0],
-    ).project([0])
+    # Use a test with closed-form solution to get an idea of the "scale".
+    approx = inverse_wald_test(
+        Z=Z, X=X, y=y, alpha=alpha, W=W, C=C, fit_intercept=fit_intercept
+    )
 
     left, right = approx.left, approx.right
     step = right - left
