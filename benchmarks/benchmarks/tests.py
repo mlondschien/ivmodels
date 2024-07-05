@@ -4,6 +4,10 @@ from ivmodels.simulate import simulate_gaussian_iv, simulate_guggenberger12
 from ivmodels.tests import (
     anderson_rubin_test,
     conditional_likelihood_ratio_test,
+    inverse_anderson_rubin_test,
+    inverse_lagrange_multiplier_test,
+    inverse_likelihood_ratio_test,
+    inverse_wald_test,
     lagrange_multiplier_test,
     likelihood_ratio_test,
     rank_test,
@@ -36,17 +40,15 @@ class Tests:
     def time_anderson_rubin_test(self, n, data):
         _, _ = anderson_rubin_test(**self.data)
 
+    def time_inverse_anderson_rubin_test(self, n, data):
+        data = {k: v for k, v in self.data.items() if k != "beta"}
+        _ = inverse_anderson_rubin_test(**data)
+
     @skip_for_params(
         [
             (100, (1, 1, 0, 0)),
-            (100, (4, 2, 0, 0)),
-            (100, (4, 2, 0, 2)),
             (1000, (1, 1, 0, 0)),
-            (1000, (4, 2, 0, 0)),
-            (1000, (4, 2, 0, 2)),
             (10000, (1, 1, 0, 0)),
-            (10000, (4, 2, 0, 0)),
-            (10000, (4, 2, 0, 2)),
         ]
     )
     def time_anderson_rubin_test_guggenberger19(self, n, data):
@@ -55,8 +57,23 @@ class Tests:
     def time_lagrange_multiplier_test(self, n, data):
         _, _ = lagrange_multiplier_test(**self.data)
 
+    @skip_for_params(
+        [
+            (100, (4, 2, 2, 2)),
+            (1000, (4, 2, 2, 2)),
+            (10000, (4, 2, 0, 2)),
+        ]
+    )
+    def time_inverse_lagrange_multiplier_test(self, n, data):
+        data = {k: v for k, v in self.data.items() if k != "beta"}
+        _ = inverse_lagrange_multiplier_test(**data)
+
     def time_likelihood_ratio_test(self, n, data):
         _, _ = likelihood_ratio_test(**self.data)
+
+    def time_inverse_likelihood_ratio_test(self, n, data):
+        data = {k: v for k, v in self.data.items() if k != "beta"}
+        _ = inverse_likelihood_ratio_test(**data)
 
     def time_conditional_likelihood_ratio_test_numerical_integration(self, n, data):
         _, _ = conditional_likelihood_ratio_test(
@@ -69,8 +86,16 @@ class Tests:
     def time_wald_test_tsls(self, n, data):
         _, _ = wald_test(**self.data, estimator="tsls")
 
+    def time_inverse_wald_test_tsls(self, n, data):
+        data = {k: v for k, v in self.data.items() if k != "beta"}
+        _ = inverse_wald_test(**data, estimator="tsls")
+
     def time_wald_test_liml(self, n, data):
         _, _ = wald_test(**self.data, estimator="liml")
+
+    def time_inverse_wald_test_liml(self, n, data):
+        data = {k: v for k, v in self.data.items() if k != "beta"}
+        _ = inverse_wald_test(**data, estimator="liml")
 
     def test_rank_test(self, n, data):
         _, _ = rank_test(Z=self.data["Z"], X=self.data["X"])
