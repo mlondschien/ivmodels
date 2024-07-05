@@ -372,7 +372,7 @@ def inverse_lagrange_multiplier_test(
                 left=-np.inf, right=np.inf, convex=True, message="no bounds found"
             )
 
-    right += step
+    right += 4 * step
 
     while lm.lm(left) < critical_value:
         left -= step
@@ -383,7 +383,7 @@ def inverse_lagrange_multiplier_test(
                 left=-np.inf, right=np.inf, convex=True, message="no bounds found"
             )
 
-    left -= step
+    left -= 4 * step
 
     n_points = 200
     x_ = np.linspace(left, right, n_points)

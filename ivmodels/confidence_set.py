@@ -31,7 +31,7 @@ class ConfidenceSet:
         else:
             return f"(-infty, {self.left}] U [{self.right}, infty)"
 
-    def _boundary(self):
+    def _boundary(self, error=True):
         if self.empty:
             return np.zeros(shape=(0, 1))
         else:

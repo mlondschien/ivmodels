@@ -133,7 +133,10 @@ class Quadric(ConfidenceSet):
 
         if len(self.D) == 1:
             if self.D[0] * self.c_standardized > 0:
-                raise ValueError("Quadric is empty.")
+                if error:
+                    raise ValueError("Quadric is empty.")
+                else:
+                    return np.zeros(shape=(0, 1))
             else:
                 return np.array(
                     [
