@@ -2,7 +2,7 @@ import numpy as np
 import scipy
 import scipy.interpolate
 import scipy.optimize
-from scipy.optimize.optimize import MemoizeJac
+from scipy.optimize._optimize import MemoizeJac
 
 from ivmodels.confidence_set import ConfidenceSet
 from ivmodels.quadric import Quadric
@@ -117,35 +117,39 @@ class _LM:
 
         return -eigval[1:, 0] / eigval[0, 0]
 
-    def derivative(self, beta, gamma=None):
+    def derivative(self, beta, gamma=None, jac_and_hess=True):
         """Return LM and derivative of LM at beta, gamma w.r.t. (beta, gamma)."""
         if gamma is not None:
             one_beta_gamma = np.hstack(([1], -beta.flatten(), -gamma.flatten()))
         else:
             one_beta_gamma = np.hstack(([1], -beta.flatten()))
 
-        residuals = self.yS @ one_beta_gamma
         residuals_proj = self.yS_proj @ one_beta_gamma
 
         Sigma = one_beta_gamma.T @ self.yS_orth_at_yS
-
         sigma_hat = Sigma @ one_beta_gamma
         Sigma = Sigma[1:] / sigma_hat
 
-        St = self.yS[:, 1:] - np.outer(residuals, Sigma)
         St_proj = self.yS_proj[:, 1:] - np.outer(residuals_proj, Sigma)
+
+        if not jac_and_hess:
+            residuals_proj_St = proj(St_proj, residuals_proj)
+            return self.dof * residuals_proj_St.T @ residuals_proj_St / sigma_hat
+
+        residuals = self.yS @ one_beta_gamma
+        St = self.yS[:, 1:] - np.outer(residuals, Sigma)
         St_orth = St - St_proj
 
         St_proj_inv = np.linalg.inv(St_proj.T @ St_proj)
         solved = St_proj_inv @ St_proj.T @ residuals_proj
         residuals_proj_St = St_proj @ solved
 
-        lm = residuals_proj_St.T @ residuals_proj_St / sigma_hat
         ar = residuals_proj.T @ residuals_proj / sigma_hat
+        lm = residuals_proj_St.T @ residuals_proj_St / sigma_hat
         kappa = ar - lm
 
-        first_term = -St_proj.T @ residuals_proj
-        second_term = (St - St_proj).T @ St @ solved
+        first_term = -St_proj[:, self.mx :].T @ residuals_proj
+        second_term = St_orth[:, self.mx :].T @ St @ solved
         S = self.yS[:, 1:]
         S_proj = self.yS_proj[:, 1:]
         S_orth = S - S_proj
@@ -157,15 +161,21 @@ class _LM:
             * (
                 -3 * kappa * np.outer(second_term, second_term) / sigma_hat
                 - kappa
-                * St_orth.T
+                * St_orth[:, self.mx :].T
                 @ St_orth
                 @ St_proj_inv
                 @ (St_proj - kappa * St_orth).T
-                @ S
-                + St.T @ (S_proj - ar * S_orth)
-                - np.outer(Sigma, (St_proj - kappa * St_orth).T @ St @ solved)
-                + 2 * kappa * np.outer(S_orth.T @ St @ solved, Sigma)
-                - 2 * np.outer(St_proj.T @ residuals, Sigma)
+                @ S[:, self.mx :]
+                + St[:, self.mx :].T
+                @ (S_proj[:, self.mx :] - ar * S_orth[:, self.mx :])
+                - np.outer(
+                    Sigma[self.mx :],
+                    (St_proj - kappa * St_orth)[:, self.mx :].T @ St @ solved,
+                )
+                + 2
+                * kappa
+                * np.outer(S_orth[:, self.mx :].T @ St @ solved, Sigma[self.mx :])
+                - 2 * np.outer(St_proj[:, self.mx :].T @ residuals, Sigma[self.mx :])
             )
             / sigma_hat
         )
@@ -181,14 +191,14 @@ class _LM:
         if isinstance(beta, float):
             beta = np.array([[beta]])
 
+        if self.mw == 0:
+            return self.derivative(beta, jac_and_hess=False)
+
         gamma_0 = self.liml(beta=beta)
 
-        if self.mw == 0:
-            return self.derivative(beta, gamma_0)[0]
-
         def _derivative(gamma):
-            result = self.derivative(beta, gamma)
-            return (result[0], result[1][self.mx :], result[2][self.mx :, self.mx :])
+            result = self.derivative(beta, gamma, jac_and_hess=True)
+            return (result[0], result[1], result[2])
 
         objective = MemoizeJacHess(_derivative)
         jac = objective.derivative
@@ -349,17 +359,31 @@ def inverse_lagrange_multiplier_test(
         c=np.sum(proj(lm.yS_proj[:, 1:], lm.y_proj) ** 2)
         - critical_value / dof * lm.yS_orth_at_yS[0, 0],
     ).project([0])
-    left, right = approx.left, approx.right
 
+    left, right = approx.left, approx.right
     step = right - left
 
     while lm.lm(right) < critical_value:
         right += step
-    right += 2 * step
+        step *= 2
+
+        if right > 1e6:
+            return ConfidenceSet(
+                left=-np.inf, right=np.inf, convex=True, message="no bounds found"
+            )
+
+    right += step
 
     while lm.lm(left) < critical_value:
         left -= step
-    left -= 2 * step
+        step *= 2
+
+        if left < -1e6:
+            return ConfidenceSet(
+                left=-np.inf, right=np.inf, convex=True, message="no bounds found"
+            )
+
+    left -= step
 
     n_points = 200
     x_ = np.linspace(left, right, n_points)

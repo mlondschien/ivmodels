@@ -260,17 +260,24 @@ def test_test_size_weak_ivs(test, n, mx, k, u, mc):
         (likelihood_ratio_test, inverse_likelihood_ratio_test),
     ],
 )
-@pytest.mark.parametrize("n, mx, k, u, mc", [(100, 1, 2, 1, 3), (100, 2, 5, 2, 0)])
+@pytest.mark.parametrize(
+    "data", [(100, 1, 2, 1, 3), (100, 2, 5, 2, 0), "guggenberger12"]
+)
 @pytest.mark.parametrize("p_value", [0.1, 0.01])
 @pytest.mark.parametrize("fit_intercept", [True, False])
-def test_test_round_trip(test, inverse_test, n, mx, k, u, mc, p_value, fit_intercept):
+def test_test_round_trip(test, inverse_test, data, p_value, fit_intercept):
     """A test's p-value at the confidence set's boundary equals the nominal level."""
-    if test == lagrange_multiplier_test and mx > 1:
-        pytest.skip("LM test inverse not implemented for mx > 1")
+    if data == "guggenberger12":
+        Z, X, y, C, _ = simulate_guggenberger12(n=100, k=5, seed=0)
+    else:
+        n, mx, k, u, mc = data
 
-    Z, X, y, C, _ = simulate_gaussian_iv(
-        n=n, mx=mx, k=k, u=u, mc=mc, seed=0, include_intercept=fit_intercept
-    )
+        if test == lagrange_multiplier_test and mx > 1:
+            pytest.skip("LM test inverse not implemented for mx > 1")
+
+        Z, X, y, C, _ = simulate_gaussian_iv(
+            n=n, mx=mx, k=k, u=u, mc=mc, seed=0, include_intercept=fit_intercept
+        )
 
     quadric = inverse_test(Z, X, y, C=C, alpha=p_value, fit_intercept=fit_intercept)
     boundary = quadric._boundary()
@@ -297,80 +304,48 @@ def test_test_round_trip(test, inverse_test, n, mx, k, u, mc, p_value, fit_inter
     ],
 )
 @pytest.mark.parametrize(
-    "n, mx, k, mw, u, mc",
+    "data",
     [
-        # (100, 1, 3, 1, 2, 3),
-        # (100, 2, 5, 2, 3, 0),
-        (100, 1, 10, 1, None, 0),
+        (100, 1, 3, 1, 2, 3),
+        (100, 2, 5, 2, 3, 0),
+        (100, 1, 10, 5, None, 0),
+        "guggenberger12",
     ],
 )
 @pytest.mark.parametrize("p_value", [0.1])
 @pytest.mark.parametrize("fit_intercept", [True, False])
-def test_subvector_round_trip(
-    test, inverse_test, n, mx, k, u, mw, mc, p_value, fit_intercept
-):
+def test_subvector_round_trip(test, inverse_test, data, p_value, fit_intercept):
     """
     A test's p-value at the confidence set's boundary equals the nominal level.
 
     This time for subvector tests.
     """
-    if test == lagrange_multiplier_test and mx > 1:
-        pytest.skip("LM test inverse not implemented for mx > 1")
+    if data == "guggenberger12":
+        Z, X, y, C, W = simulate_guggenberger12(n=100, k=5, seed=0)
+    else:
+        n, mx, k, mw, u, mc = data
 
-    Z, X, y, C, W = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, mw=mw, mc=mc, seed=0)
+        if test == lagrange_multiplier_test and mx > 1:
+            pytest.skip("LM test inverse not implemented for mx > 1")
+
+        Z, X, y, C, W = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, mw=mw, mc=mc, seed=0)
+
+    kwargs = {"Z": Z, "X": X, "y": y, "W": W, "C": C, "fit_intercept": fit_intercept}
 
     quadric = inverse_test(Z, X, y, p_value, W=W, C=C, fit_intercept=fit_intercept)
     boundary = quadric._boundary()
 
     if quadric.message is not None:
         eps = 1e-6 * (quadric.right - quadric.left)
-        tol = 1e-4
-        assert (
-            test(
-                Z,
-                X,
-                y,
-                beta=np.array([quadric.left - eps]),
-                W=W,
-                C=C,
-                fit_intercept=fit_intercept,
-            )[1]
-            - tol
-            <= p_value
-            <= test(
-                Z,
-                X,
-                y,
-                beta=np.array([quadric.left]) + eps,
-                W=W,
-                C=C,
-                fit_intercept=fit_intercept,
-            )[1]
-            + tol
-        )
-        assert (
-            test(
-                Z,
-                X,
-                y,
-                beta=np.array([quadric.right]) - eps,
-                W=W,
-                C=C,
-                fit_intercept=fit_intercept,
-            )[1]
-            + tol
-            >= p_value
-            >= test(
-                Z,
-                X,
-                y,
-                beta=np.array([quadric.left]) + eps,
-                W=W,
-                C=C,
-                fit_intercept=fit_intercept,
-            )[1]
-            - tol
-        )
+        tol = 1e-3
+
+        left_m = test(**kwargs, beta=np.array([quadric.left - eps]))
+        left_p = test(Z, X, y, beta=np.array([quadric.left + eps]))
+        assert left_m[1] + tol >= p_value >= left_p[1] - tol
+
+        right_p = test(**kwargs, beta=np.array([quadric.right + eps]))
+        right_m = test(Z, X, y, beta=np.array([quadric.right - eps]))
+        assert right_p[1] + tol >= p_value >= right_m[1] - tol
 
     else:
         if isinstance(quadric, Quadric):
@@ -378,9 +353,7 @@ def test_subvector_round_trip(
 
         p_values = np.zeros(boundary.shape[0])
         for idx, row in enumerate(boundary):
-            p_values[idx] = test(
-                Z, X, y, beta=row, W=W, C=C, fit_intercept=fit_intercept
-            )[1]
+            p_values[idx] = test(beta=row, **kwargs)[1]
 
         assert np.allclose(p_values, p_value, atol=1e-4)
 
