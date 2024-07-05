@@ -1,8 +1,21 @@
 Changelog
 =========
 
-0.2.0 - 2024-06-7
------------------
+0.3.0 - 2024-07-xx
+------------------
+
+**New features:**
+
+- New function :func:`~ivmodels.tests.inverse_lagrange_multiplier_test`.
+
+- New class :class:`~ivmodels.confidence_sets.ConfidenceSet`.
+
+**Other changes:**
+
+- The function :func:`~ivmodels.tests.lagrange_multiplier_test` is now slightly faster.
+
+0.2.0 - 2024-06-07
+------------------
 
 **New features:**
 
