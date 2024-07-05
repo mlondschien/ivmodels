@@ -140,8 +140,13 @@ class _LM:
         St = self.yS[:, 1:] - np.outer(residuals, Sigma)
         St_orth = St - St_proj
 
+        mat = St_proj.T @ St_proj
+        cond = np.linalg.cond(mat)
+        if cond > 1e12:
+            mat += 1e-6 * np.eye(mat.shape[0])
+
         solved = np.linalg.solve(
-            St_proj.T @ St_proj,
+            mat,
             np.hstack(
                 [
                     St_proj.T @ residuals_proj.reshape(-1, 1),
