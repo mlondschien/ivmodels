@@ -332,34 +332,20 @@ def test_subvector_round_trip(test, inverse_test, data, p_value, fit_intercept):
 
     kwargs = {"Z": Z, "X": X, "y": y, "W": W, "C": C, "fit_intercept": fit_intercept}
 
-    quadric = inverse_test(Z, X, y, p_value, W=W, C=C, fit_intercept=fit_intercept)
-
+    quadric = inverse_test(alpha=p_value, **kwargs)
     boundary = quadric._boundary(error=False)
 
-    if quadric.message is not None:
-        if quadric.empty or not all(np.isfinite([quadric.left, quadric.right])):
-            return
+    if isinstance(quadric, Quadric):
+        assert np.allclose(quadric(boundary), 0, atol=1e-7)
 
-        eps = 1e-6 * (quadric.right - quadric.left)
-        tol = 1e-3
-
-        left_m = test(**kwargs, beta=np.array([quadric.left - eps]))
-        left_p = test(Z, X, y, beta=np.array([quadric.left + eps]))
-        assert left_m[1] + tol >= p_value >= left_p[1] - tol
-
-        right_p = test(**kwargs, beta=np.array([quadric.right + eps]))
-        right_m = test(Z, X, y, beta=np.array([quadric.right - eps]))
-        assert right_p[1] + tol >= p_value >= right_m[1] - tol
-
-    else:
-        if isinstance(quadric, Quadric):
-            assert np.allclose(quadric(boundary), 0, atol=1e-7)
-
-        p_values = np.zeros(boundary.shape[0])
-        for idx, row in enumerate(boundary):
+    p_values = np.zeros(boundary.shape[0])
+    for idx, row in enumerate(boundary):
+        if np.isfinite(row).all():
             p_values[idx] = test(beta=row, **kwargs)[1]
+        else:
+            p_values[idx] = p_value
 
-        assert np.allclose(p_values, p_value, atol=1e-4)
+    assert np.allclose(p_values, p_value, atol=1e-4)
 
 
 @pytest.mark.parametrize(

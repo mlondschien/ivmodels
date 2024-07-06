@@ -84,3 +84,52 @@ def _check_test_inputs(Z, X, y, W=None, C=None, beta=None):
             )
 
     return Z, X, y, W, C, beta
+
+
+def _find_roots(f, a, b, tol, max_value, max_eval, n_points=50):
+    """
+    Find the root of function ``f`` between ``a`` and ``b`` closest to ``b``.
+
+    Assumes ``f(a) < 0`` and ``f(b) > 0``. Finds root by building a grid between ``a``
+    and ``b`` with ``n_points``, evaluating ``f`` at each point, and finding the last
+    point where ``f`` is negative. If ``b`` is infinite, uses a logarithmic grid between
+    ``a`` and ``a + sign(b - a) * max_value``. The function is then called recursively
+    on the new interval until the size of the interval is less than ``tol`` or the
+    maximum number of evaluations ``max_eval`` of ``f`` is reached.
+
+    There is no scipy root finding algorithm that ensures that the root found is the
+    closest to ``b``. Note that this is also not strictly ensured by this function.
+    """
+    sgn = np.sign(b - a)
+    if np.isinf(b):
+        grid = np.ones(n_points) * a
+        grid[1:] += sgn * np.logspace(0, np.log10(max_value), n_points - 1)
+    else:
+        grid = np.linspace(a, b, n_points)
+
+    y = np.zeros(n_points)
+    y[-1] = f(grid[-1])
+    if y[-1] < 0:
+        return sgn * np.inf
+
+    for i, x in enumerate(grid[:-1]):
+        y[i] = f(x)
+
+    last_positive = np.where(y < 0)[0][-1]
+    # f(a_new) < 0 < f(b_new) -> repeat
+    a_new, b_new = grid[last_positive], grid[last_positive + 1]
+
+    if np.abs(b_new - a_new) < tol or max_eval - n_points < 0:
+        return b_new  # convervative
+
+    else:
+        new_max_eval = max_eval - n_points
+        return _find_roots(
+            f,
+            a_new,
+            b_new,
+            tol=tol,
+            n_points=n_points,
+            max_value=None,
+            max_eval=new_max_eval,
+        )
