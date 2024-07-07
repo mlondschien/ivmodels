@@ -234,16 +234,27 @@ class Quadric:
         if any([c < 0 or c >= self.A.shape[0] for c in coordinates]):
             raise ValueError("Coordinates must be between 0 and p - 1.")
 
-        B = np.zeros((self.A.shape[0], len(coordinates)))
-        for i, c in enumerate(coordinates):
-            B[c, i] = 1
+        mask = np.array([x in coordinates for x in range(self.A.shape[0])])
 
-        A_inv = np.linalg.inv(self.A)
-        A_new = np.linalg.inv(B.T @ A_inv @ B)
-        b_new = A_new @ B.T @ A_inv @ self.b
-        c_new = (
-            self.c_standardized
-            + 1.0 / 4.0 * self.b.T @ A_inv @ B @ A_new @ B.T @ A_inv @ self.b
-        )
+        if mask.all():
+            return self
 
-        return Quadric(A_new, b_new, c_new)
+        if (  # [~mask, ~mask] will to a .reshape(-1) on the matrix
+            scipy.linalg.eigvalsh(self.A[:, ~mask][~mask, :], subset_by_index=[0, 0])[0]
+            < 0
+        ):
+            return Quadric(
+                -np.diag(np.ones(len(coordinates))), self.center[mask], -1
+            )  # whole space
+
+        else:
+            B = np.diag(np.ones(self.A.shape[0]))[:, mask]
+            A_inv = np.linalg.inv(self.A)
+            A_new = np.linalg.inv(B.T @ A_inv @ B)
+            b_new = A_new @ B.T @ A_inv @ self.b
+            c_new = (
+                self.c_standardized
+                + 1.0 / 4.0 * self.b.T @ A_inv @ B @ A_new @ B.T @ A_inv @ self.b
+            )
+
+            return Quadric(A_new, b_new, c_new)

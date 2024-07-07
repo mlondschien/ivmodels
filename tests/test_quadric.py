@@ -171,3 +171,15 @@ def test_quadric_trivial_projection_does_not_change_standardization(n, seed):
 def test_quadric_to_confidence_set(A, b, c, expected):
     quadric = Quadric(A, b, c)
     assert str(ConfidenceSet.from_quadric(quadric)) == expected
+
+
+def test_quadric_project_whole_space():
+    A = np.array([[1, 0], [0, -1]])
+    b = np.zeros(2)
+    c = 0
+
+    quadric = Quadric(A, b, c)
+    projected_quadric = quadric.project([0])
+
+    assert not projected_quadric.is_bounded()
+    assert projected_quadric._boundary().shape == (0, 1)
