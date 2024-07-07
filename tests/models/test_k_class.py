@@ -268,3 +268,71 @@ def test_kclass_X_Z_C_raises():
     kclass_3 = KClass(kappa=1, instrument_regex="1", exogenous_regex="1")
     with pytest.raises(ValueError, match="mes` and `exogenous_regex` must be disjoint"):
         kclass_3.fit(df, Y)
+
+
+def test_kclass_X_Z_C_names():
+    rng = np.random.RandomState(0)
+    columns = ["X1", "X2", "X3", "Z1", "Z2", "Z3", "C1", "C2", "C3"]
+    covariates = ["X1", "X2", "X3", "C1", "C2", "C3"]
+
+    df = pd.DataFrame({k: rng.randn(100) for k in columns})
+    y = np.random.randn(100)
+
+    kclass = KClass(
+        kappa=1,
+        instrument_names=["Z1", "Z2", "Z3"],
+        exogenous_names=["C1", "C2", "C3"],
+        fit_intercept=True,
+    )
+    kclass.fit(df, y)
+    assert kclass.endogenous_names_ == ["X1", "X2", "X3"]
+    assert kclass.instrument_names_ == ["Z1", "Z2", "Z3"]
+    assert kclass.exogenous_names_ == ["C1", "C2", "C3"]
+    assert kclass.named_coefs_.index.tolist() == ["intercept"] + covariates
+
+    kclass = KClass(
+        kappa=1,
+        instrument_names=["Z1", "Z2", "Z3"],
+        exogenous_names=["C1", "C2", "C3"],
+        fit_intercept=False,
+    )
+    kclass.fit(df, y)
+    assert kclass.endogenous_names_ == ["X1", "X2", "X3"]
+    assert kclass.instrument_names_ == ["Z1", "Z2", "Z3"]
+    assert kclass.exogenous_names_ == ["C1", "C2", "C3"]
+    assert kclass.named_coefs_.index.tolist() == covariates
+
+    kclass = KClass(
+        kappa=1, instrument_regex="1", exogenous_regex="2", fit_intercept=True
+    )
+    kclass.fit(df, y)
+    assert kclass.endogenous_names_ == ["X3", "Z3", "C3"]
+    assert kclass.instrument_names_ == ["X1", "Z1", "C1"]
+    assert kclass.exogenous_names_ == ["X2", "Z2", "C2"]
+    assert kclass.named_coefs_.index.tolist() == [
+        "intercept",
+        "X3",
+        "Z3",
+        "C3",
+        "X2",
+        "Z2",
+        "C2",
+    ]
+
+    kclass = KClass(kappa=1, fit_intercept=True)
+    kclass.fit(X=df[["X1", "X2"]], Z=df[["Z1", "Z2"]], C=df[["C1", "C2"]], y=y)
+    assert kclass.endogenous_names_ == ["X1", "X2"]
+    assert kclass.instrument_names_ == ["Z1", "Z2"]
+    assert kclass.exogenous_names_ == ["C1", "C2"]
+    assert kclass.named_coefs_.index.tolist() == ["intercept", "X1", "X2", "C1", "C2"]
+
+    kclass = KClass(kappa=1, fit_intercept=True)
+    kclass.fit(
+        X=df[["X1", "X2"]].to_numpy(),
+        Z=df[["Z1", "Z2"]].to_numpy(),
+        C=df[["C1", "C2"]].to_numpy(),
+        y=y,
+    )
+    assert kclass.endogenous_names_ == ["endogenous_0", "endogenous_1"]
+    assert kclass.instrument_names_ == ["instrument_0", "instrument_1"]
+    assert kclass.exogenous_names_ == ["exogenous_0", "exogenous_1"]
