@@ -6,9 +6,12 @@ Changelog
 
 **New features:**
 
-- New function :func:`~ivmodels.tests.inverse_lagrange_multiplier_test`.
+- New functions :func:`~ivmodels.tests.inverse_lagrange_multiplier_test` and
+  :func:`~ivmodels.tests.inverse_conditional_likelihood_ratio_test` to approximate the
+  1 dimensional confidence sets by inverting the corresponding (subvector) tests.
 
 - New class :class:`~ivmodels.confidence_sets.ConfidenceSet`.
+
 
 **Other changes:**
 
