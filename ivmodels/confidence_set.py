@@ -26,12 +26,39 @@ class ConfidenceSet:
         if len(self.boundaries) == 0:
             return "\u2205"  # empty set symbol
 
-        return " \u222A ".join(  # union symbol
-            f"[{left.__format__(format_spec)}, {right.__format(format_spec)}]"
+        return " U ".join(
+            f"[{left.__format__(format_spec)}, {right.__format__(format_spec)}]"
             for left, right in sorted(self.boundaries, key=lambda x: x[0])
         )
 
+    def __str__(self):  # noqa D
+        return f"{self}"
+
+    def is_empty(self):
+        """Return True if the confidence set is empty."""
+        return len(self.boundaries) == 0
+
+    def is_finite(self):
+        """Return True if the confidence set is finite."""
+        return all(np.isfinite(x) for b in self.boundaries for x in b)
+
     def _boundary(self, error=True):
+        """Return an array containing all the boundary points of the confidence set."""
         return np.array(
             [x for b in self.boundaries for x in b if np.isfinite(x)]
         ).reshape(-1, 1)
+
+    @staticmethod
+    def from_quadric(quadric):
+        """Create a 1D confidence set from a quadric."""
+        if not quadric.dim() == 1:
+            raise ValueError("Can only convert 1D Quadric to ConfidenceSet.")
+
+        if quadric.is_empty():
+            return ConfidenceSet([])
+
+        boundary = sorted(quadric._boundary().flatten())
+        if quadric.is_bounded():
+            return ConfidenceSet([(boundary[0], boundary[1])])
+        else:
+            return ConfidenceSet([(-np.inf, boundary[0]), (boundary[1], np.inf)])

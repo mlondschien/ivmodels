@@ -2,12 +2,13 @@ import numpy as np
 import pytest
 import scipy
 
+from ivmodels.confidence_set import ConfidenceSet
 from ivmodels.quadric import Quadric
 
 
 @pytest.mark.parametrize("p", [2, 5])
 @pytest.mark.parametrize("seed", [0, 1])
-def test_quadric(p, seed):
+def test_quadric_map(p, seed):
     rng = np.random.RandomState(seed)
 
     A = rng.normal(0, 1, (p, p))
@@ -63,6 +64,7 @@ def test_quadric_boundary(D, c_standardized):
 def test_quadric_volume(D, c, expected):
     quadric = Quadric(np.diag(D), np.zeros_like(D), c)
     assert quadric.volume() == expected
+    assert quadric.is_bounded() == (expected < np.inf)
 
 
 def test_quadric_from_constraints():
@@ -104,23 +106,37 @@ def test_quadric_projection(n, p, seed):
     quadric = Quadric(A, b, c)
 
     for j in range(p):
-        sol = quadric._projection(j)
-        assert np.allclose(quadric(np.array(sol)), 0)
+        sol = quadric.project([j])
+
+        right = scipy.optimize.minimize(
+            lambda x: -x[j],
+            constraints=[{"type": "ineq", "fun": lambda x: -quadric(x)}],
+            x0=quadric.center,
+        )
+
+        left = scipy.optimize.minimize(
+            lambda x: x[j],
+            constraints=[{"type": "ineq", "fun": lambda x: -quadric(x)}],
+            x0=quadric.center,
+        )
+
+        assert np.allclose(sol._boundary().min(), left.x[j], atol=1e-4)
+        assert np.allclose(sol._boundary().max(), right.x[j], atol=1e-4)
 
         # The gradient of the quadric at the solution should be zero in each direction
         # other than j. In direction j, the gradient should be negative for the min,
         # (first component) and positive for the max (second component).
-        grad0 = scipy.optimize.approx_fprime(sol[0], lambda x: quadric(x), 1e-8)
-        grad1 = scipy.optimize.approx_fprime(sol[1], lambda x: quadric(x), 1e-8)
+        grad0 = scipy.optimize.approx_fprime(right.x, lambda x: quadric(x), 1e-8)
+        grad1 = scipy.optimize.approx_fprime(left.x, lambda x: quadric(x), 1e-8)
 
-        assert grad0[j] < 0
-        assert grad1[j] > 0
+        assert grad0[j] > 0
+        assert grad1[j] < 0
 
         grad0[j] = 0
         grad1[j] = 0
 
-        assert np.allclose(grad0, 0, atol=1e-3)
-        assert np.allclose(grad1, 0, atol=1e-3)
+        assert np.allclose(grad0, 0, atol=1e-2)
+        assert np.allclose(grad1, 0, atol=1e-2)
 
 
 @pytest.mark.parametrize("dim_before, dim_after", [(2, 2), (5, 5), (5, 2), (2, 1)])
@@ -163,10 +179,10 @@ def test_quadric_trivial_projection_does_not_change_standardization(n, seed):
     "A, b, c, expected",
     [
         (np.array([[1]]), np.array([-4]), 3, "[1.0, 3.0]"),
-        (np.array([[-1]]), np.array([-4]), -3, "[-infty, -3.0] U [-1.0, infty]"),
-        (np.array([[1]]), np.zeros(1), 1, "[]"),
+        (np.array([[-1]]), np.array([-4]), -3, "[-inf, -3.0] U [-1.0, inf]"),
+        (np.array([[1]]), np.zeros(1), 1, "∅"),
     ],
 )
-def test_quadric_str(A, b, c, expected):
+def test_quadric_to_confidence_set(A, b, c, expected):
     quadric = Quadric(A, b, c)
-    assert str(quadric) == expected
+    assert str(ConfidenceSet.from_quadric(quadric)) == expected
