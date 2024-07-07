@@ -1,5 +1,8 @@
 from .anderson_rubin import anderson_rubin_test, inverse_anderson_rubin_test
-from .conditional_likelihood_ratio import conditional_likelihood_ratio_test
+from .conditional_likelihood_ratio import (
+    conditional_likelihood_ratio_test,
+    inverse_conditional_likelihood_ratio_test,
+)
 from .lagrange_multiplier import (
     inverse_lagrange_multiplier_test,
     lagrange_multiplier_test,
@@ -13,6 +16,7 @@ __all__ = [
     "anderson_rubin_test",
     "inverse_anderson_rubin_test",
     "conditional_likelihood_ratio_test",
+    "inverse_conditional_likelihood_ratio_test",
     "lagrange_multiplier_test",
     "inverse_lagrange_multiplier_test",
     "likelihood_ratio_test",

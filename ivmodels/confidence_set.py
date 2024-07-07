@@ -2,37 +2,36 @@ import numpy as np
 
 
 class ConfidenceSet:
-    """A class to represent a confidence set."""
+    """A class to represent a 1D confidence set.
 
-    def __init__(self, left, right, convex, empty=False, message=None):
-        self.left = left
-        self.right = right
-        self.convex = convex
-        self.empty = empty
-        self.message = message
+    Parameters
+    ----------
+    boundaries: list of 2-tuples of floats.
+        The boundaries of the confidence set. The confidence set is the union of
+        the intervals defined by the boundaries.
+    """
+
+    def __init__(self, boundaries):
+        self.boundaries = boundaries
 
     def __call__(self, x):  # noqa D
-        if self.empty:
-            return 1
+        """Return -1 if x is in the confidence set, 1 otherwise."""
+        for left, right in self.boundaries:
+            if left <= x <= right:
+                return -1
 
-        between = self.left <= x <= self.right
-        if self.convex and between:
-            return -1
-        elif not self.convex and not between:
-            return -1
-        else:
-            return 1
+        return 1
 
-    def __str__(self):  # noqa D
-        if self.empty:
-            return "[]"
-        elif self.convex:
-            return f"[{self.left}, {self.right}]"
-        else:
-            return f"(-infty, {self.left}] U [{self.right}, infty)"
+    def __format__(self, format_spec: str) -> str:  # noqa D
+        if len(self.boundaries) == 0:
+            return "\u2205"  # empty set symbol
+
+        return " \u222A ".join(  # union symbol
+            f"[{left.__format__(format_spec)}, {right.__format(format_spec)}]"
+            for left, right in sorted(self.boundaries, key=lambda x: x[0])
+        )
 
     def _boundary(self, error=True):
-        if self.empty:
-            return np.zeros(shape=(0, 1))
-        else:
-            return np.array([[self.left], [self.right]])
+        return np.array(
+            [x for b in self.boundaries for x in b if np.isfinite(x)]
+        ).reshape(-1, 1)

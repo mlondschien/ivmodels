@@ -10,6 +10,7 @@ from ivmodels.tests import (
     anderson_rubin_test,
     conditional_likelihood_ratio_test,
     inverse_anderson_rubin_test,
+    inverse_conditional_likelihood_ratio_test,
     inverse_lagrange_multiplier_test,
     inverse_likelihood_ratio_test,
     inverse_pulse_test,
@@ -31,7 +32,7 @@ inverse_f_anderson_rubin_test = partial(
 )
 
 TEST_PAIRS = [
-    (conditional_likelihood_ratio_test, None),
+    (conditional_likelihood_ratio_test, inverse_conditional_likelihood_ratio_test),
     (pulse_test, inverse_pulse_test),
     (lagrange_multiplier_test, inverse_lagrange_multiplier_test),
     (anderson_rubin_test, inverse_anderson_rubin_test),
@@ -258,6 +259,7 @@ def test_test_size_weak_ivs(test, n, mx, k, u, mc):
         (lagrange_multiplier_test, inverse_lagrange_multiplier_test),
         (liml_wald_test, liml_inverse_wald_test),
         (likelihood_ratio_test, inverse_likelihood_ratio_test),
+        (conditional_likelihood_ratio_test, inverse_conditional_likelihood_ratio_test),
     ],
 )
 @pytest.mark.parametrize(
@@ -301,6 +303,7 @@ def test_test_round_trip(test, inverse_test, data, p_value, fit_intercept):
         (lagrange_multiplier_test, inverse_lagrange_multiplier_test),
         (f_anderson_rubin_test, inverse_f_anderson_rubin_test),
         (likelihood_ratio_test, inverse_likelihood_ratio_test),
+        (conditional_likelihood_ratio_test, inverse_conditional_likelihood_ratio_test),
     ],
 )
 @pytest.mark.parametrize(
@@ -327,6 +330,8 @@ def test_subvector_round_trip(test, inverse_test, data, p_value, fit_intercept):
 
         if test == lagrange_multiplier_test and mx > 1:
             pytest.skip("LM test inverse not implemented for mx > 1")
+        if test == conditional_likelihood_ratio_test and mx > 1:
+            pytest.skip("CLR test inverse not implemented for mx > 1")
 
         Z, X, y, C, W = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, mw=mw, mc=mc, seed=0)
 

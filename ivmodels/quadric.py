@@ -61,9 +61,9 @@ class Quadric(ConfidenceSet):
 
         if A.shape[0] == 1:
             if (self.D[0] < 0) and (self.c_standardized <= 0):
-                left, right = -np.inf, np.inf
+                left, right = -np.inf, np.inf  # whole space
             elif self.D[0] * self.c_standardized > 0:
-                left, right = np.nan, np.nan
+                left, right = np.nan, np.nan  # empty
             else:
                 boundary = self._boundary()
                 left, right = boundary[0], boundary[1]
