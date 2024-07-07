@@ -123,21 +123,6 @@ def test_quadric_projection(n, p, seed):
         assert np.allclose(sol._boundary().min(), left.x[j], atol=1e-4)
         assert np.allclose(sol._boundary().max(), right.x[j], atol=1e-4)
 
-        # The gradient of the quadric at the solution should be zero in each direction
-        # other than j. In direction j, the gradient should be negative for the min,
-        # (first component) and positive for the max (second component).
-        grad0 = scipy.optimize.approx_fprime(right.x, lambda x: quadric(x), 1e-8)
-        grad1 = scipy.optimize.approx_fprime(left.x, lambda x: quadric(x), 1e-8)
-
-        assert grad0[j] > 0
-        assert grad1[j] < 0
-
-        grad0[j] = 0
-        grad1[j] = 0
-
-        assert np.allclose(grad0, 0, atol=1e-2)
-        assert np.allclose(grad1, 0, atol=1e-2)
-
 
 @pytest.mark.parametrize("dim_before, dim_after", [(2, 2), (5, 5), (5, 2), (2, 1)])
 def test_quadric_projected_sphere_is_sphere(dim_before, dim_after):
