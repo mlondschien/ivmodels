@@ -5,6 +5,7 @@ from ivmodels.tests import (
     anderson_rubin_test,
     conditional_likelihood_ratio_test,
     inverse_anderson_rubin_test,
+    inverse_conditional_likelihood_ratio_test,
     inverse_lagrange_multiplier_test,
     inverse_likelihood_ratio_test,
     inverse_wald_test,
@@ -82,6 +83,17 @@ class Tests:
 
     def time_conditional_likelihood_ratio_test_power_series(self, n, data):
         _, _ = conditional_likelihood_ratio_test(**self.data, method="power_series")
+
+    @skip_for_params(
+        [
+            (100, (4, 2, 2, 2)),
+            (1000, (4, 2, 2, 2)),
+            (10000, (4, 2, 0, 2)),
+        ]
+    )
+    def time_inverse_conditional_likelihood_ratio_test(self, n, data):
+        data = {k: v for k, v in self.data.items() if k != "beta"}
+        _ = inverse_conditional_likelihood_ratio_test(**data)
 
     def time_wald_test_tsls(self, n, data):
         _, _ = wald_test(**self.data, estimator="tsls")

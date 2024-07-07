@@ -458,7 +458,8 @@ def inverse_conditional_likelihood_ratio_test(
                 method="numerical_integration",
                 tol=tol,
             )
-            - alpha
+            - 1
+            + alpha
         )
 
     boundaries = []

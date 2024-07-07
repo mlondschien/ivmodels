@@ -246,17 +246,20 @@ class KClassMixin:
     def _spectrum(X, y, Z=None, X_proj=None, y_proj=None, subset_by_index=None):
         if (y_proj is None or X_proj is None) and Z is None:
             raise ValueError("Either Z or both X_proj and y_proj must be specified.")
-        if X_proj is None and y_proj is None:
+        elif X_proj is None and y_proj is None:
             X_proj, y_proj = proj(Z, X, y)
         elif X_proj is None:
             X_proj = proj(Z, X)
-        if y_proj is None:
+        elif y_proj is None:
             y_proj = proj(Z, y)
 
         Xy = np.concatenate([X, y.reshape(-1, 1)], axis=1)
         Xy_proj = np.concatenate([X_proj, y_proj.reshape(-1, 1)], axis=1)
+        Xy_orth = Xy - Xy_proj
         return scipy.linalg.eigvalsh(
-            a=Xy.T @ Xy_proj, b=(Xy - Xy_proj).T @ Xy, subset_by_index=subset_by_index
+            a=Xy_proj.T @ Xy_proj,
+            b=Xy_orth.T @ Xy_orth,
+            subset_by_index=subset_by_index,
         )
 
     @staticmethod
