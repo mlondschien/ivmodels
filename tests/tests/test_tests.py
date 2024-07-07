@@ -347,10 +347,7 @@ def test_subvector_round_trip(test, inverse_test, data, p_value, fit_intercept):
 
     p_values = np.zeros(boundary.shape[0])
     for idx, row in enumerate(boundary):
-        if np.isfinite(row).all():
-            p_values[idx] = test(beta=row, **kwargs)[1]
-        else:
-            p_values[idx] = p_value
+        p_values[idx] = test(beta=row, **kwargs)[1]
 
     assert np.allclose(p_values, p_value, atol=1e-4)
 

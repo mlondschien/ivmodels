@@ -42,7 +42,7 @@ class ConfidenceSet:
         """Return True if the confidence set is finite."""
         return all(np.isfinite(x) for b in self.boundaries for x in b)
 
-    def _boundary(self, error=True):
+    def _boundary(self):
         """Return array containing all finite boundary points of the confidence set."""
         return np.array(
             [x for b in self.boundaries for x in b if np.isfinite(x)]

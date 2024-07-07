@@ -122,7 +122,7 @@ class Quadric:
         """Map from the original space to the standardized space."""
         return (x - self.center.T) @ self.V
 
-    def _boundary(self, num=200, error=True):
+    def _boundary(self, num=200):
         assert len(self.D) <= 2
 
         if len(self.D) == 1:
@@ -137,15 +137,9 @@ class Quadric:
                 )
 
         if np.all(self.D > 0) and (self.c_standardized > 0):
-            if error:
-                raise ValueError("Quadric is empty.")
-            else:
-                return np.zeros(shape=(0, 1))
+            return np.zeros(shape=(0, 1))
         if np.all(self.D < 0) and (self.c_standardized <= 0):
-            if error:
-                raise ValueError("The quadric is the whole space.")
-            else:
-                return np.zeros(shape=(0, 1))
+            return np.zeros(shape=(0, 1))
 
         # If both entries of D have the opposite sign as c_standardized, the
         # boundary of the quadric is an ellipse.
