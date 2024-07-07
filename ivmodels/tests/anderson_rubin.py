@@ -214,7 +214,6 @@ def anderson_rubin_test(
             "critical_values must be one of 'chi2', 'f', or 'guggenberger'. Got "
             f"{critical_values}."
         )
-
     return statistic, p_value
 
 
@@ -286,35 +285,33 @@ def inverse_anderson_rubin_test(
     if C.shape[1] > 0:
         X, y, Z, W = oproj(C, X, y, Z, W)
 
-    X = np.concatenate([X, W], axis=1)
+    S = np.concatenate([X, W], axis=1)
+
     dfn = k - W.shape[1]
+    dfd = n - k - C.shape[1]
 
     if critical_values == "chi2":
-        quantile = scipy.stats.chi2.ppf(1 - alpha, df=dfn) / (n - k - C.shape[1])
+        quantile = scipy.stats.chi2.ppf(1 - alpha, df=dfn) / dfd
     elif critical_values == "f":
-        quantile = (
-            scipy.stats.f.ppf(1 - alpha, dfn=dfn, dfd=n - k - C.shape[1])
-            * dfn
-            / (n - k - C.shape[1])
-        )
+        quantile = scipy.stats.f.ppf(1 - alpha, dfn=dfn, dfd=dfd) * dfn / dfd
     else:
         raise ValueError(
             "critical_values must be one of 'chi2', 'f'. Got " f"{critical_values}."
         )
 
-    X_proj, y_proj = proj(Z, X, y)
-    X_orth = X - X_proj
+    S_proj, y_proj = proj(Z, S, y)
+    S_orth = S - S_proj
     y_orth = y - y_proj
 
-    A = X.T @ (X_proj - quantile * X_orth)
-    b = -2 * (X_proj - quantile * X_orth).T @ y
+    A = S.T @ (S_proj - quantile * S_orth)
+    b = -2 * (S_proj - quantile * S_orth).T @ y
     c = y.T @ (y_proj - quantile * y_orth)
 
     if isinstance(c, np.ndarray):
         c = c.item()
 
     if W is not None:
-        return Quadric(A, b, c).project(range(X.shape[1] - W.shape[1]))
+        return Quadric(A, b, c).project(range(X.shape[1]))
 
     else:
         return Quadric(A, b, c)

@@ -2,10 +2,8 @@
 import numpy as np
 import scipy
 
-from ivmodels.confidence_set import ConfidenceSet
 
-
-class Quadric(ConfidenceSet):
+class Quadric:
     """
     A class to represent a quadric :math:`x^T A x + b^T x + c \\leq 0`.
 
@@ -59,20 +57,20 @@ class Quadric(ConfidenceSet):
         self.D = eigenvalues
         self.V = eigenvectors
 
-        if A.shape[0] == 1:
-            if (self.D[0] < 0) and (self.c_standardized <= 0):
-                left, right = -np.inf, np.inf
-            elif self.D[0] * self.c_standardized > 0:
-                left, right = np.nan, np.nan
-            else:
-                boundary = self._boundary()
-                left, right = boundary[0], boundary[1]
+    def dim(self):
+        """Return the dimension of the quadric."""
+        return self.A.shape[0]
 
-            volume = self.volume()
-            super().__init__(left, right, convex=np.isfinite(volume), empty=volume == 0)
+    def is_empty(self):
+        """Return True if the quadric is empty."""
+        if self.c_standardized <= 0:
+            return False  # quadric contains self.center
         else:
-            volume = self.volume()
-            super().__init__(None, None, np.isfinite(volume), empty=volume == 0)
+            return np.all(self.D >= 0)
+
+    def is_bounded(self):
+        """Return True if the quadric is bounded."""
+        return np.isfinite(self.volume())
 
     def __call__(self, x):
         """Evaluate the quadric at :math:`x`.
@@ -89,8 +87,8 @@ class Quadric(ConfidenceSet):
             values. If x is a vector, returns a scalar.
         """
         if (
-            (x.ndim == 1 and len(x) != self.A.shape[0])
-            or (x.ndim == 2 and x.shape[1] != self.A.shape[0])
+            (x.ndim == 1 and len(x) != self.dim())
+            or (x.ndim == 2 and x.shape[1] != self.dim())
             or x.ndim > 2
         ):
             raise ValueError("x has the wrong dimension.")
@@ -100,25 +98,21 @@ class Quadric(ConfidenceSet):
         if x.ndim == 1:
             return out.item()
 
-        return (x @ self.A * x).sum(axis=x.ndim - 1) + self.b.T @ x.T + self.c
+        return out
 
-    def __str__(self):  # noqa D
-        if self.A.shape[0] > 1:
-            return super().__str__()
-
-        if self.D[0] * self.c_standardized > 0:
-            return "[]"
-
-        if self.D[0] == 0:
-            return "[-infty, infty]"
-
-        boundary = self.center + np.array([-1, 1]) * np.sqrt(
-            -self.c_standardized / self.D[0]
+    def __format__(self, format_spec: str) -> str:  # noqa D
+        return "A:\n{A}\nb:\n{b}\nc: {c}".format(
+            A=np.array2string(
+                self.A, formatter={"float_kind": lambda x: x.__format__(format_spec)}
+            ),
+            b=np.array2string(
+                self.b, formatter={"float_kind": lambda x: x.__format__(format_spec)}
+            ),
+            c=f"{self.c.__format__(format_spec)}",
         )
-        if self.D[0] > 0:
-            return f"[{boundary[0]}, {boundary[1]}]"
-        else:
-            return f"[-infty, {boundary[0]}] U [{boundary[1]}, infty]"
+
+    def __repr__(self):  # noqa D
+        return f"{self}"
 
     def forward_map(self, x_tilde):
         """Map from the standardized space to the original space."""
@@ -128,15 +122,12 @@ class Quadric(ConfidenceSet):
         """Map from the original space to the standardized space."""
         return (x - self.center.T) @ self.V
 
-    def _boundary(self, num=200, error=True):
+    def _boundary(self, num=200):
         assert len(self.D) <= 2
 
         if len(self.D) == 1:
-            if self.D[0] * self.c_standardized > 0:
-                if error:
-                    raise ValueError("Quadric is empty.")
-                else:
-                    return np.zeros(shape=(0, 1))
+            if self.c_standardized * self.D[0] > 0:  # either empty or the whole space
+                return np.zeros(shape=(0, 1))
             else:
                 return np.array(
                     [
@@ -146,15 +137,9 @@ class Quadric(ConfidenceSet):
                 )
 
         if np.all(self.D > 0) and (self.c_standardized > 0):
-            if error:
-                raise ValueError("Quadric is empty.")
-            else:
-                return np.zeros(shape=(0, 1))
+            return np.zeros(shape=(0, 1))
         if np.all(self.D < 0) and (self.c_standardized <= 0):
-            if error:
-                raise ValueError("The quadric is the whole space.")
-            else:
-                return np.zeros(shape=(0, 1))
+            return np.zeros(shape=(0, 1))
 
         # If both entries of D have the opposite sign as c_standardized, the
         # boundary of the quadric is an ellipse.
@@ -208,32 +193,6 @@ class Quadric(ConfidenceSet):
                 * np.sqrt(np.prod(-self.c_standardized / self.D))
             )
 
-    def _projection(self, coordinate):
-        """
-        Return the projection of the quadric onto the coordinate.
-
-        Solves argmin/max { x_coordinate | quadric(x) <= 0 }. The ``coordinate``-th
-        coordinate of the solution can be seen as the boundary of the projection of the
-        quadric onto the coordinate.
-
-        Parameters
-        ----------
-        coordinate: int
-            The coordinate onto which to project the quadric. Must be between 0 and
-            p - 1.
-
-        Returns
-        -------
-        (np.ndarray of dimension (p,), np.ndarray of dimension (p,))
-            The lower and upper bounds of the projection of the quadric onto the
-            coordinate.
-        """
-        one_hot = np.zeros_like(self.center)
-        one_hot[coordinate] = 1
-        solution = np.linalg.solve(self.A, one_hot)
-        solution *= np.sqrt(-self.c_standardized / solution[coordinate])
-        return (self.center - solution, self.center + solution)
-
     def project(self, coordinates):
         """
         Return the projection of the quadric onto ``coordinates``.
@@ -275,16 +234,27 @@ class Quadric(ConfidenceSet):
         if any([c < 0 or c >= self.A.shape[0] for c in coordinates]):
             raise ValueError("Coordinates must be between 0 and p - 1.")
 
-        B = np.zeros((self.A.shape[0], len(coordinates)))
-        for i, c in enumerate(coordinates):
-            B[c, i] = 1
+        mask = np.array([x in coordinates for x in range(self.A.shape[0])])
 
-        A_inv = np.linalg.inv(self.A)
-        A_new = np.linalg.inv(B.T @ A_inv @ B)
-        b_new = A_new @ B.T @ A_inv @ self.b
-        c_new = (
-            self.c_standardized
-            + 1.0 / 4.0 * self.b.T @ A_inv @ B @ A_new @ B.T @ A_inv @ self.b
-        )
+        if mask.all():
+            return self
 
-        return Quadric(A_new, b_new, c_new)
+        if (  # [~mask, ~mask] will to a .reshape(-1) on the matrix
+            scipy.linalg.eigvalsh(self.A[:, ~mask][~mask, :], subset_by_index=[0, 0])[0]
+            < 0
+        ):
+            return Quadric(
+                -np.diag(np.ones(len(coordinates))), self.center[mask], -1
+            )  # whole space
+
+        else:
+            B = np.diag(np.ones(self.A.shape[0]))[:, mask]
+            A_inv = np.linalg.inv(self.A)
+            A_new = np.linalg.inv(B.T @ A_inv @ B)
+            b_new = A_new @ B.T @ A_inv @ self.b
+            c_new = (
+                self.c_standardized
+                + 1.0 / 4.0 * self.b.T @ A_inv @ B @ A_new @ B.T @ A_inv @ self.b
+            )
+
+            return Quadric(A_new, b_new, c_new)

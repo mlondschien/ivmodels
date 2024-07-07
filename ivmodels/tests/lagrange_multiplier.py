@@ -5,8 +5,7 @@ import scipy.optimize
 from scipy.optimize._optimize import MemoizeJac
 
 from ivmodels.confidence_set import ConfidenceSet
-from ivmodels.tests.utils import _check_test_inputs
-from ivmodels.tests.wald import inverse_wald_test
+from ivmodels.tests.utils import _check_test_inputs, _find_roots
 from ivmodels.utils import oproj, proj
 
 
@@ -327,15 +326,47 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None, C=None, fit_intercept=True):
 
 
 def inverse_lagrange_multiplier_test(
-    Z, X, y, alpha=0.05, W=None, C=None, fit_intercept=True
+    Z,
+    X,
+    y,
+    alpha=0.05,
+    W=None,
+    C=None,
+    fit_intercept=True,
+    tol=1e-4,
+    max_value=1e8,
+    max_eval=1000,
 ):
     """
     Return an approximation of the confidence set by inversion of the LM test.
 
-    This is only implemented if ``X.shape[1] == 1``. The confidence set is essentially
-    computed by a grid search plus a root finding algorithm to improve the precision.
-    Due to the numerical nature, this is in no way guaranteed to return the true
-    confidence set, or contain it.
+    This is only implemented if ``X.shape[1] == 1``. The confidence set is computed by
+    a root finding algorithm, see the docs of
+    :func:`~ivmodels.tests.utils._find_roots` for more details.
+
+    Parameters
+    ----------
+    Z: np.ndarray of dimension (n, k)
+        Instruments.
+    X: np.ndarray of dimension (n, 1)
+        Regressors of interest.
+    y: np.ndarray of dimension (n,)
+        Outcomes.
+    alpha: float, optional, default=0.05
+        Significance level. The confidence level is ``1 - alpha``.
+    W: np.ndarray of dimension (n, mw) or None, optional, default=None
+        Endogenous regressors not of interest.
+    C: np.ndarray of dimension (n, mc) or None, optional, default=None
+        Exogenous regressors not of interest.
+    fit_intercept: bool, optional, default=True
+        Whether to fit an intercept. This is equivalent to centering the inputs.
+    tol: float, optional, default=1e-4
+        Tolerance for the root finding algorithm.
+    max_value: float, optional, default=1e8
+        Maximum value for the root finding algorithm. Returns a confidence set with
+        infinite bounds if the algorithm reaches this value.
+    max_eval: int, optional, default=1000
+        Maximum number of evaluations of the statistic for the root finding algorithm.
     """
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1).")
@@ -361,71 +392,22 @@ def inverse_lagrange_multiplier_test(
     dof = n - k - C_.shape[1]
     lm = _LM(X=X_, W=W_, y=y_, Z=Z_, dof=dof)
     critical_value = scipy.stats.chi2(df=mx).ppf(1 - alpha)
+    liml = lm.liml()
 
-    # Use a test with closed-form solution to get an idea of the "scale".
-    approx = inverse_wald_test(
-        Z=Z, X=X, y=y, alpha=alpha, W=W, C=C, fit_intercept=fit_intercept
+    left = _find_roots(
+        lambda x: lm.lm(x) - critical_value,
+        a=liml[0],
+        b=-np.inf,
+        tol=tol,
+        max_value=max_value,
+        max_eval=max_eval,
     )
-
-    left, right = approx.left, approx.right
-    step = right - left
-
-    while lm.lm(right) < critical_value:
-        right += step
-        step *= 2
-
-        if right > 1e6:
-            return ConfidenceSet(
-                left=-np.inf, right=np.inf, convex=True, message="no bounds found"
-            )
-
-    right += 4 * step
-
-    while lm.lm(left) < critical_value:
-        left -= step
-        step *= 2
-
-        if left < -1e6:
-            return ConfidenceSet(
-                left=-np.inf, right=np.inf, convex=True, message="no bounds found"
-            )
-
-    left -= 4 * step
-
-    n_points = 200
-    x_ = np.linspace(left, right, n_points)
-    y__ = np.zeros(n_points)
-
-    for idx in range(n_points):
-        y__[idx] = lm.lm(x_[idx])
-
-    where = np.where(y__ < critical_value)[0]
-    left_bracket = x_[where[0] - 1], x_[where[where > where[0] + 1][0]]
-    right_bracket = x_[where[-1] + 1], x_[where[where < where[-1] - 1][-1]]
-
-    def f(x):
-        arr = np.ones(1)
-        arr[0] = x
-        return lm.lm(arr) - critical_value
-
-    new_left = scipy.optimize.root_scalar(
-        f, bracket=left_bracket, maxiter=1000, xtol=1e-5
-    ).root
-
-    new_right = scipy.optimize.root_scalar(
-        f,
-        bracket=right_bracket,
-        maxiter=1000,
-        xtol=1e-5,
-    ).root
-
-    if not max(np.abs([f(new_left), f(new_right)])) < 1e-3:
-        return ConfidenceSet(
-            left=new_left,
-            right=new_right,
-            convex=True,
-            empty=False,
-            message="No roots found.",
-        )
-    else:
-        return ConfidenceSet(left=new_left, right=new_right, convex=True, empty=False)
+    right = _find_roots(
+        lambda x: lm.lm(x) - critical_value,
+        a=liml[0],
+        b=np.inf,
+        tol=tol,
+        max_value=max_value,
+        max_eval=max_eval,
+    )
+    return ConfidenceSet(boundaries=[(left, right)])

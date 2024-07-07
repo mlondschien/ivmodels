@@ -1,8 +1,10 @@
 import numpy as np
 import scipy
 
+from ivmodels.confidence_set import ConfidenceSet
 from ivmodels.models.kclass import KClass
-from ivmodels.tests.utils import _check_test_inputs
+from ivmodels.quadric import Quadric
+from ivmodels.tests.utils import _check_test_inputs, _find_roots
 from ivmodels.utils import oproj, proj
 
 
@@ -174,7 +176,6 @@ def conditional_likelihood_ratio_test(
     fit_intercept=True,
     method="numerical_integration",
     tol=1e-4,
-    critical_values="kleibergen",
 ):
     """
     Perform the conditional likelihood ratio test for ``beta``.
@@ -370,32 +371,123 @@ def conditional_likelihood_ratio_test(
         )
 
         statistic = (n - k - C.shape[1]) * (ar - XWy_eigenvals[0])
-
-        if critical_values == "kleibergen":
-            s_min = (n - k - C.shape[1]) * (XWy_eigenvals[0] + XWy_eigenvals[1] - ar)
-        else:
-            XW = np.concatenate([X, W], axis=1)
-            XW_proj = np.concatenate([X_proj, W_proj], axis=1)
-
-            residuals = y - X @ beta - kclass.predict(X=W)
-            residuals_proj = proj(Z, y_proj - X_proj @ beta - kclass.predict(X=W_proj))
-            residuals_orth = residuals - residuals_proj
-
-            Sigma = (residuals_orth.T @ XW) / (residuals_orth.T @ residuals_orth)
-            XWt = XW - np.outer(residuals, Sigma)
-            XWt_proj = XW_proj - np.outer(residuals_proj, Sigma)
-            s_min = (n - k - C.shape[1]) * min(
-                np.real(
-                    scipy.linalg.eigvalsh(
-                        a=XWt_proj.T @ XWt,
-                        b=(XWt - XWt_proj).T @ XWt,
-                        subset_by_index=[0, 0],
-                    )
-                )
-            )
+        s_min = (n - k - C.shape[1]) * (XWy_eigenvals[0] + XWy_eigenvals[1] - ar)
 
     p_value = conditional_likelihood_ratio_critical_value_function(
         mx, k - mw, s_min, statistic, method=method, tol=tol
     )
 
     return statistic, p_value
+
+
+def inverse_conditional_likelihood_ratio_test(
+    Z, X, y, alpha=0.05, W=None, C=None, fit_intercept=True, tol=1e-4
+):
+    """Return an approximation of the confidence set by inversion of the CLR test."""
+    if not 0 < alpha < 1:
+        raise ValueError("alpha must be in (0, 1).")
+
+    Z, X, y, W, C, _ = _check_test_inputs(Z, X, y, W=W, C=C)
+
+    n, mx = X.shape
+    mw = W.shape[1]
+    k = Z.shape[1]
+
+    if fit_intercept:
+        C = np.hstack([np.ones((n, 1)), C])
+
+    if C.shape[1] > 0:
+        X, y, Z, W = oproj(C, X, y, Z, W)
+
+    S = np.concatenate([X, W], axis=1)
+
+    S_proj, y_proj = proj(Z, S, y)
+    S_orth = S - S_proj
+    y_orth = y - y_proj
+
+    Sy_proj = np.concatenate([S_proj, y_proj.reshape(-1, 1)], axis=1)
+    Sy_orth = np.concatenate([S_orth, y_orth.reshape(-1, 1)], axis=1)
+
+    Sy_eigvals = np.real(
+        scipy.linalg.eigvalsh(
+            a=Sy_proj.T @ Sy_proj, b=Sy_orth.T @ Sy_orth, subset_by_index=[0, 1]
+        )
+    )
+
+    dof = n - k - C.shape[1]
+
+    # "lower bound" on the confidence set to be computed. That is, the confidence set
+    # to be computed will contain the lower bound.
+    quantile_lower = scipy.stats.chi2.ppf(1 - alpha, df=mx) + dof * Sy_eigvals[0]
+
+    A = S.T @ (dof * S_proj - quantile_lower * S_orth)
+    b = -2 * (dof * S_proj - quantile_lower * S_orth).T @ y
+    c = y.T @ (dof * y_proj - quantile_lower * y_orth)
+    cs_lower = ConfidenceSet.from_quadric(Quadric(A, b, c).project(range(X.shape[1])))
+
+    quantile_upper = scipy.stats.chi2.ppf(1 - alpha, df=k - mw) + dof * Sy_eigvals[0]
+
+    A = S.T @ (dof * S_proj - quantile_upper * S_orth)
+    b = -2 * (dof * S_proj - quantile_upper * S_orth).T @ y
+    c = y.T @ (dof * y_proj - quantile_upper * y_orth)
+    cs_upper = ConfidenceSet.from_quadric(Quadric(A, b, c).project(range(X.shape[1])))
+
+    Wy_proj = Sy_proj[:, mx:]
+    Wy_orth = Sy_orth[:, mx:]
+
+    def f(x):
+        Wy_proj_ = np.copy(Wy_proj)
+        Wy_proj_[:, -1:] -= S_proj[:, :mx] * x
+        Wy_orth_ = np.copy(Wy_orth)
+        Wy_orth_[:, -1:] -= S_orth[:, :mx] * x
+
+        eigval = np.real(
+            scipy.linalg.eigvalsh(
+                a=Wy_proj_.T @ Wy_proj_, b=Wy_orth_.T @ Wy_orth_, subset_by_index=[0, 0]
+            )
+        )
+
+        s_min = dof * (Sy_eigvals[0] + Sy_eigvals[1] - eigval[0])
+        statistic = dof * eigval[0] - dof * Sy_eigvals[0]
+        return (
+            conditional_likelihood_ratio_critical_value_function(
+                mx,
+                k - mx - mw,
+                s_min,
+                statistic,
+                method="numerical_integration",
+                tol=tol,
+            )
+            - 1
+            + alpha
+        )
+
+    boundaries = []
+    for left_upper, right_upper in cs_upper.boundaries:
+        left_lower_, right_lower_ = right_upper, left_upper
+        for left_lower, right_lower in cs_lower.boundaries:
+            if left_upper <= left_lower and right_lower <= right_upper:
+                left_lower_, right_lower_ = left_lower, right_lower
+                break
+
+        boundaries.append(
+            (
+                _find_roots(
+                    f,
+                    left_lower_,
+                    left_upper,
+                    tol=tol,
+                    max_value=1e6,
+                    max_eval=1000,
+                ),
+                _find_roots(
+                    f,
+                    right_lower_,
+                    right_upper,
+                    tol=tol,
+                    max_value=1e6,
+                    max_eval=1000,
+                ),
+            )
+        )
+    return ConfidenceSet(boundaries=boundaries)
