@@ -126,11 +126,8 @@ class Quadric:
         assert len(self.D) <= 2
 
         if len(self.D) == 1:
-            if self.D[0] * self.c_standardized > 0:
-                if error:
-                    raise ValueError("Quadric is empty.")
-                else:
-                    return np.zeros(shape=(0, 1))
+            if self.c_standardized * self.D[0] > 0:  # either empty or the whole space
+                return np.zeros(shape=(0, 1))
             else:
                 return np.array(
                     [

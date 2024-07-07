@@ -276,6 +276,8 @@ def test_test_round_trip(test, inverse_test, data, p_value, fit_intercept):
 
         if test == lagrange_multiplier_test and mx > 1:
             pytest.skip("LM test inverse not implemented for mx > 1")
+        if test == conditional_likelihood_ratio_test and mx > 1:
+            pytest.skip("CLR test inverse not implemented for mx > 1")
 
         Z, X, y, C, _ = simulate_gaussian_iv(
             n=n, mx=mx, k=k, u=u, mc=mc, seed=0, include_intercept=fit_intercept

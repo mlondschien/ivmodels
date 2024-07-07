@@ -423,14 +423,14 @@ def inverse_conditional_likelihood_ratio_test(
     A = S.T @ (dof * S_proj - quantile_lower * S_orth)
     b = -2 * (dof * S_proj - quantile_lower * S_orth).T @ y
     c = y.T @ (dof * y_proj - quantile_lower * y_orth)
-    quadric_lower = Quadric(A, b, c).project(range(X.shape[1]))
+    cs_lower = ConfidenceSet.from_quadric(Quadric(A, b, c).project(range(X.shape[1])))
 
     quantile_upper = scipy.stats.chi2.ppf(1 - alpha, df=k - mw) + dof * Sy_eigvals[0]
 
     A = S.T @ (dof * S_proj - quantile_upper * S_orth)
     b = -2 * (dof * S_proj - quantile_upper * S_orth).T @ y
     c = y.T @ (dof * y_proj - quantile_upper * y_orth)
-    quadric_upper = Quadric(A, b, c).project(range(X.shape[1]))
+    cs_upper = ConfidenceSet.from_quadric(Quadric(A, b, c).project(range(X.shape[1])))
 
     Wy_proj = Sy_proj[:, mx:]
     Wy_orth = Sy_orth[:, mx:]
@@ -451,37 +451,42 @@ def inverse_conditional_likelihood_ratio_test(
         statistic = dof * eigval[0] - dof * Sy_eigvals[0]
         return (
             conditional_likelihood_ratio_critical_value_function(
-                mx, k - mw, s_min, statistic, method="numerical_integration", tol=tol
+                mx,
+                k - mx - mw,
+                s_min,
+                statistic,
+                method="numerical_integration",
+                tol=tol,
             )
             - alpha
         )
 
-    if np.isfinite(quadric_lower.volume()) and np.isfinite(quadric_upper.volume()):
-        left = _find_roots(
-            f,
-            quadric_upper.left,
-            quadric_lower.left,
-            tol=tol,
-            max_value=1e6,
-            max_eval=1000,
+    boundaries = []
+    for left_upper, right_upper in cs_upper.boundaries:
+        left_lower_, right_lower_ = right_upper, left_upper
+        for left_lower, right_lower in cs_lower.boundaries:
+            if left_upper <= left_lower and right_lower <= right_upper:
+                left_lower_, right_lower_ = left_lower, right_lower
+                break
+
+        boundaries.append(
+            (
+                _find_roots(
+                    f,
+                    left_lower_,
+                    left_upper,
+                    tol=tol,
+                    max_value=1e6,
+                    max_eval=1000,
+                ),
+                _find_roots(
+                    f,
+                    right_lower_,
+                    right_upper,
+                    tol=tol,
+                    max_value=1e6,
+                    max_eval=1000,
+                ),
+            )
         )
-        right = _find_roots(
-            f,
-            quadric_upper.right,
-            quadric_lower.right,
-            tol=tol,
-            max_value=1e6,
-            max_eval=1000,
-        )
-        return ConfidenceSet(left=left, right=right, convex=True, empty=False)
-    elif np.isinf(quadric_lower.volume()) and np.isfinite(quadric_upper.volume()):
-        right = _find_roots(
-            f,
-            quadric_upper.right,
-            quadric_lower.right,
-            tol=tol,
-            max_value=1e6,
-            max_eval=1000,
-        )
-        return ConfidenceSet(left=None, right=right, convex=True, empty=False)
-    raise ValueError
+    return ConfidenceSet(boundaries=boundaries)

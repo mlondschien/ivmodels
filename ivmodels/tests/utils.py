@@ -100,6 +100,11 @@ def _find_roots(f, a, b, tol, max_value, max_eval, n_points=50):
     There is no scipy root finding algorithm that ensures that the root found is the
     closest to ``b``. Note that this is also not strictly ensured by this function.
     """
+    if np.abs(b - a) < tol or max_eval < 0:
+        return b  # convervative
+    if np.isinf(a):
+        return a
+
     sgn = np.sign(b - a)
     if np.isinf(b):
         grid = np.ones(n_points) * a
@@ -112,24 +117,22 @@ def _find_roots(f, a, b, tol, max_value, max_eval, n_points=50):
     if y[-1] < 0:
         return sgn * np.inf
 
+    y[0] = f(grid[0])
+    if y[0] >= 0:
+        raise ValueError("f(a) must be negative.")
+
     for i, x in enumerate(grid[:-1]):
         y[i] = f(x)
 
     last_positive = np.where(y < 0)[0][-1]
+
     # f(a_new) < 0 < f(b_new) -> repeat
-    a_new, b_new = grid[last_positive], grid[last_positive + 1]
-
-    if np.abs(b_new - a_new) < tol or max_eval - n_points < 0:
-        return b_new  # convervative
-
-    else:
-        new_max_eval = max_eval - n_points
-        return _find_roots(
-            f,
-            a_new,
-            b_new,
-            tol=tol,
-            n_points=n_points,
-            max_value=None,
-            max_eval=new_max_eval,
-        )
+    return _find_roots(
+        f,
+        grid[last_positive],
+        grid[last_positive + 1],
+        tol=tol,
+        n_points=n_points,
+        max_value=None,
+        max_eval=max_eval - n_points,
+    )

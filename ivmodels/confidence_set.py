@@ -31,7 +31,7 @@ class ConfidenceSet:
             for left, right in sorted(self.boundaries, key=lambda x: x[0])
         )
 
-    def __str__(self):  # noqa D
+    def __repr__(self):  # noqa D
         return f"{self}"
 
     def is_empty(self):
@@ -43,7 +43,7 @@ class ConfidenceSet:
         return all(np.isfinite(x) for b in self.boundaries for x in b)
 
     def _boundary(self, error=True):
-        """Return an array containing all the boundary points of the confidence set."""
+        """Return array containing all finite boundary points of the confidence set."""
         return np.array(
             [x for b in self.boundaries for x in b if np.isfinite(x)]
         ).reshape(-1, 1)
@@ -60,5 +60,7 @@ class ConfidenceSet:
         boundary = sorted(quadric._boundary().flatten())
         if quadric.is_bounded():
             return ConfidenceSet([(boundary[0], boundary[1])])
+        elif len(boundary) == 0:
+            return ConfidenceSet([(-np.inf, np.inf)])
         else:
             return ConfidenceSet([(-np.inf, boundary[0]), (boundary[1], np.inf)])

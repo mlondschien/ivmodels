@@ -410,4 +410,4 @@ def inverse_lagrange_multiplier_test(
         max_value=max_value,
         max_eval=max_eval,
     )
-    return ConfidenceSet(left=left, right=right, convex=True, empty=False)
+    return ConfidenceSet(boundaries=[(left, right)])
