@@ -12,6 +12,9 @@ Changelog
 
 - New class :class:`~ivmodels.confidence_sets.ConfidenceSet`.
 
+- The :class:`~ivmodels.models.kclass.KClass` gets new attributes after fitting a model:
+  `endogenous_names_`, `exogenous_names_`,  and `instrument_names_`. If pandas is
+  installed, there's also `names_coefs_`.
 
 **Other changes:**
 
