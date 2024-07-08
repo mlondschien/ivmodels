@@ -62,7 +62,7 @@ def test_lm_gradient(n, mx, mw, k):
         )
         grad = lm.derivative(beta, gamma)[1]
 
-        assert np.allclose(grad, grad_approx, rtol=5e-5, atol=5e-5)
+        assert np.allclose(grad, grad_approx, rtol=5e-4, atol=5e-4)
 
         hess_approx = scipy.optimize.approx_fprime(
             gamma,

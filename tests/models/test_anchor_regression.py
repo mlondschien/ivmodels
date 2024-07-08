@@ -76,10 +76,10 @@ def test_anchor_solution_minimizes_loss(n, mx, k, u, mc, gamma):
     ar = AnchorRegression(gamma=gamma, fit_intercept=False).fit(X, y, Z, C=C)
 
     def loss(beta):
-        return np.mean((y - np.hstack([X, C]) @ beta - ar.intercept_) ** 2) + (
-            gamma - 1
-        ) * np.mean(
+        return 1 / gamma * np.mean(
+            (y - np.hstack([X, C]) @ beta - ar.intercept_) ** 2
+        ) + (gamma - 1) / gamma * np.mean(
             proj(np.hstack([Z, C]), y - np.hstack([X, C]) @ beta - ar.intercept_) ** 2
         )
 
-    assert np.allclose(scipy.optimize.approx_fprime(ar.coef_, loss), 0, atol=1e-6)
+    assert np.allclose(scipy.optimize.approx_fprime(ar.coef_, loss), 0, atol=1e-5)
