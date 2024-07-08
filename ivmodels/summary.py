@@ -108,7 +108,6 @@ class Summary:
 
                 X_, W_, C_, Z_ = X[:, mask], X[:, ~mask], C, Z
                 fit_intercept_ = True
-                beta_ = np.array([self.kclass.coef_[idx]])
 
             elif name in self.kclass.exogenous_names_:
                 mask = np.zeros(len(self.kclass.exogenous_names_), dtype=bool)
@@ -116,12 +115,10 @@ class Summary:
 
                 X_, W_, C_, Z_ = C[:, mask], X, C[:, ~mask], np.hstack([Z, C[:, mask]])
                 fit_intercept_ = True
-                beta_ = np.array([self.kclass.coef_[idx]])
 
             elif name == "intercept":
                 X_, W_, C_, Z_ = np.ones((X.shape[0], 1)), X, C, Z
                 fit_intercept_ = False
-                beta_ = np.array([self.kclass.intercept_])
 
             test_result = test_(
                 Z=Z_,
@@ -129,7 +126,7 @@ class Summary:
                 W=W_,
                 y=y,
                 C=C_,
-                beta=beta_,
+                beta=np.array([0]),
                 fit_intercept=fit_intercept_,
                 **kwargs,
             )
