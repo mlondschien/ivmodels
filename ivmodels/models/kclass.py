@@ -198,7 +198,22 @@ class KClassMixin:
         if Z is None:
             Z = np.zeros((X.shape[0], 0))
 
-        return to_numpy(X), to_numpy(Z), to_numpy(C)
+        def _names(x, names, prefix):
+            if len(names) > 0:
+                return names.to_list()
+            if _PANDAS_INSTALLED and isinstance(x, pd.DataFrame):
+                return x.columns.to_list()
+            return [f"{prefix}_{i}" for i in range(x.shape[1])]
+
+        instrument_names_ = _names(Z, instrument_names, "instrument")
+        exogenous_names_ = _names(C, exogenous_names, "exogenous")
+        endogenous_names_ = _names(X, [], "endogenous")
+
+        return (to_numpy(X), to_numpy(Z), to_numpy(C)), (
+            endogenous_names_,
+            instrument_names_,
+            exogenous_names_,
+        )
 
     def _fuller_alpha(self, kappa):
         """
@@ -339,7 +354,8 @@ class KClassMixin:
             specified, ``C`` must be ``None``. If ``C`` is specified,
             ``exogenous_names`` and ``exogenous_regex`` must be ``None``.
         """
-        X, Z, C = self._X_Z_C(X, Z, C, predict=False)
+        (X, Z, C), names = self._X_Z_C(X, Z, C, predict=False)
+        self.endogenous_names_, self.instrument_names_, self.exogenous_names_ = names
 
         n, mx = X.shape
 
@@ -441,10 +457,23 @@ class KClassMixin:
                 # needed for glum.GeneralizedLinearRegressor.predict
                 self.intercept_ = 0
 
+        if _PANDAS_INSTALLED and self.fit_intercept:
+            self.named_coefs_ = pd.Series(
+                [self.intercept_] + list(self.coef_),
+                index=["intercept"] + self.endogenous_names_ + self.exogenous_names_,
+                name="coefficients",
+            )
+        elif _PANDAS_INSTALLED and not self.fit_intercept:
+            self.named_coefs_ = pd.Series(
+                self.coef_,
+                index=self.endogenous_names_ + self.exogenous_names_,
+                name="coefficients",
+            )
+
         return self
 
     def predict(self, X, C=None, *args, **kwargs):  # noqa D
-        X, _, C = self._X_Z_C(X, C=C, Z=None, predict=True)
+        (X, _, C), _ = self._X_Z_C(X, C=C, Z=None, predict=True)
         return super().predict(np.hstack([X, C]), *args, **kwargs)
 
 

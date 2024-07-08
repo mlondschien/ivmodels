@@ -42,7 +42,7 @@ class PULSEMixin:
             ``instrument_regex`` are specified, ``Z`` must be ``None``. If ``Z`` is
             specified, ``instrument_names`` and ``instrument_regex`` must be ``None``.
         """
-        _, Z_, C_ = self._X_Z_C(X, Z, C)
+        (_, Z_, C_), _ = self._X_Z_C(X, Z, C)
 
         if C_.shape[1] > 0:
             raise ValueError("PULSE does not support exogenous included variables.")
