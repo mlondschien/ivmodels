@@ -101,7 +101,7 @@ def _find_roots(f, a, b, tol, max_value, max_eval, n_points=50):
     closest to ``b``. Note that this is also not strictly ensured by this function.
     """
     if np.abs(b - a) < tol or max_eval < 0:
-        return b  # convervative
+        return b  # conservative
     if np.isinf(a):
         return a
 

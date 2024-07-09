@@ -49,8 +49,8 @@ def wald_test(Z, X, y, beta, W=None, C=None, estimator="tsls", fit_intercept=Tru
         Exogenous regressors not of interest.
     beta: np.ndarray of dimension (mx,)
         Coefficients to test.
-    estimator: str, optional, default = "tsls"
-        Estimator to use. Must be one of ``"tsls"`` or ``"liml"``.
+    estimator: str or float, optional, default = "liml"
+        Estimator to use. Passed to ``kappa`` argument of ``KClass``.
     fit_intercept: bool, optional, default = True
         Whether to include an intercept. The intercept will be included both in the
         complete and the (restricted) model. Including an intercept is equivalent to

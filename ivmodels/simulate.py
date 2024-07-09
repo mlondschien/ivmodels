@@ -163,22 +163,19 @@ def simulate_gaussian_iv(
         True gamma. Only returned if ``return_gamma`` is True.
     """
     rng = np.random.RandomState(seed)
-    beta = rng.normal(0, 1, (mx, 1))
 
+    m = mx + mw
     if u is None:
-        u = mx
+        u = m
 
-    ux = rng.normal(0, 1, (u, mx))
+    ux = rng.normal(0, 1, (u, m))
     uy = rng.normal(0, 1, (u, 1))
-    uw = rng.normal(0, 1, (u, mw))
 
     alpha = rng.normal(0, 1, (mc, 1))
-    gamma = rng.normal(0, 1, (mw, 1))
+    beta = rng.normal(0, 1, (m, 1))
 
-    Pi_ZX = rng.normal(0, 1, (k, mx))
-    Pi_ZW = rng.normal(0, 1, (k, mw))
-    Pi_CX = rng.normal(0, 1, (mc, mx))
-    Pi_CW = rng.normal(0, 1, (mc, mw))
+    Pi_ZX = rng.normal(0, 1, (k, m))
+    Pi_CX = rng.normal(0, 1, (mc, m))
     Pi_CZ = rng.normal(0, 1, (mc, k))
 
     U = rng.normal(0, 1, (n, u))
@@ -191,17 +188,15 @@ def simulate_gaussian_iv(
     )
 
     X = Z @ Pi_ZX + C @ Pi_CX + U @ ux
-    X += rng.normal(0, 1, (n, mx)) + include_intercept * rng.normal(0, 1, (1, mx))
-    W = Z @ Pi_ZW + C @ Pi_CW + U @ uw
-    W += rng.normal(0, 1, (n, mw)) + include_intercept * rng.normal(0, 1, (1, mw))
-    y = C @ alpha + X @ beta + W @ gamma + U @ uy
+    X += rng.normal(0, 1, (n, m)) + include_intercept * rng.normal(0, 1, (1, m))
+    y = C @ alpha + X @ beta + U @ uy
     y += rng.normal(0, 1, (n, 1)) + include_intercept * rng.normal(0, 1, (1, 1))
 
     if return_beta and return_gamma:
-        return Z, X, y.flatten(), C, W, beta.flatten(), gamma.flatten()
+        return Z, X[:, :mx], y.flatten(), C, X[:, mx:], beta[:mx], beta[mx:]
     elif return_beta:
-        return Z, X, y.flatten(), C, W, beta.flatten()
+        return Z, X[:, :mx], y.flatten(), C, X[:, mx:], beta[:mx]
     elif return_gamma:
-        return Z, X, y.flatten(), C, W, gamma.flatten()
+        return Z, X[:, :mx], y.flatten(), C, X[:, mx:], beta[mx:]
     else:
-        return Z, X, y.flatten(), C, W
+        return Z, X[:, :mx], y.flatten(), C, X[:, mx:]
