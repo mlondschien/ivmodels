@@ -358,6 +358,11 @@ class KClassMixin:
         (X, Z, C), names = self._X_Z_C(X, Z, C, predict=False)
         self.endogenous_names_, self.instrument_names_, self.exogenous_names_ = names
 
+        if self.fit_intercept and any("intercept" in n for n in names):
+            raise ValueError(
+                "Variable names must not contain 'intercept' when fit_intercept=True."
+            )
+
         n, mx = X.shape
 
         # Including an intercept is equivalent to replacing y <- M_1 y, X <- M_1 X,
