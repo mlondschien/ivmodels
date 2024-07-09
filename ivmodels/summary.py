@@ -14,15 +14,21 @@ class Summary:
     kclass: ivmodels.KClass or child class of ivmodels.models.kclass.KClassMixin
         Fitted model.
     test: str
-        Name of the test to be used.
+        Name of the test to be used. One of ``"wald"``, ``"anderson-rubin"``,
+        ``"lagrange multiplier"``, ``"likelihood-ratio"``, or
+        ``"conditional likelihood-ratio"``.
     alpha: float
         Significance level :math:`\\alpha` for the confidence sets, e.g., 0.05. The
         confidence of the confidence set will be :math:`1 - \\alpha`
 
-
     """
 
     def __init__(self, kclass, test, alpha):
+        from ivmodels import KClass  # avoid circular imports
+
+        if not isinstance(kclass, KClass):
+            raise ValueError("kclass must be an instance of ivmodels.KClass")
+
         self.kclass = kclass
         self.test = test
         self.alpha = alpha
@@ -56,30 +62,38 @@ class Summary:
             specified, ``C`` must be ``None``. If ``C`` is specified,
             ``exogenous_names`` and ``exogenous_regex`` must be ``None``.
         """
+        if not hasattr(self, "named_coefs_"):
+            self.kclass.fit(X, y, Z=Z, C=C)
+
         import ivmodels.tests as tests  # avoid circular imports
 
         _TESTS = {
-            "wald (liml)": (
-                partial(tests.wald_test, estimator="liml"),
-                partial(tests.inverse_wald_test, estimator="liml"),
+            "wald": (
+                partial(tests.wald_test, estimator=self.kclass.kappa),
+                partial(tests.inverse_wald_test, estimator=self.kclass.kappa),
             ),
-            "wald (tsls)": (
-                partial(tests.wald_test, estimator="tsls"),
-                partial(tests.inverse_wald_test, estimator="tsls"),
-            ),
-            "anderson rubin": (
+            "anderson-rubin": (
                 tests.anderson_rubin_test,
                 tests.inverse_anderson_rubin_test,
             ),
-            "AR": (tests.anderson_rubin_test, tests.inverse_anderson_rubin_test),
             "lagrange multiplier": (
                 tests.lagrange_multiplier_test,
                 tests.inverse_lagrange_multiplier_test,
             ),
+            "likelihood-ratio": (
+                tests.likelihood_ratio_test,
+                tests.inverse_likelihood_ratio_test,
+            ),
+            "conditional likelihood-ratio": (
+                tests.conditional_likelihood_ratio_test,
+                tests.inverse_conditional_likelihood_ratio_test,
+            ),
         }
 
-        if not hasattr(self, "named_coefs_"):
-            self.kclass.fit(X, y, Z=Z, C=C)
+        if not str(self.test).lower() in _TESTS:
+            raise ValueError(f"Test {self.test} not recognized.")
+
+        test_, inverse_test_ = _TESTS.get(str(self.test).lower())
 
         self.estimates_ = self.kclass.coef_.tolist()
         self.statistics_ = list()
@@ -88,20 +102,15 @@ class Summary:
 
         (X, Z, C), _ = self.kclass._X_Z_C(X, Z, C, predict=False)
 
-        test_, inverse_test_ = _TESTS[self.test]
-
         self.feature_names_ = self.kclass.endogenous_names_
         # + self.kclass.exogenous_names_
 
         idx = 0
-
         # if self.kclass.fit_intercept:
         #     self.feature_names_ = ["intercept"] + self.feature_names_
         #     self.estimates_ = [self.kclass.intercept_] + self.estimates_
         #     idx -= 1
-
         for name in self.feature_names_:
-
             if name in self.kclass.endogenous_names_:
                 mask = np.zeros(len(self.kclass.endogenous_names_), dtype=bool)
                 mask[idx] = True
@@ -117,7 +126,8 @@ class Summary:
                 fit_intercept_ = True
 
             elif name == "intercept":
-                X_, W_, C_, Z_ = np.ones((X.shape[0], 1)), X, C, Z
+                ones = np.ones((X.shape[0], 1))
+                X_, W_, C_, Z_ = ones, X, C, np.hstack([Z, ones])
                 fit_intercept_ = False
 
             test_result = test_(
@@ -150,15 +160,24 @@ class Summary:
             self.confidence_sets_.append(confidence_set)
             idx += 1
 
+        self.statistic_, self.p_value_ = test_(
+            Z=Z, X=X, y=y, C=C, beta=np.zeros(X.shape[1]), fit_intercept=True
+        )
+        self.f_statistic_, self.f_p_value_ = tests.rank_test(
+            Z, X, C=C, fit_intercept=True
+        )
         return self
 
     def __format__(self, format_spec: str) -> str:  # noqa D
         if not hasattr(self, "estimates_"):
             return "Summary not fitted yet."
 
+        def format_p_value(x):
+            return f"{x:{format_spec}}" if x > 1e-16 else "<1e-16"
+
         estimate_str = [f"{e:{format_spec}}" for e in self.estimates_]
         statistics_str = [f"{s:{format_spec}}" for s in self.statistics_]
-        p_values_str = [f"{p:{format_spec}}" for p in self.p_values_]
+        p_values_str = [format_p_value(p) for p in self.p_values_]
         cis_str = [f"{cs:{format_spec}}" for cs in self.confidence_sets_]
 
         names_len = max(len(name) for name in self.feature_names_)
@@ -167,15 +186,21 @@ class Summary:
         p_values_len = max(max(len(p) for p in p_values_str), len("p-value"))
         cis_len = max(max(len(ci) for ci in cis_str), len("conf. set"))
 
-        string = f"{'': <{names_len}} {'estimate': >{coefs_len}} {'statistic': >{statistics_len}} {'p-value': >{p_values_len}} {'conf. set': >{cis_len}}\n"
+        string = f"""Summary based on the {self.test} test.
+
+{'': <{names_len}}  {'estimate': >{coefs_len}}  {'statistic': >{statistics_len}}  {'p-value': >{p_values_len}}  {'conf. set': >{cis_len}}
+"""
         # total_len = names_len + statistics_len + coefs_len + p_values_len + cis_len + 4
         # string += "-" * total_len + "\n"
 
         for name, estimate, statistic, p_value, ci in zip(
             self.feature_names_, estimate_str, statistics_str, p_values_str, cis_str
         ):
-            string += f"{name: <{names_len}} {estimate: >{coefs_len}} {statistic: >{statistics_len}} {p_value: >{p_values_len}} {ci: >{cis_len}}\n"
+            string += f"{name: <{names_len}}  {estimate: >{coefs_len}}  {statistic: >{statistics_len}}  {p_value: >{p_values_len}}  {ci: >{cis_len}}\n"
 
+        string += f"""
+Endogenous model statistic: {self.statistic_:{format_spec}}, p-value: {format_p_value(self.p_value_)}
+(Multivariate) F-statistic: {self.f_statistic_:{format_spec}}, p-value: {format_p_value(self.f_p_value_)}"""
         return string
 
     def __str__(self):  # noqa D
