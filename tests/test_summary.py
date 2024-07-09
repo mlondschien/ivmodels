@@ -25,4 +25,4 @@ def test_kclass_summary(test, n, mx, k, mc, fit_intercept):
     kclass = KClass(kappa="liml", fit_intercept=fit_intercept)
     kclass.fit(X, y, Z, C)
 
-    _ = kclass.summary(X, y, Z, C, test=test)
+    _ = str(kclass.summary(X, y, Z, C, test=test))
