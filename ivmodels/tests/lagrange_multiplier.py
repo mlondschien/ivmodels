@@ -162,18 +162,17 @@ class _LM:
         cond = np.linalg.cond(mat)
 
         if hess:
-            if cond > 1e8:
-                mat += 1e-8 * np.eye(mat.shape[0])
-
-            solved = np.linalg.solve(
-                mat,
-                np.hstack(
-                    [
-                        St_proj.T @ residuals_proj.reshape(-1, 1),
-                        St_orth.T @ St[:, self.mx :],
-                    ]
-                ),
+            f = np.hstack(
+                [
+                    St_proj.T @ residuals_proj.reshape(-1, 1),
+                    St_orth.T @ St[:, self.mx :],
+                ]
             )
+            if cond > 1e8:
+                solved = np.linalg.pinv(mat) @ f
+            else:
+                solved = np.linalg.solve(mat, f)
+
         else:
             # If mat is well conditioned, both should be equivalent, but the pinv
             # solution is defined even if mat is singular. In theory, solve should be
