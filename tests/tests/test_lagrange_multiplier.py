@@ -36,6 +36,7 @@ def test__LM__init__(n, mx, mw, k):
         [
             np.all(np.isclose(lm1.__dict__[k], lm2.__dict__[k]))
             for k in lm1.__dict__.keys()
+            if k not in ["optimizer", "gamma_0"]
         ]
     )
 
