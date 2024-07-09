@@ -5,6 +5,7 @@ import numpy as np
 import scipy
 from glum import GeneralizedLinearRegressor
 
+from ivmodels.summary import Summary
 from ivmodels.utils import oproj, proj, to_numpy
 
 try:
@@ -357,6 +358,11 @@ class KClassMixin:
         (X, Z, C), names = self._X_Z_C(X, Z, C, predict=False)
         self.endogenous_names_, self.instrument_names_, self.exogenous_names_ = names
 
+        if self.fit_intercept and any("intercept" in n for n in names):
+            raise ValueError(
+                "Variable names must not contain 'intercept' when fit_intercept=True."
+            )
+
         n, mx = X.shape
 
         # Including an intercept is equivalent to replacing y <- M_1 y, X <- M_1 X,
@@ -475,6 +481,38 @@ class KClassMixin:
     def predict(self, X, C=None, *args, **kwargs):  # noqa D
         (X, _, C), _ = self._X_Z_C(X, C=C, Z=None, predict=True)
         return super().predict(np.hstack([X, C]), *args, **kwargs)
+
+    def summary(self, X, y, Z=None, C=None, test="wald (liml)", alpha=0.05, **kwargs):
+        """
+        Create Summary object for the fitted model.
+
+        This contains the fitted values (estimates), subvector test statistics for each
+        parameter, corresponding p-values, and confidence sets.
+
+        Parameters
+        ----------
+        X: array-like, shape (n_samples, n_features)
+            The input data.
+        y: array-like, shape (n_samples,)
+            The target values.
+        Z: array-like, shape (n_samples, n_instruments), optional
+            The instrument values. If ``instrument_names`` or ``instrument_regex`` are
+            specified, ``Z`` must be ``None``. If ``Z`` is specified,
+            ``instrument_names`` and ``instrument_regex`` must be ``None``.
+        C: array-like, shape (n_samples, n_exogenous), optional
+            The exogenous regressors. If ``exogenous_names`` or ``exogenous_regex`` are
+            specified, ``C`` must be ``None``. If ``C`` is specified,
+            ``exogenous_names`` and ``exogenous_regex`` must be ``None``.
+        test: str, optional, default="wald (liml)"
+            The test to use. Must be one of "wald (liml)", "wald (tsls)", "anderson
+            rubin", "AR", or "lagrange multiplier".
+        alpha: float, optional, default=0.05
+            The significance level.
+        **kwargs
+            Additional keyword arguments to pass to the test and its inversion.
+        """
+        summary = Summary(kclass=self, test=test, alpha=alpha)
+        return summary.fit(X, y, Z=Z, C=C, **kwargs)
 
 
 class KClass(KClassMixin, GeneralizedLinearRegressor):
