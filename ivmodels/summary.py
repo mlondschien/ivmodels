@@ -173,12 +173,12 @@ class Summary:
             return "Summary not fitted yet."
 
         def format_p_value(x):
-            return f"{x:{format_spec}}" if x > 1e-16 else "<1e-16"  # noqa E231
+            return f"{x:{format_spec}}" if x > 1e-16 else "<1e-16"
 
-        estimate_str = [f"{e:{format_spec}}" for e in self.estimates_]  # noqa E231
-        statistics_str = [f"{s:{format_spec}}" for s in self.statistics_]  # noqa E231
-        p_values_str = [format_p_value(p) for p in self.p_values_]  # noqa E231
-        cis_str = [f"{cs:{format_spec}}" for cs in self.confidence_sets_]  # noqa E231
+        estimate_str = [f"{e:{format_spec}}" for e in self.estimates_]
+        statistics_str = [f"{s:{format_spec}}" for s in self.statistics_]
+        p_values_str = [format_p_value(p) for p in self.p_values_]
+        cis_str = [f"{cs:{format_spec}}" for cs in self.confidence_sets_]
 
         names_len = max(len(name) for name in self.feature_names_)
         coefs_len = max(max(len(e) for e in estimate_str), len("estimate"))
