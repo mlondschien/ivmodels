@@ -216,14 +216,14 @@ class _LM:
         # hess = objective.hessian
 
         res1 = scipy.optimize.minimize(
-            objective, jac=jac, hess=None, x0=gamma_0, method="newton-cg"
+            objective, jac=jac, hess=None, x0=gamma_0, method="bfgs"
         )
 
         res2 = scipy.optimize.minimize(
             objective,
             jac=jac,
             hess=None,
-            method="newton-cg",
+            method="bfgs",
             x0=np.zeros_like(gamma_0),
         )
 
