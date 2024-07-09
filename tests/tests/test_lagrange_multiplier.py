@@ -36,6 +36,7 @@ def test__LM__init__(n, mx, mw, k):
         [
             np.all(np.isclose(lm1.__dict__[k], lm2.__dict__[k]))
             for k in lm1.__dict__.keys()
+            if k not in ["optimizer", "gamma_0"]
         ]
     )
 
@@ -55,23 +56,37 @@ def test_lm_gradient(n, mx, mw, k):
         beta = rng.normal(0, 1, mx)
         gamma = rng.normal(0, 1, mw)
 
-        grad_approx = scipy.optimize.approx_fprime(
+        grad_approx1 = scipy.optimize.approx_fprime(
             gamma,
-            lambda g: lm.derivative(beta=beta, gamma=g)[0],
+            lambda g: lm.derivative(beta=beta, gamma=g, jac=False, hess=False)[0],
             1e-6,
         )
-        grad = lm.derivative(beta, gamma)[1]
-
-        assert np.allclose(grad, grad_approx, rtol=5e-4, atol=5e-4)
-
-        hess_approx = scipy.optimize.approx_fprime(
+        grad_approx2 = scipy.optimize.approx_fprime(
             gamma,
-            lambda g: lm.derivative(beta=beta, gamma=g)[1],
+            lambda g: lm.derivative(beta=beta, gamma=g, jac=True, hess=True)[0],
             1e-6,
         )
-        hess = lm.derivative(beta, gamma)[2]
+        grad1 = lm.derivative(beta, gamma, jac=True, hess=False)[1]
+        grad2 = lm.derivative(beta, gamma, jac=True, hess=True)[1]
 
-        assert np.allclose(hess, hess_approx, rtol=5e-5, atol=5e-5)
+        assert np.allclose(grad1, grad_approx1, rtol=5e-4, atol=5e-4)
+        assert np.allclose(grad1, grad_approx2, rtol=5e-4, atol=5e-4)
+        assert np.allclose(grad1, grad2, rtol=5e-4, atol=5e-4)
+
+        hess_approx1 = scipy.optimize.approx_fprime(
+            gamma,
+            lambda g: lm.derivative(beta=beta, gamma=g, jac=True, hess=True)[1],
+            1e-6,
+        )
+        hess_approx2 = scipy.optimize.approx_fprime(
+            gamma,
+            lambda g: lm.derivative(beta=beta, gamma=g, jac=True, hess=False)[1],
+            1e-6,
+        )
+        hess = lm.derivative(beta, gamma, jac=True, hess=True)[2]
+
+        assert np.allclose(hess, hess_approx1, rtol=5e-5, atol=5e-5)
+        assert np.allclose(hess, hess_approx2, rtol=5e-5, atol=5e-5)
 
 
 @pytest.mark.parametrize(

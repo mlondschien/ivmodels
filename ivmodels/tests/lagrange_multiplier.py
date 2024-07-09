@@ -57,7 +57,19 @@ class _LM:
         Projection of ``W`` onto the column space of ``Z``.
     """
 
-    def __init__(self, X, y, W, dof, Z=None, X_proj=None, y_proj=None, W_proj=None):
+    def __init__(
+        self,
+        X,
+        y,
+        W,
+        dof,
+        Z=None,
+        X_proj=None,
+        y_proj=None,
+        W_proj=None,
+        optimizer="bfgs",
+        gamma_0=None,
+    ):
 
         self.X = X
         self.y = y.reshape(-1, 1)
@@ -86,6 +98,9 @@ class _LM:
         self.yS_orth_at_yS = self.yS_orth.T @ self.yS_orth
         # for liml
         self.yS_proj_at_yS = self.yS_proj.T @ self.yS_proj
+
+        self.optimizer = optimizer
+        self.gamma_0 = ["liml"] if gamma_0 is None else gamma_0
 
     def liml(self, beta=None):
         """
@@ -116,7 +131,7 @@ class _LM:
 
         return -eigval[1:, 0] / eigval[0, 0]
 
-    def derivative(self, beta, gamma=None, jac_and_hess=True):
+    def derivative(self, beta, gamma=None, jac=True, hess=True):
         """Return LM and derivative of LM at beta, gamma w.r.t. (beta, gamma)."""
         if gamma is not None:
             one_beta_gamma = np.hstack(([1], -beta.flatten(), -gamma.flatten()))
@@ -131,9 +146,13 @@ class _LM:
 
         St_proj = self.yS_proj[:, 1:] - np.outer(residuals_proj, Sigma)
 
-        if not jac_and_hess:
+        if not jac:  # not jac -> not hess
             residuals_proj_St = proj(St_proj, residuals_proj)
-            return self.dof * residuals_proj_St.T @ residuals_proj_St / sigma_hat
+            return (
+                self.dof * residuals_proj_St.T @ residuals_proj_St / sigma_hat,
+                None,
+                None,
+            )
 
         residuals = self.yS @ one_beta_gamma
         St = self.yS[:, 1:] - np.outer(residuals, Sigma)
@@ -141,18 +160,30 @@ class _LM:
 
         mat = St_proj.T @ St_proj
         cond = np.linalg.cond(mat)
-        if cond > 1e12:
-            mat += 1e-6 * np.eye(mat.shape[0])
 
-        solved = np.linalg.solve(
-            mat,
-            np.hstack(
+        if hess:
+            f = np.hstack(
                 [
                     St_proj.T @ residuals_proj.reshape(-1, 1),
                     St_orth.T @ St[:, self.mx :],
                 ]
-            ),
-        )
+            )
+            if cond > 1e8:
+                solved = np.linalg.pinv(mat) @ f
+            else:
+                solved = np.linalg.solve(mat, f)
+
+        else:
+            # If mat is well conditioned, both should be equivalent, but the pinv
+            # solution is defined even if mat is singular. In theory, solve should be
+            # faster. In practice, not so clear. The lstsq solution tends to be slower.
+            if cond > 1e8:
+                solved = np.linalg.pinv(mat) @ St_proj.T @ residuals_proj.reshape(-1, 1)
+            else:
+                # solved = scipy.linalg.lstsq(St_proj, residuals_proj.reshape(-1, 1), cond=None, lapack_driver="gelsy")[0]
+                # solved = np.linalg.pinv(mat) @ St_proj.T @ residuals_proj.reshape(-1, 1)
+                solved = np.linalg.solve(mat, St_proj.T @ residuals_proj.reshape(-1, 1))
+
         residuals_proj_St = St_proj @ solved[:, 0]
 
         ar = residuals_proj.T @ residuals_proj / sigma_hat
@@ -161,12 +192,15 @@ class _LM:
 
         first_term = -St_proj[:, self.mx :].T @ residuals_proj
         second_term = St_orth[:, self.mx :].T @ St @ solved[:, 0]
-        S = self.yS[:, 1:]
-        S_proj = self.yS_proj[:, 1:]
-        S_orth = S - S_proj
 
         d_lm = 2 * (first_term + kappa * second_term) / sigma_hat
 
+        if not hess:
+            return (self.dof * lm, self.dof * d_lm, None)
+
+        S = self.yS[:, 1:]
+        S_proj = self.yS_proj[:, 1:]
+        S_orth = S - S_proj
         dd_lm = (
             2
             * (
@@ -203,34 +237,50 @@ class _LM:
             beta = np.array([[beta]])
 
         if self.mw == 0:
-            return self.derivative(beta, jac_and_hess=False)
+            return self.derivative(beta, jac=False, hess=False)[0]
 
-        gamma_0 = self.liml(beta=beta)
+        methods_with_hessian = [
+            "newton-cg",
+            "dogleg",
+            "trust-ncg",
+            "trust-krylov",
+            "trust-exact",
+        ]
+        hess = self.optimizer.lower() in methods_with_hessian
 
         def _derivative(gamma):
-            result = self.derivative(beta, gamma, jac_and_hess=True)
-            return (result[0], result[1], result[2])
+            result = self.derivative(beta, gamma, jac=True, hess=hess)
+            return result
 
         objective = MemoizeJacHess(_derivative)
         jac = objective.derivative
-        # hess = objective.hessian
-
-        res1 = scipy.optimize.minimize(
-            objective, jac=jac, hess=None, x0=gamma_0, method="newton-cg"
+        hess = (
+            objective.hessian
+            if self.optimizer.lower() in methods_with_hessian
+            else None
         )
 
-        res2 = scipy.optimize.minimize(
-            objective,
-            jac=jac,
-            hess=None,
-            method="newton-cg",
-            x0=np.zeros_like(gamma_0),
-        )
+        results = []
+        for g in self.gamma_0:
+            if g == "liml":
+                gamma_0 = self.liml(beta=beta)
+            elif g == "zero":
+                gamma_0 = np.zeros(self.mw)
+            else:
+                raise ValueError(f"unknown gamma_0: {g}")
 
-        return np.min([res1.fun, res2.fun])
+            results.append(
+                scipy.optimize.minimize(
+                    objective, jac=jac, hess=hess, x0=gamma_0, method=self.optimizer
+                )
+            )
+
+        return np.min([r.fun for r in results])
 
 
-def lagrange_multiplier_test(Z, X, y, beta, W=None, C=None, fit_intercept=True):
+def lagrange_multiplier_test(
+    Z, X, y, beta, W=None, C=None, fit_intercept=True, **kwargs
+):
     """
     Perform the Lagrange multiplier test for ``beta`` by :cite:t:`kleibergen2002pivotal`.
 
@@ -298,7 +348,7 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None, C=None, fit_intercept=True):
         X, y, Z, W = oproj(C, X, y, Z, W)
 
     if W.shape[1] > 0:
-        statistic = _LM(X=X, y=y, W=W, Z=Z, dof=n - k - C.shape[1]).lm(beta)
+        statistic = _LM(X=X, y=y, W=W, Z=Z, dof=n - k - C.shape[1], **kwargs).lm(beta)
 
         p_value = 1 - scipy.stats.chi2.cdf(statistic, df=mx)
 
