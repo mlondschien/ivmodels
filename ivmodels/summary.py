@@ -173,12 +173,12 @@ class Summary:
             return "Summary not fitted yet."
 
         def format_p_value(x):
-            return f"{x:{format_spec}}" if x > 1e-16 else "<1e-16"
+            return f"{x: {format_spec}}" if x > 1e-16 else "<1e-16"
 
-        estimate_str = [f"{e:{format_spec}}" for e in self.estimates_]
-        statistics_str = [f"{s:{format_spec}}" for s in self.statistics_]
+        estimate_str = [f"{e: {format_spec}}" for e in self.estimates_]
+        statistics_str = [f"{s: {format_spec}}" for s in self.statistics_]
         p_values_str = [format_p_value(p) for p in self.p_values_]
-        cis_str = [f"{cs:{format_spec}}" for cs in self.confidence_sets_]
+        cis_str = [f"{cs: {format_spec}}" for cs in self.confidence_sets_]
 
         names_len = max(len(name) for name in self.feature_names_)
         coefs_len = max(max(len(e) for e in estimate_str), len("estimate"))
@@ -199,8 +199,8 @@ class Summary:
             string += f"{name: <{names_len}}  {estimate: >{coefs_len}}  {statistic: >{statistics_len}}  {p_value: >{p_values_len}}  {ci: >{cis_len}}\n"
 
         string += f"""
-Endogenous model statistic: {self.statistic_:{format_spec}}, p-value: {format_p_value(self.p_value_)}
-(Multivariate) F-statistic: {self.f_statistic_:{format_spec}}, p-value: {format_p_value(self.f_p_value_)}"""
+Endogenous model statistic: {self.statistic_: {format_spec}}, p-value: {format_p_value(self.p_value_)}
+(Multivariate) F-statistic: {self.f_statistic_: {format_spec}}, p-value: {format_p_value(self.f_p_value_)}"""
         return string
 
     def __str__(self):  # noqa D
