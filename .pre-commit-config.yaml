@@ -1,39 +1,39 @@
 repos:
 -   repo: https://github.com/codespell-project/codespell
-    rev: v2.2.2
+    rev: v2.3.0
     hooks:
     -   id: codespell
         types_or: [python, rst, markdown]
         additional_dependencies: [tomli]
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v4.6.0
     hooks:
     -   id: debug-statements
     -   id: trailing-whitespace
 -   repo: https://github.com/Quantco/pre-commit-mirrors-black
-    rev: 22.12.0
+    rev: 24.4.2
     hooks:
     - id: black-conda
       args:
         - --safe
         - --target-version=py38
 - repo: https://github.com/Quantco/pre-commit-mirrors-isort
-  rev: 5.7.0
+  rev: 5.13.2
   hooks:
   - id: isort-conda
     additional_dependencies: [toml]
 - repo: https://github.com/Quantco/pre-commit-mirrors-flake8
-  rev: 5.0.4
+  rev: 7.0.0
   hooks:
   - id: flake8-conda
-    additional_dependencies: [-c, conda-forge, flake8-docstrings=1.5.0, flake8-rst-docstrings=0.0.14]
+    additional_dependencies: [-c, conda-forge, flake8-docstrings=1.7.0, flake8-rst-docstrings=0.3.0]
     args: ["--ignore=E203,E266,E501,W503,C901,D104,D100,D301,W604"]
 - repo: https://github.com/Quantco/pre-commit-mirrors-mypy
-  rev: "0.982"
+  rev: "1.10.1"
   hooks:
   - id: mypy-conda
 - repo: https://github.com/Quantco/pre-commit-mirrors-pyupgrade
-  rev: 3.1.0
+  rev: 3.15.2
   hooks:
   - id: pyupgrade-conda
     args:
