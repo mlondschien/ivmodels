@@ -57,7 +57,19 @@ class _LM:
         Projection of ``W`` onto the column space of ``Z``.
     """
 
-    def __init__(self, X, y, W, dof, Z=None, X_proj=None, y_proj=None, W_proj=None):
+    def __init__(
+        self,
+        X,
+        y,
+        W,
+        dof,
+        Z=None,
+        X_proj=None,
+        y_proj=None,
+        W_proj=None,
+        optimizer="bfgs",
+        gamma_0=None,
+    ):
 
         self.X = X
         self.y = y.reshape(-1, 1)
@@ -86,6 +98,9 @@ class _LM:
         self.yS_orth_at_yS = self.yS_orth.T @ self.yS_orth
         # for liml
         self.yS_proj_at_yS = self.yS_proj.T @ self.yS_proj
+
+        self.optimizer = optimizer
+        self.gamma_0 = ["liml"] if gamma_0 is None else gamma_0
 
     def liml(self, beta=None):
         """
@@ -216,32 +231,48 @@ class _LM:
         if self.mw == 0:
             return self.derivative(beta, jac=False, hess=False)[0]
 
-        gamma_0 = self.liml(beta=beta)
+        methods_with_hessian = [
+            "newton-cg",
+            "dogleg",
+            "trust-ncg",
+            "trust-krylov",
+            "trust-exact",
+        ]
+        hess = self.optimizer.lower() in methods_with_hessian
 
         def _derivative(gamma):
-            result = self.derivative(beta, gamma, jac=True, hess=False)
-            return (result[0], result[1], result[2])
+            result = self.derivative(beta, gamma, jac=True, hess=hess)
+            return result
 
         objective = MemoizeJacHess(_derivative)
         jac = objective.derivative
-        hess = objective.hessian
-
-        res1 = scipy.optimize.minimize(
-            objective, jac=jac, hess=hess, x0=gamma_0, method="bfgs"
+        hess = (
+            objective.hessian
+            if self.optimizer.lower() in methods_with_hessian
+            else None
         )
 
-        res2 = scipy.optimize.minimize(
-            objective,
-            jac=jac,
-            hess=hess,
-            method="bfgs",
-            x0=np.zeros_like(gamma_0),
-        )
+        results = []
+        for g in self.gamma_0:
+            if g == "liml":
+                gamma_0 = self.liml(beta=beta)
+            elif g == "zero":
+                gamma_0 = np.zeros(self.mw)
+            else:
+                raise ValueError(f"unknown gamma_0: {g}")
 
-        return np.min([res1.fun, res2.fun])
+            results.append(
+                scipy.optimize.minimize(
+                    objective, jac=jac, hess=hess, x0=gamma_0, method=self.optimizer
+                )
+            )
+
+        return np.min([r.fun for r in results])
 
 
-def lagrange_multiplier_test(Z, X, y, beta, W=None, C=None, fit_intercept=True):
+def lagrange_multiplier_test(
+    Z, X, y, beta, W=None, C=None, fit_intercept=True, **kwargs
+):
     """
     Perform the Lagrange multiplier test for ``beta`` by :cite:t:`kleibergen2002pivotal`.
 
@@ -309,7 +340,7 @@ def lagrange_multiplier_test(Z, X, y, beta, W=None, C=None, fit_intercept=True):
         X, y, Z, W = oproj(C, X, y, Z, W)
 
     if W.shape[1] > 0:
-        statistic = _LM(X=X, y=y, W=W, Z=Z, dof=n - k - C.shape[1]).lm(beta)
+        statistic = _LM(X=X, y=y, W=W, Z=Z, dof=n - k - C.shape[1], **kwargs).lm(beta)
 
         p_value = 1 - scipy.stats.chi2.cdf(statistic, df=mx)
 
