@@ -140,58 +140,58 @@ class _LM:
         St_orth = St - St_proj
 
         mat = St_proj.T @ St_proj
-        cond = np.linalg.cond(mat)
-        if cond > 1e12:
-            mat += 1e-6 * np.eye(mat.shape[0])
+        # cond = np.linalg.cond(mat)
+        # if cond > 1e12:
+        #     mat += 1e-6 * np.eye(mat.shape[0])
 
-        solved = np.linalg.solve(
-            mat,
-            np.hstack(
-                [
-                    St_proj.T @ residuals_proj.reshape(-1, 1),
-                    St_orth.T @ St[:, self.mx :],
-                ]
-            ),
-        )
-        residuals_proj_St = St_proj @ solved[:, 0]
+        solved = np.linalg.solve(mat, St_proj.T @ residuals_proj)
+        #     mat,
+        #     np.hstack(
+        #         [
+        #             St_proj.T @ residuals_proj.reshape(-1, 1),
+        #             St_orth.T @ St[:, self.mx :],
+        #         ]
+        #     ),
+        # )
+        residuals_proj_St = St_proj @ solved
 
         ar = residuals_proj.T @ residuals_proj / sigma_hat
         lm = residuals_proj_St.T @ residuals_proj_St / sigma_hat
         kappa = ar - lm
 
         first_term = -St_proj[:, self.mx :].T @ residuals_proj
-        second_term = St_orth[:, self.mx :].T @ St @ solved[:, 0]
-        S = self.yS[:, 1:]
-        S_proj = self.yS_proj[:, 1:]
-        S_orth = S - S_proj
+        second_term = St_orth[:, self.mx :].T @ St @ solved
+        # S = self.yS[:, 1:]
+        # S_proj = self.yS_proj[:, 1:]
+        # S_orth = S - S_proj
 
         d_lm = 2 * (first_term + kappa * second_term) / sigma_hat
 
-        dd_lm = (
-            2
-            * (
-                -3 * kappa * np.outer(second_term, second_term) / sigma_hat
-                + kappa**2 * St_orth[:, self.mx :].T @ St_orth @ solved[:, 1:]
-                - kappa * St_orth[:, self.mx :].T @ St_orth[:, self.mx :]
-                - kappa
-                * St_orth[:, self.mx :].T
-                @ St_orth
-                @ np.outer(solved[:, 0], Sigma[self.mx :])
-                + St[:, self.mx :].T
-                @ (S_proj[:, self.mx :] - ar * S_orth[:, self.mx :])
-                - np.outer(
-                    Sigma[self.mx :],
-                    (St_proj - kappa * St_orth)[:, self.mx :].T @ St @ solved[:, 0],
-                )
-                + 2
-                * kappa
-                * np.outer(S_orth[:, self.mx :].T @ St @ solved[:, 0], Sigma[self.mx :])
-                - 2 * np.outer(St_proj[:, self.mx :].T @ residuals, Sigma[self.mx :])
-            )
-            / sigma_hat
-        )
+        # dd_lm = (
+        #     2
+        #     * (
+        #         -3 * kappa * np.outer(second_term, second_term) / sigma_hat
+        #         + kappa**2 * St_orth[:, self.mx :].T @ St_orth @ solved[:, 1:]
+        #         - kappa * St_orth[:, self.mx :].T @ St_orth[:, self.mx :]
+        #         - kappa
+        #         * St_orth[:, self.mx :].T
+        #         @ St_orth
+        #         @ np.outer(solved[:, 0], Sigma[self.mx :])
+        #         + St[:, self.mx :].T
+        #         @ (S_proj[:, self.mx :] - ar * S_orth[:, self.mx :])
+        #         - np.outer(
+        #             Sigma[self.mx :],
+        #             (St_proj - kappa * St_orth)[:, self.mx :].T @ St @ solved[:, 0],
+        #         )
+        #         + 2
+        #         * kappa
+        #         * np.outer(S_orth[:, self.mx :].T @ St @ solved[:, 0], Sigma[self.mx :])
+        #         - 2 * np.outer(St_proj[:, self.mx :].T @ residuals, Sigma[self.mx :])
+        #     )
+        #     / sigma_hat
+        # )
 
-        return (self.dof * lm.item(), self.dof * d_lm.flatten(), self.dof * dd_lm)
+        return (self.dof * lm.item(), self.dof * d_lm.flatten(), None)
 
     def lm(self, beta):
         """
@@ -213,16 +213,16 @@ class _LM:
 
         objective = MemoizeJacHess(_derivative)
         jac = objective.derivative
-        hess = objective.hessian
+        # hess = objective.hessian
 
         res1 = scipy.optimize.minimize(
-            objective, jac=jac, hess=hess, x0=gamma_0, method="newton-cg"
+            objective, jac=jac, hess=None, x0=gamma_0, method="newton-cg"
         )
 
         res2 = scipy.optimize.minimize(
             objective,
             jac=jac,
-            hess=hess,
+            hess=None,
             method="newton-cg",
             x0=np.zeros_like(gamma_0),
         )
