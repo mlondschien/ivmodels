@@ -159,8 +159,9 @@ class _LM:
         St_orth = St - St_proj
 
         mat = St_proj.T @ St_proj
+        cond = np.linalg.cond(mat)
+
         if hess:
-            cond = np.linalg.cond(mat)
             if cond > 1e8:
                 mat += 1e-8 * np.eye(mat.shape[0])
 
@@ -174,7 +175,15 @@ class _LM:
                 ),
             )
         else:
-            solved = np.linalg.solve(mat, St_proj.T @ residuals_proj.reshape(-1, 1))
+            # If mat is well conditioned, both should be equivalent, but the pinv
+            # solution is defined even if mat is singular. In theory, solve should be
+            # faster. In practice, not so clear. The lstsq solution tends to be slower.
+            if cond > 1e8:
+                solved = np.linalg.pinv(mat) @ St_proj.T @ residuals_proj.reshape(-1, 1)
+            else:
+                # solved = scipy.linalg.lstsq(St_proj, residuals_proj.reshape(-1, 1), cond=None, lapack_driver="gelsy")[0]
+                # solved = np.linalg.pinv(mat) @ St_proj.T @ residuals_proj.reshape(-1, 1)
+                solved = np.linalg.solve(mat, St_proj.T @ residuals_proj.reshape(-1, 1))
 
         residuals_proj_St = St_proj @ solved[:, 0]
 
