@@ -204,4 +204,4 @@ Endogenous model statistic: {self.statistic_: {format_spec}}, p-value: {format_p
         return string
 
     def __str__(self):  # noqa D
-        return f"{self:.4g}"
+        return f"{self: .4g}"
