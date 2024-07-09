@@ -213,16 +213,16 @@ class _LM:
 
         objective = MemoizeJacHess(_derivative)
         jac = objective.derivative
-        # hess = objective.hessian
+        hess = objective.hessian
 
         res1 = scipy.optimize.minimize(
-            objective, jac=jac, hess=None, x0=gamma_0, method="newton-cg"
+            objective, jac=jac, hess=hess, x0=gamma_0, method="newton-cg"
         )
 
         res2 = scipy.optimize.minimize(
             objective,
             jac=jac,
-            hess=None,
+            hess=hess,
             method="newton-cg",
             x0=np.zeros_like(gamma_0),
         )
