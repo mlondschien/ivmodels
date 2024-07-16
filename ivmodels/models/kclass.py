@@ -482,7 +482,7 @@ class KClassMixin:
         (X, _, C), _ = self._X_Z_C(X, C=C, Z=None, predict=True)
         return super().predict(np.hstack([X, C]), *args, **kwargs)
 
-    def summary(self, X, y, Z=None, C=None, test="wald (liml)", alpha=0.05, **kwargs):
+    def summary(self, X, y, Z=None, C=None, test="wald", alpha=0.05, **kwargs):
         """
         Create Summary object for the fitted model.
 
@@ -504,8 +504,9 @@ class KClassMixin:
             specified, ``C`` must be ``None``. If ``C`` is specified,
             ``exogenous_names`` and ``exogenous_regex`` must be ``None``.
         test: str, optional, default="wald (liml)"
-            The test to use. Must be one of "wald (liml)", "wald (tsls)", "anderson
-            rubin", "AR", or "lagrange multiplier".
+            The test to use. Must be one of "wald", "anderson-rubin",
+            "lagrange multiplier", "likelihood-ratio", or
+            "conditional likelihood-ratio".
         alpha: float, optional, default=0.05
             The significance level.
         **kwargs

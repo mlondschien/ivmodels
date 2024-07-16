@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def _check_test_inputs(Z, X, y, W=None, C=None, beta=None):
+def _check_test_inputs(Z, X, y, W=None, C=None, D=None, beta=None):
     """
     Test dimensions of inputs to tests.
 
@@ -17,6 +17,8 @@ def _check_test_inputs(Z, X, y, W=None, C=None, beta=None):
         Regressors to control for.
     C: np.ndarray of dimension (n, r), optional, default=None
         Exogenous regressors not of interest.
+    D: np.ndarray of dimension (n, md), optional, default=None
+        Exogenous regressors of interest.
     beta: np.ndarray of dimension (mx,), optional, default=None
         Coefficients.
 
@@ -33,6 +35,8 @@ def _check_test_inputs(Z, X, y, W=None, C=None, beta=None):
         shape (n, 0).
     C: np.ndarray of dimension (n, mc)
         Exogenous regressors not of interest.
+    D: np.ndarray of dimension (n, md)
+        Exogenous regressors of interest.
     beta: np.ndarray of dimension (mx,) or None
         Coefficients.
 
@@ -42,11 +46,17 @@ def _check_test_inputs(Z, X, y, W=None, C=None, beta=None):
         If the dimensions of the inputs are incorrect.
 
     """
+    if X is None:
+        X = np.empty((Z.shape[0], 0))
+
     if W is None:
         W = np.empty((Z.shape[0], 0))
 
     if C is None:
         C = np.empty((Z.shape[0], 0))
+
+    if D is None:
+        D = np.empty((Z.shape[0], 0))
 
     if Z.ndim != 2:
         raise ValueError(f"Z must be a matrix. Got shape {Z.shape}.")
@@ -63,11 +73,20 @@ def _check_test_inputs(Z, X, y, W=None, C=None, beta=None):
         raise ValueError(f"W must be a matrix. Got shape {W.shape}.")
     if C.ndim != 2:
         raise ValueError(f"C must be a matrix. Got shape {C.shape}.")
+    if D.ndim != 2:
+        raise ValueError(f"D must be a matrix. Got shape {D.shape}.")
 
-    if not Z.shape[0] == X.shape[0] == y.shape[0] == W.shape[0] == C.shape[0]:
+    if (
+        not Z.shape[0]
+        == X.shape[0]
+        == y.shape[0]
+        == W.shape[0]
+        == C.shape[0]
+        == D.shape[0]
+    ):
         raise ValueError(
-            f"Z, X, y, W, and C must have the same number of rows. Got shapes "
-            f"{Z.shape}, {X.shape}, {y.shape}, {W.shape}, and {C.shape}."
+            f"Z, X, y, W, C, and D must have the same number of rows. Got shapes "
+            f"{Z.shape}, {X.shape}, {y.shape}, {W.shape}, {C.shape}, and {D.shape}."
         )
 
     if beta is not None and beta.ndim != 1:
@@ -77,13 +96,13 @@ def _check_test_inputs(Z, X, y, W=None, C=None, beta=None):
             beta = beta.flatten()
 
     if beta is not None:
-        if beta.shape[0] != X.shape[1]:
+        if beta.shape[0] != X.shape[1] + D.shape[1]:
             raise ValueError(
-                "beta must have the same length or number of rows as X has columns. "
-                f"Got shapes {beta.shape} and {X.shape}."
+                "beta must have the same length or number of rows as X and D have "
+                f"columns. Got shapes {beta.shape} and {X.shape}, {D.shape}."
             )
 
-    return Z, X, y, W, C, beta
+    return Z, X, y, W, C, D, beta
 
 
 def _find_roots(f, a, b, tol, max_value, max_eval, n_points=50):
