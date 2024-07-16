@@ -6,7 +6,7 @@ from ivmodels.tests.utils import _check_test_inputs
 from ivmodels.utils import oproj, proj
 
 
-def likelihood_ratio_test(Z, X, y, beta, W=None, C=None, fit_intercept=True):
+def likelihood_ratio_test(Z, X, y, beta, W=None, C=None, D=None, fit_intercept=True):
     """
     Perform the likelihood ratio test for ``beta``.
 
@@ -52,6 +52,8 @@ def likelihood_ratio_test(Z, X, y, beta, W=None, C=None, fit_intercept=True):
         Endogenous regressors not of interest.
     C: np.ndarray of dimension (n, mc) or None, optional, default=None
         Exogenous regressors not of interest.
+    D: np.ndarray of dimension (n, md) or None, optional, default=None
+        Exogenous regressors of interest.
     fit_intercept: bool, optional, default=True
         Whether to fit an intercept. This is equivalent to centering the inputs.
 
@@ -70,10 +72,10 @@ def likelihood_ratio_test(Z, X, y, beta, W=None, C=None, fit_intercept=True):
     ValueError:
         If the dimensions of the inputs are incorrect.
     """
-    Z, X, y, W, C, beta = _check_test_inputs(Z, X, y, W=W, C=C, beta=beta)
+    Z, X, y, W, C, D, beta = _check_test_inputs(Z, X, y, W=W, C=C, D=D, beta=beta)
 
-    n, mx = X.shape
-    k = Z.shape[1]
+    n, k = Z.shape
+    mx, mw, mc, md = X.shape[1], W.shape[1], C.shape[1], D.shape[1]
 
     if fit_intercept:
         C = np.hstack([np.ones((n, 1)), C])
@@ -81,19 +83,26 @@ def likelihood_ratio_test(Z, X, y, beta, W=None, C=None, fit_intercept=True):
     if C.shape[1] > 0:
         X, y, Z, W = oproj(C, X, y, Z, W)
 
+    if md > 0:
+        Z = np.concatenate([Z, D], axis=1)
+
     X_proj, y_proj, W_proj = proj(Z, X, y, W)
 
     XWy = np.concatenate([X, W, y.reshape(-1, 1)], axis=1)
     XWy_proj = np.concatenate([X_proj, W_proj, y_proj.reshape(-1, 1)], axis=1)
 
-    ar_min = (n - k - C.shape[1]) * np.real(
+    ar_min = (n - k - mc - md - fit_intercept) * np.real(
         scipy.linalg.eigvalsh(
             a=XWy.T @ XWy_proj, b=XWy.T @ (XWy - XWy_proj), subset_by_index=[0, 0]
         )[0]
     )
 
-    if W.shape[1] == 0:
-        statistic = (n - k - C.shape[1]) * np.linalg.norm(
+    if md > 0:
+        X = np.concatenate([X, D], axis=1)
+        X_proj = np.concatenate([X_proj, D], axis=1)
+
+    if mw == 0:
+        statistic = (n - k - mc - md - fit_intercept) * np.linalg.norm(
             y_proj - X_proj @ beta
         ) ** 2 / np.linalg.norm((y - y_proj) - (X - X_proj) @ beta) ** 2 - ar_min
     else:
@@ -113,7 +122,7 @@ def likelihood_ratio_test(Z, X, y, beta, W=None, C=None, fit_intercept=True):
 
 
 def inverse_likelihood_ratio_test(
-    Z, X, y, alpha=0.05, W=None, C=None, fit_intercept=True
+    Z, X, y, alpha=0.05, W=None, C=None, D=None, fit_intercept=True
 ):
     """
     Return the quadric for the inverse likelihood ratio test's acceptance region.
@@ -138,6 +147,8 @@ def inverse_likelihood_ratio_test(
         Endogenous regressors not of interest.
     C: np.ndarray of dimension (n, mc) or None, optional, default=None
         Exogenous regressors not of interest.
+    D: np.ndarray of dimension (n, md) or None, optional, default=None
+        Exogenous regressors of interest.
     fit_intercept: bool, optional, default=True
         Whether to fit an intercept. This is equivalent to centering the inputs.
 
@@ -145,43 +156,52 @@ def inverse_likelihood_ratio_test(
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1).")
 
-    Z, X, y, W, C, _ = _check_test_inputs(Z, X, y, W=W, C=C)
+    Z, X, y, W, C, D, _ = _check_test_inputs(Z, X, y, W=W, C=C, D=D)
 
-    n, mx = X.shape
-    k = Z.shape[1]
+    n, k = Z
+    mx, mw, mc, md = X.shape[1], W.shape[1], C.shape[1], D.shape[1]
 
     if fit_intercept:
         C = np.hstack([np.ones((n, 1)), C])
 
     if C.shape[1] > 0:
-        X, y, Z, W = oproj(C, X, y, Z, W)
+        X, y, Z, W, D = oproj(C, X, y, Z, W, D)
 
-    X = np.concatenate([X, W], axis=1)
+    XW = np.concatenate([X, W], axis=1)
 
-    X_proj, y_proj = proj(Z, X, y)
-    X_orth = X - X_proj
+    if md > 0:
+        Z = np.concatenate([Z, D], axis=1)
+
+    XW_proj, y_proj = proj(Z, XW, y)
+    XW_orth = XW - XW_proj
     y_orth = y - y_proj
 
-    Xy_proj = np.concatenate([X_proj, y_proj.reshape(-1, 1)], axis=1)
-    Xy = np.concatenate([X, y.reshape(-1, 1)], axis=1)
+    XWy_proj = np.concatenate([XW_proj, y_proj.reshape(-1, 1)], axis=1)
+    XWy = np.concatenate([XW, y.reshape(-1, 1)], axis=1)
 
     kappa_liml = np.real(
         scipy.linalg.eigvalsh(
-            a=Xy.T @ Xy_proj, b=Xy.T @ (Xy - Xy_proj), subset_by_index=[0, 0]
+            a=XWy.T @ XWy_proj, b=X.T @ (XWy - XWy_proj), subset_by_index=[0, 0]
         )[0]
     )
 
-    dfd = n - k - C.shape[1]
-    quantile = scipy.stats.chi2.ppf(1 - alpha, df=mx) + dfd * kappa_liml
+    dfd = n - k - mc - md
+    quantile = scipy.stats.chi2.ppf(1 - alpha, df=mx + md) + dfd * kappa_liml
 
-    A = X.T @ (X_proj - 1 / dfd * quantile * X_orth)
-    b = -2 * (X_proj - 1 / dfd * quantile * X_orth).T @ y
+    if md > 0:
+        XW = np.concatenate([XW, D], axis=1)
+        XW_proj = np.concatenate([XW_proj, D], axis=1)
+        XW_orth = np.concatenate([XW_orth, np.zeros_like(D)], axis=1)
+
+    A = X.T @ (XW_proj - 1 / dfd * quantile * XW_orth)
+    b = -2 * (XW_proj - 1 / dfd * quantile * XW_orth).T @ y
     c = y.T @ (y_proj - 1 / dfd * quantile * y_orth)
 
     if isinstance(c, np.ndarray):
         c = c.item()
 
     if W is not None:
-        return Quadric(A, b, c).project(range(X.shape[1] - W.shape[1]))
+        coordinates = np.concatenate([np.arange(mx), np.arange(mx + mw, mx + mw + md)])
+        return Quadric(A, b, c).project(coordinates)
     else:
         return Quadric(A, b, c)
