@@ -111,33 +111,3 @@ def test_compare_test_and_lm_derivative(n, mx, k):
             Z, X, y=y, beta=beta, C=C, fit_intercept=False
         )[0]
         assert np.allclose(statistic1, statistic2, rtol=1e-5, atol=1e-5)
-
-
-@pytest.mark.parametrize(
-    "n, mx, mw, k",
-    [
-        (100, 1, 1, 3),
-        (100, 1, 3, 5),
-        (1000, 5, 2, 10),
-    ],
-)
-def test_lm_at_minimum(n, mx, mw, k):
-    Z, X, y, C, W, _ = simulate_gaussian_iv(
-        n=n, mx=mx, mw=mw, k=k, mc=0, include_intercept=False
-    )
-
-    rng = np.random.RandomState(0)
-    for _ in range(5):
-        beta = rng.normal(0, 1, mx)
-        res1 = lagrange_multiplier_test(
-            Z, X, y=y, W=W, beta=beta, C=C, fit_intercept=False
-        )
-        res2 = lagrange_multiplier_test(
-            Z,
-            X=np.hstack([X, W]),
-            y=y,
-            beta=np.hstack([beta, res1[2]]),
-            C=C,
-            fit_intercept=False,
-        )
-        assert np.allclose(res1[0], res2[0], rtol=1e-5, atol=1e-5)

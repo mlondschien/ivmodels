@@ -365,8 +365,9 @@ def lagrange_multiplier_test(
         X = np.hstack([X, D])
         Z = np.hstack([Z, D])
 
+    dof = n - k - mc - md - fit_intercept
     if mw > 0:
-        statistic = _LM(X=X, y=y, W=W, Z=Z, dof=n - k - mc - md, **kwargs).lm(beta)
+        statistic = _LM(X=X, y=y, W=W, Z=Z, dof=dof, **kwargs).lm(beta)
 
         p_value = 1 - scipy.stats.chi2.cdf(statistic, df=mx + md)
 
@@ -384,8 +385,7 @@ def lagrange_multiplier_test(
 
         X_tilde_proj_residuals = proj(X_tilde_proj, residuals)
         # (y - X beta) P_{P_Z X_tilde} (y - X beta) / (y - X_beta) M_Z (y - X beta)
-        statistic = np.square(X_tilde_proj_residuals).sum() / sigma_hat
-        statistic *= n - k - mc - fit_intercept - md
+        statistic = dof * np.square(X_tilde_proj_residuals).sum() / sigma_hat
 
         p_value = 1 - scipy.stats.chi2.cdf(statistic, df=mx + md)
 

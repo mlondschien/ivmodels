@@ -89,15 +89,18 @@ def likelihood_ratio_test(Z, X, y, beta, W=None, C=None, D=None, fit_intercept=T
     X_proj, y_proj, W_proj = proj(Z, X, y, W)
 
     XWy = np.concatenate([X, W, y.reshape(-1, 1)], axis=1)
-    if md > 0:
-        XWy = oproj(D, XWy)
 
-    XWy_proj = np.concatenate([X_proj, W_proj, y_proj.reshape(-1, 1)], axis=1)
+    XWy_proj = np.hstack([X_proj, W_proj, y_proj.reshape(-1, 1)])
 
-    ar_min = np.real(
-        scipy.linalg.eigvalsh(
-            a=XWy.T @ XWy_proj, b=XWy.T @ (XWy - XWy_proj), subset_by_index=[0, 0]
-        )[0]
+    ar_min = (
+        np.real(
+            scipy.linalg.eigvalsh(
+                a=oproj(D, XWy).T @ XWy,
+                b=XWy.T @ (XWy - XWy_proj),
+                subset_by_index=[0, 0],
+            )[0]
+        )
+        - 1
     )
 
     if md > 0:
@@ -170,7 +173,7 @@ def inverse_likelihood_ratio_test(
 
     Z, X, y, W, C, D, _ = _check_test_inputs(Z, X, y, W=W, C=C, D=D)
 
-    n, k = Z
+    n, k = Z.shape
     mx, mw, mc, md = X.shape[1], W.shape[1], C.shape[1], D.shape[1]
 
     if fit_intercept:
@@ -193,11 +196,11 @@ def inverse_likelihood_ratio_test(
 
     kappa_liml = np.real(
         scipy.linalg.eigvalsh(
-            a=XWy.T @ XWy_proj, b=X.T @ (XWy - XWy_proj), subset_by_index=[0, 0]
+            a=XWy.T @ XWy_proj, b=XWy.T @ (XWy - XWy_proj), subset_by_index=[0, 0]
         )[0]
     )
 
-    dfd = n - k - mc - md
+    dfd = n - k - mc - md - fit_intercept
     quantile = scipy.stats.chi2.ppf(1 - alpha, df=mx + md) + dfd * kappa_liml
 
     if md > 0:
@@ -205,7 +208,7 @@ def inverse_likelihood_ratio_test(
         XW_proj = np.concatenate([XW_proj, D], axis=1)
         XW_orth = np.concatenate([XW_orth, np.zeros_like(D)], axis=1)
 
-    A = X.T @ (XW_proj - 1 / dfd * quantile * XW_orth)
+    A = XW.T @ (XW_proj - 1 / dfd * quantile * XW_orth)
     b = -2 * (XW_proj - 1 / dfd * quantile * XW_orth).T @ y
     c = y.T @ (y_proj - 1 / dfd * quantile * y_orth)
 

@@ -352,15 +352,18 @@ def conditional_likelihood_ratio_test(
         ) * (n - k - mc - md - fit_intercept)
 
         Xy = np.concatenate([X, y.reshape(-1, 1)], axis=1)
-        Xy_proj = np.hstack([X_proj, y_proj])
+        Xy_proj = np.hstack([X_proj, y_proj.reshape(-1, 1)])
 
         if md > 0:
             Xy = oproj(D, Xy)
 
-        ar_min = scipy.linalg.eigvalsh(
-            a=Xy_proj.T @ Xy,
-            b=(Xy - Xy_proj).T @ Xy,
-            subset_by_index=[0, 0],
+        ar_min = (
+            scipy.linalg.eigvalsh(
+                a=Xy.T @ Xy,
+                b=(Xy - Xy_proj).T @ Xy,
+                subset_by_index=[0, 0],
+            )[0]
+            - 1
         )
 
         ar = residuals_proj.T @ residuals_proj / (residuals_orth.T @ residuals_orth)
@@ -374,15 +377,19 @@ def conditional_likelihood_ratio_test(
         if md > 0:
             XWy = oproj(D, XWy)
 
-        XWy_eigenvals = np.sort(
-            np.real(
-                scipy.linalg.eigvalsh(
-                    a=XWy_proj.T @ XWy,
-                    b=(XWy - XWy_proj).T @ XWy,
-                    subset_by_index=[0, 1],
+        XWy_eigenvals = (
+            np.sort(
+                np.real(
+                    scipy.linalg.eigvalsh(
+                        a=XWy.T @ XWy,
+                        b=(XWy - XWy_proj).T @ XWy,
+                        subset_by_index=[0, 1],
+                    )
                 )
             )
+            - 1
         )
+
         residuals = y - np.hstack([X, D]) @ beta
         residuals_proj = y_proj - np.hstack([X_proj, D]) @ beta
 
@@ -401,17 +408,16 @@ def conditional_likelihood_ratio_test(
 
 
 def inverse_conditional_likelihood_ratio_test(
-    Z, X, y, alpha=0.05, W=None, C=None, fit_intercept=True, tol=1e-4
+    Z, X, y, alpha=0.05, W=None, C=None, D=None, fit_intercept=True, tol=1e-4
 ):
     """Return an approximation of the confidence set by inversion of the CLR test."""
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1).")
 
-    Z, X, y, W, C, _ = _check_test_inputs(Z, X, y, W=W, C=C)
+    Z, X, y, W, C, D, _ = _check_test_inputs(Z, X, y, W=W, C=C, D=D)
 
-    n, mx = X.shape
-    mw = W.shape[1]
-    k = Z.shape[1]
+    n, k = Z.shape
+    mx, mw, mc, md = X.shape[1], W.shape[1], C.shape[1], D.shape[1]
 
     if fit_intercept:
         C = np.hstack([np.ones((n, 1)), C])
@@ -434,23 +440,26 @@ def inverse_conditional_likelihood_ratio_test(
         )
     )
 
-    dof = n - k - C.shape[1]
+    dof = n - k - mc - md - fit_intercept
 
     # "lower bound" on the confidence set to be computed. That is, the confidence set
     # to be computed will contain the lower bound.
-    quantile_lower = scipy.stats.chi2.ppf(1 - alpha, df=mx) + dof * Sy_eigvals[0]
+    quantile_lower = scipy.stats.chi2.ppf(1 - alpha, df=mx + md) + dof * Sy_eigvals[0]
 
     A = S.T @ (dof * S_proj - quantile_lower * S_orth)
     b = -2 * (dof * S_proj - quantile_lower * S_orth).T @ y
     c = y.T @ (dof * y_proj - quantile_lower * y_orth)
-    cs_lower = ConfidenceSet.from_quadric(Quadric(A, b, c).project(range(X.shape[1])))
+    coordinates = np.concatenate([np.arange(mx), np.arange(mx + mw, mx + mw + md)])
+    cs_lower = ConfidenceSet.from_quadric(Quadric(A, b, c).project(coordinates))
 
-    quantile_upper = scipy.stats.chi2.ppf(1 - alpha, df=k - mw) + dof * Sy_eigvals[0]
+    quantile_upper = (
+        scipy.stats.chi2.ppf(1 - alpha, df=k + md - mw) + dof * Sy_eigvals[0]
+    )
 
     A = S.T @ (dof * S_proj - quantile_upper * S_orth)
     b = -2 * (dof * S_proj - quantile_upper * S_orth).T @ y
     c = y.T @ (dof * y_proj - quantile_upper * y_orth)
-    cs_upper = ConfidenceSet.from_quadric(Quadric(A, b, c).project(range(X.shape[1])))
+    cs_upper = ConfidenceSet.from_quadric(Quadric(A, b, c).project(coordinates))
 
     Wy_proj = Sy_proj[:, mx:]
     Wy_orth = Sy_orth[:, mx:]

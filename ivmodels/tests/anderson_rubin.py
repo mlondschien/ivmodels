@@ -178,7 +178,7 @@ def anderson_rubin_test(
         C = np.hstack([np.ones((n, 1)), C])
 
     if C.shape[1] > 0:
-        X, y, Z, W = oproj(C, X, y, Z, W)
+        X, y, Z, W, D = oproj(C, X, y, Z, W, D)
 
     if md > 0:
         X, Z = np.hstack([X, D]), np.hstack([Z, D])
@@ -190,17 +190,18 @@ def anderson_rubin_test(
             np.square(proj_residuals).sum()
             / np.square(residuals - proj_residuals).sum()
         )
-        dfn = k
+        dfn = k + md
     else:
-        ar = KClass._spectrum(X=W, y=y - X @ beta, Z=Z, subset_by_index=[0, 0])[0]
-        dfn = k - mw
+        ar = KClass.ar_min(X=W, y=y - X @ beta, Z=Z)
+        dfn = k - mw + md
 
-    statistic = ar * (n - k - mc - md) / dfn
+    dfd = n - k - mc - md - fit_intercept
+    statistic = ar * dfd / dfn
 
     if critical_values == "chi2":
         p_value = 1 - scipy.stats.chi2.cdf(statistic * dfn, df=dfn)
     elif critical_values == "f":
-        p_value = 1 - scipy.stats.f.cdf(statistic, dfn=dfn, dfd=n - k - mc - md)
+        p_value = 1 - scipy.stats.f.cdf(statistic, dfn=dfn, dfd=dfd)
     elif critical_values.startswith("guggenberger"):
         if mw == 0:
             raise ValueError(
@@ -290,7 +291,7 @@ def inverse_anderson_rubin_test(
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1).")
 
-    Z, X, y, W, C, D, _ = _check_test_inputs(Z, X, y, W=W, C=C)
+    Z, X, y, W, C, D, _ = _check_test_inputs(Z, X, y, W=W, C=C, D=D)
 
     n, k = Z.shape
     mx, mw, mc, md = X.shape[1], W.shape[1], C.shape[1], D.shape[1]
@@ -303,8 +304,8 @@ def inverse_anderson_rubin_test(
 
     S = np.concatenate([X, W], axis=1)
 
-    dfn = k - mw
-    dfd = n - k - mc - md
+    dfn = k + md - mw
+    dfd = n - k - mc - md - fit_intercept
 
     if critical_values == "chi2":
         quantile = scipy.stats.chi2.ppf(1 - alpha, df=dfn) / dfd

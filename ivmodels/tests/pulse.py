@@ -55,7 +55,7 @@ def pulse_test(Z, X, y, beta, C=None, W=None, fit_intercept=True):
 
        jakobsen2022distributional
     """
-    Z, X, y, W, C, beta = _check_test_inputs(Z, X, y, C=C, W=W, beta=beta)
+    Z, X, y, W, C, _, beta = _check_test_inputs(Z, X, y, C=C, W=W, beta=beta)
 
     if W.shape[1] > 0:
         raise ValueError("No subvector variant of the pulse test is implemented.")
@@ -79,7 +79,7 @@ def pulse_test(Z, X, y, beta, C=None, W=None, fit_intercept=True):
 
 def inverse_pulse_test(Z, X, y, C=None, alpha=0.05, fit_intercept=True):
     """Return the quadric for the inverse pulse test's acceptance region."""
-    Z, X, y, _, C, _ = _check_test_inputs(Z, X, y, C=C)
+    Z, X, y, _, C, _, _ = _check_test_inputs(Z, X, y, C=C)
 
     n, k = Z.shape
 

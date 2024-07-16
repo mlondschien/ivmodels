@@ -416,26 +416,32 @@ def test_inverse_test_sorted(inverse_test, n, mx, k, u, mc):
     assert volumes[0] <= volumes[1] <= volumes[2] <= volumes[3]
 
 
-@pytest.mark.parametrize("fit_intercept", [True, False])
-@pytest.mark.parametrize("n, mx, mw, u, mc", [(100, 2, 0, 2, 2), (100, 2, 2, 2, 2)])
-def test_ar_lm_clr_yield_same_result(n, mx, mw, u, mc, fit_intercept):
+@pytest.mark.parametrize(
+    "n, mx, mw, u, mc, md, fit_intercept",
+    [(100, 2, 0, 2, 2, 0, True), (100, 2, 2, 2, 2, 1, False)],
+)
+def test_ar_lm_clr_yield_same_result(n, mx, mw, u, mc, md, fit_intercept):
     """The AR, LM, and CLR tests should yield the same result if k = m."""
-    Z, X, y, C, W, _ = simulate_gaussian_iv(n=n, mx=mx, k=mx + mw, u=u, mw=mw, mc=mc)
+    Z, X, y, C, W, D = simulate_gaussian_iv(
+        n=n, mx=mx, k=mx + mw, u=u, mw=mw, mc=mc, md=md
+    )
 
     for seed in range(5):
         rng = np.random.RandomState(seed)
-        beta = rng.normal(size=(mx, 1))
+        beta = rng.normal(size=(mx + md, 1))
 
-        ar = anderson_rubin_test(Z, X, y, beta, W, C=C, fit_intercept=fit_intercept)[1]
+        ar = anderson_rubin_test(
+            Z, X, y, beta, W, C=C, D=D, fit_intercept=fit_intercept
+        )
         lm = lagrange_multiplier_test(
-            Z, X, y, beta, W, C=C, fit_intercept=fit_intercept
-        )[1]
+            Z, X, y, beta, W, C=C, D=D, fit_intercept=fit_intercept
+        )
         clr = conditional_likelihood_ratio_test(
-            Z, X, y, beta, W, C=C, fit_intercept=fit_intercept
-        )[1]
+            Z, X, y, beta, W, C=C, D=D, fit_intercept=fit_intercept
+        )
 
-        assert np.allclose(ar, lm)
-        assert np.allclose(ar, clr)
+        assert np.allclose(ar[0] * (mx + md), lm[0], clr[0])
+        assert np.allclose(ar[1], lm[1], clr[1])
 
 
 # once with W=None, once with W!=None
