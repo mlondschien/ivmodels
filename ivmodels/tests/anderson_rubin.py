@@ -91,7 +91,7 @@ def more_powerful_subvector_anderson_rubin_critical_value_function(
 
 
 def anderson_rubin_test(
-    Z, X, y, beta, W=None, C=None, critical_values="chi2", fit_intercept=True
+    Z, X, y, beta, W=None, C=None, D=None, critical_values="chi2", fit_intercept=True
 ):
     """
     Perform the Anderson Rubin test :cite:p:`anderson1949estimation`.
@@ -138,6 +138,8 @@ def anderson_rubin_test(
         Endogenous regressors not of interest.
     C: np.ndarray of dimension (n, mc) or None, optional, default = None
         Exogenous regressors not of interest.
+    D: np.ndarray of dimension (n, md) or None, optional, default = None
+        Exogenous regressors of interest.
     critical_values: str, optional, default = "chi2"
         If ``"chi2"``, use the :math:`\\chi^2(k - m_W)` distribution to compute the p-value.
         If ``"f"``, use the :math:`F_{k - m_W, n - k}` distribution to compute the p-value.
@@ -167,9 +169,10 @@ def anderson_rubin_test(
        guggenberger2012asymptotic
        guggenberger2019more
     """
-    Z, X, y, W, C, beta = _check_test_inputs(Z, X, y, W=W, C=C, beta=beta)
+    Z, X, y, W, C, D, beta = _check_test_inputs(Z, X, y, W=W, C=C, D=D, beta=beta)
 
     n, k = Z.shape
+    mw, mc, md = W.shape[1], C.shape[1], D.shape[1]
 
     if fit_intercept:
         C = np.hstack([np.ones((n, 1)), C])
@@ -177,7 +180,10 @@ def anderson_rubin_test(
     if C.shape[1] > 0:
         X, y, Z, W = oproj(C, X, y, Z, W)
 
-    if W.shape[1] == 0:
+    if md > 0:
+        X, Z = np.hstack([X, D]), np.hstack([Z, D])
+
+    if mw == 0:
         residuals = y - X @ beta
         proj_residuals = proj(Z, residuals)
         ar = (
@@ -187,27 +193,26 @@ def anderson_rubin_test(
         dfn = k
     else:
         ar = KClass._spectrum(X=W, y=y - X @ beta, Z=Z, subset_by_index=[0, 0])[0]
-        dfn = k - W.shape[1]
+        dfn = k - mw
 
-    statistic = ar * (n - k - C.shape[1]) / dfn
+    statistic = ar * (n - k - mc - md) / dfn
 
     if critical_values == "chi2":
         p_value = 1 - scipy.stats.chi2.cdf(statistic * dfn, df=dfn)
     elif critical_values == "f":
-        p_value = 1 - scipy.stats.f.cdf(statistic, dfn=dfn, dfd=n - k - C.shape[1])
+        p_value = 1 - scipy.stats.f.cdf(statistic, dfn=dfn, dfd=n - k - mc - md)
     elif critical_values.startswith("guggenberger"):
-        if W.shape[1] == 0:
+        if mw == 0:
             raise ValueError(
                 "The critical value function proposed by Guggenberger et al. (2019) is "
                 "only available for the subvector variant where W is not None."
             )
 
-        mw = W.shape[1]
-        kappa_max = (n - k - C.shape[1]) * KClass._spectrum(
+        kappa_max = (n - k - mc - md) * KClass._spectrum(
             X=W, y=y - X @ beta, Z=Z, subset_by_index=[mw, mw]
         )[0]
         p_value = more_powerful_subvector_anderson_rubin_critical_value_function(
-            statistic * dfn, kappa_max, k, mw=W.shape[1]
+            statistic * dfn, kappa_max, k=k, mw=mw
         )
     else:
         raise ValueError(
@@ -218,7 +223,15 @@ def anderson_rubin_test(
 
 
 def inverse_anderson_rubin_test(
-    Z, X, y, alpha=0.05, W=None, C=None, critical_values="chi2", fit_intercept=True
+    Z,
+    X,
+    y,
+    alpha=0.05,
+    W=None,
+    C=None,
+    D=None,
+    critical_values="chi2",
+    fit_intercept=True,
 ):
     """
     Return the quadric for to the inverse Anderson-Rubin test's acceptance region.
@@ -258,6 +271,8 @@ def inverse_anderson_rubin_test(
         Endogenous regressors not of interest.
     C: np.ndarray of dimension (n, mc) or None, optional, default = None
         Exogenous regressors not of interest.
+    D: np.ndarray of dimension (n, md) or None, optional, default = None
+        Exogenous regressors of interest.
     critical_values: str, optional, default = "chi2"
         If ``"chi2"``, use the :math:`\\chi^2(k - m_W)` distribution to compute the
         p-value.
@@ -275,20 +290,21 @@ def inverse_anderson_rubin_test(
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1).")
 
-    Z, X, y, W, C, _ = _check_test_inputs(Z, X, y, W=W, C=C)
+    Z, X, y, W, C, D, _ = _check_test_inputs(Z, X, y, W=W, C=C)
 
     n, k = Z.shape
+    mx, mw, mc, md = X.shape[1], W.shape[1], C.shape[1], D.shape[1]
 
     if fit_intercept:
         C = np.hstack([np.ones((n, 1)), C])
 
     if C.shape[1] > 0:
-        X, y, Z, W = oproj(C, X, y, Z, W)
+        X, y, Z, W, D = oproj(C, X, y, Z, W, D)
 
     S = np.concatenate([X, W], axis=1)
 
-    dfn = k - W.shape[1]
-    dfd = n - k - C.shape[1]
+    dfn = k - mw
+    dfd = n - k - mc - md
 
     if critical_values == "chi2":
         quantile = scipy.stats.chi2.ppf(1 - alpha, df=dfn) / dfd
@@ -299,7 +315,15 @@ def inverse_anderson_rubin_test(
             "critical_values must be one of 'chi2', 'f'. Got " f"{critical_values}."
         )
 
+    if md > 0:
+        Z = np.hstack([Z, D])
+
     S_proj, y_proj = proj(Z, S, y)
+
+    if md > 0:
+        S = np.hstack([S, D])
+        S_proj = np.hstack([S_proj, D])
+
     S_orth = S - S_proj
     y_orth = y - y_proj
 
@@ -311,7 +335,8 @@ def inverse_anderson_rubin_test(
         c = c.item()
 
     if W is not None:
-        return Quadric(A, b, c).project(range(X.shape[1]))
+        coordinates = np.concatenate([np.arange(mx), np.arange(mx + mw, mx + mw + md)])
+        return Quadric(A, b, c).project(coordinates)
 
     else:
         return Quadric(A, b, c)
