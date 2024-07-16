@@ -173,6 +173,7 @@ def conditional_likelihood_ratio_test(
     beta,
     W=None,
     C=None,
+    D=None,
     fit_intercept=True,
     method="numerical_integration",
     tol=1e-4,
@@ -276,7 +277,7 @@ def conditional_likelihood_ratio_test(
     ----------
     Z: np.ndarray of dimension (n, k)
         Instruments.
-    X: np.ndarray of dimension (n, mx)
+    X: np.ndarray of dimension (n, mx + md)
         Regressors.
     y: np.ndarray of dimension (n,)
         Outcomes.
@@ -286,6 +287,8 @@ def conditional_likelihood_ratio_test(
         Endogenous regressors not of interest.
     C: np.ndarray of dimension (n, mc) or None, optional, default = None
         Exogenous regressors not of interest.
+    D: np.ndarray of dimension (n, md) or None, optional, default = None
+        Exogenous regressors of interest.
     fit_intercept: bool, optional, default: True
         Whether to include an intercept. This is equivalent to centering the inputs.
     method: str, optional, default: "numerical_integration"
@@ -316,45 +319,60 @@ def conditional_likelihood_ratio_test(
        moreira2003conditional
        kleibergen2021efficient
     """
-    Z, X, y, W, C, beta = _check_test_inputs(Z, X, y, W=W, C=C, beta=beta)
+    Z, X, y, W, C, D, beta = _check_test_inputs(Z, X, y, W=W, C=C, D=D, beta=beta)
 
     n, k = Z.shape
-    mx = X.shape[1]
-    mw = W.shape[1]
+    mx, mw, mc, md = X.shape[1], W.shape[1], C.shape[1], D.shape[1]
 
     if fit_intercept:
         C = np.hstack([np.ones((n, 1)), C])
 
     if C.shape[1] > 0:
-        X, y, Z, W = oproj(C, X, y, Z, W)
+        X, y, Z, W, D = oproj(C, X, y, Z, W, D)
 
-    # Z = scipy.linalg.qr(Z, mode="economic")[0]
-    X_proj, y_proj, W_proj = proj(Z, X, y, W)  # , orthogonal=True)
+    if md > 0:
+        Z = np.hstack([Z, D])
+
+    X_proj, y_proj, W_proj = proj(Z, X, y, W)
 
     if mw == 0:
-        residuals = y - X @ beta
-        residuals_proj = y_proj - X_proj[:, :mx] @ beta
+        residuals = y - np.hstack([X, D]) @ beta
+        residuals_proj = y_proj - np.hstack([X_proj, D]) @ beta
         residuals_orth = residuals - residuals_proj
 
         Sigma = (residuals_orth.T @ X) / (residuals_orth.T @ residuals_orth)
         Xt = X - np.outer(residuals, Sigma)
         Xt_proj = X_proj - np.outer(residuals_proj, Sigma)
         Xt_orth = Xt - Xt_proj
+
         s_min = np.real(
             scipy.linalg.eigvalsh(
                 a=Xt_proj.T @ Xt_proj, b=Xt_orth.T @ Xt_orth, subset_by_index=[0, 0]
             )[0]
-        ) * (n - k - C.shape[1])
+        ) * (n - k - mc - md - fit_intercept)
 
-        # TODO: This can be done with efficient rank-1 updates.
-        ar_min = KClass.ar_min(X=X, y=y, Z=Z)
+        Xy = np.concatenate([X, y.reshape(-1, 1)], axis=1)
+        Xy_proj = np.hstack([X_proj, y_proj])
+
+        if md > 0:
+            Xy = oproj(D, Xy)
+
+        ar_min = scipy.linalg.eigvalsh(
+            a=Xy_proj.T @ Xy,
+            b=(Xy - Xy_proj).T @ Xy,
+            subset_by_index=[0, 0],
+        )
+
         ar = residuals_proj.T @ residuals_proj / (residuals_orth.T @ residuals_orth)
 
-        statistic = (n - k - C.shape[1]) * (ar - ar_min)
+        statistic = (n - k - mc - md - fit_intercept) * (ar - ar_min)
 
     elif mw > 0:
         XWy = np.concatenate([X, W, y.reshape(-1, 1)], axis=1)
         XWy_proj = np.concatenate([X_proj, W_proj, y_proj.reshape(-1, 1)], axis=1)
+
+        if md > 0:
+            XWy = oproj(D, XWy)
 
         XWy_eigenvals = np.sort(
             np.real(
@@ -365,16 +383,18 @@ def conditional_likelihood_ratio_test(
                 )
             )
         )
-        kclass = KClass(kappa="liml").fit(X=W, y=y - X @ beta, Z=Z)
-        ar = kclass.ar_min(
-            X=W, y=y - X @ beta, X_proj=W_proj, y_proj=y_proj - X_proj @ beta
-        )
+        residuals = y - np.hstack([X, D]) @ beta
+        residuals_proj = y_proj - np.hstack([X_proj, D]) @ beta
 
-        statistic = (n - k - C.shape[1]) * (ar - XWy_eigenvals[0])
-        s_min = (n - k - C.shape[1]) * (XWy_eigenvals[0] + XWy_eigenvals[1] - ar)
+        kclass = KClass(kappa="liml").fit(X=W, y=residuals, Z=Z)
+        ar = kclass.ar_min(X=W, y=residuals, X_proj=W_proj, y_proj=residuals_proj)
+
+        dof = n - k - mc - fit_intercept - md
+        statistic = dof * (ar - XWy_eigenvals[0])
+        s_min = dof * (XWy_eigenvals[0] + XWy_eigenvals[1] - ar)
 
     p_value = conditional_likelihood_ratio_critical_value_function(
-        mx, k - mw, s_min, statistic, method=method, tol=tol
+        mx + md, k + md - mw, s_min, statistic, method=method, tol=tol
     )
 
     return statistic, p_value

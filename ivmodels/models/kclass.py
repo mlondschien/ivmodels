@@ -363,7 +363,8 @@ class KClassMixin:
                 "Variable names must not contain 'intercept' when fit_intercept=True."
             )
 
-        n, mx = X.shape
+        n, k = Z.shape
+        mx, mc = X.shape[1], C.shape[1]
 
         # Including an intercept is equivalent to replacing y <- M_1 y, X <- M_1 X,
         # C <- M_1 C, Z <- M_1 Z, where M_1 = Id - 1/n 1 1^T is the projection
@@ -383,13 +384,13 @@ class KClassMixin:
             y = y - y_mean
             Z = Z - Z.mean(axis=0)
 
-            if C.shape[1] > 0:
+            if mc > 0:
                 c_mean = C.mean(axis=0)
                 C = C - c_mean
             else:
                 c_mean = np.zeros(0)
         else:
-            x_mean, y_mean, c_mean = np.zeros(mx), 0, np.zeros(C.shape[1])
+            x_mean, y_mean, c_mean = np.zeros(mx), 0, np.zeros(mc)
 
         # Including exogenous covariates C can be done by the following approaches:
         #
@@ -403,7 +404,7 @@ class KClassMixin:
         #   replace Z <- [Z C], X <- [X C], y <- y, and apply the k-class estimator to
         #   the augmented data. This is the approach taken here. Care needs to be taken
         #   to compute kappa. For this, we follow the first approach. See below.
-        if C.shape[1] > 0:
+        if mc > 0:
             Z = np.hstack([Z, C])
             # save some compute here, as proj([Z, C], C) = C
             X_proj, y_proj = proj(Z, X, y)
@@ -432,7 +433,7 @@ class KClassMixin:
                     y_proj=y_proj,
                 )
                 self.kappa_liml_ = 1 + self.ar_min_
-                self.kappa_ = self.kappa_liml_ - self.fuller_alpha_ / (n - Z.shape[1])
+                self.kappa_ = self.kappa_liml_ - self.fuller_alpha_ / (n - k - mc)
         else:
             self.kappa_ = self.kappa
 

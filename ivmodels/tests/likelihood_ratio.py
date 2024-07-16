@@ -81,7 +81,7 @@ def likelihood_ratio_test(Z, X, y, beta, W=None, C=None, D=None, fit_intercept=T
         C = np.hstack([np.ones((n, 1)), C])
 
     if C.shape[1] > 0:
-        X, y, Z, W = oproj(C, X, y, Z, W)
+        X, y, Z, W, D = oproj(C, X, y, Z, W, D)
 
     if md > 0:
         Z = np.concatenate([Z, D], axis=1)
@@ -89,34 +89,46 @@ def likelihood_ratio_test(Z, X, y, beta, W=None, C=None, D=None, fit_intercept=T
     X_proj, y_proj, W_proj = proj(Z, X, y, W)
 
     XWy = np.concatenate([X, W, y.reshape(-1, 1)], axis=1)
+    if md > 0:
+        XWy = oproj(D, XWy)
+
     XWy_proj = np.concatenate([X_proj, W_proj, y_proj.reshape(-1, 1)], axis=1)
 
-    ar_min = (n - k - mc - md - fit_intercept) * np.real(
+    ar_min = np.real(
         scipy.linalg.eigvalsh(
             a=XWy.T @ XWy_proj, b=XWy.T @ (XWy - XWy_proj), subset_by_index=[0, 0]
         )[0]
     )
 
     if md > 0:
-        X = np.concatenate([X, D], axis=1)
-        X_proj = np.concatenate([X_proj, D], axis=1)
+        X = np.hstack([X, D])
+        X_proj = np.hstack([X_proj, D])
+
+    residuals = y - X @ beta
+    residuals_proj = y_proj - X_proj @ beta
 
     if mw == 0:
-        statistic = (n - k - mc - md - fit_intercept) * np.linalg.norm(
-            y_proj - X_proj @ beta
-        ) ** 2 / np.linalg.norm((y - y_proj) - (X - X_proj) @ beta) ** 2 - ar_min
-    else:
-        Wy = np.concatenate([W, (y - X @ beta).reshape(-1, 1)], axis=1)
-        Wy_proj = np.concatenate(
-            [W_proj, (y_proj - X_proj @ beta).reshape(-1, 1)], axis=1
-        )
-        statistic = (n - k - C.shape[1]) * np.real(
-            scipy.linalg.eigvalsh(
-                a=Wy.T @ Wy_proj, b=Wy.T @ (Wy - Wy_proj), subset_by_index=[0, 0]
-            )[0]
-        ) - ar_min
+        statistic = np.linalg.norm(residuals) ** 2
+        statistic /= np.linalg.norm(residuals - residuals_proj) ** 2
+        statistic -= ar_min
 
-    p_value = 1 - scipy.stats.chi2.cdf(statistic, df=mx)
+    else:
+        Wy = np.hstack([W, residuals.reshape(-1, 1)])
+        Wy_proj = np.hstack([W_proj, residuals_proj.reshape(-1, 1)])
+
+        statistic = (
+            np.real(
+                scipy.linalg.eigvalsh(
+                    a=Wy_proj.T @ Wy_proj,
+                    b=Wy.T @ (Wy - Wy_proj),
+                    subset_by_index=[0, 0],
+                )[0]
+            )
+            - ar_min
+        )
+
+    statistic *= n - k - mc - md - fit_intercept
+    p_value = 1 - scipy.stats.chi2.cdf(statistic, df=mx + md)
 
     return statistic, p_value
 
