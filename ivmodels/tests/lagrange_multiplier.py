@@ -5,6 +5,7 @@ import scipy.optimize
 from scipy.optimize._optimize import MemoizeJac
 
 from ivmodels.confidence_set import ConfidenceSet
+from ivmodels.models.kclass import KClass
 from ivmodels.tests.utils import _check_test_inputs, _find_roots
 from ivmodels.utils import oproj, proj
 
@@ -55,6 +56,11 @@ class _LM:
         Projection of ``Y`` onto the column space of ``Z``.
     W_proj: np.ndarray of dimension (n, mw), optional, default=None
         Projection of ``W`` onto the column space of ``Z``.
+    optimizer: str, optional, default="bfgs"
+        Optimization method to use. Passed to ``scipy.optimize.minimize``.
+    gamma_0: list of str or np.ndarray of dimension (mw), optional, default=None
+        Initial value for the minimization. If ``str``, must be one of "liml" or "zero".
+        If ``None``, ``"liml"`` is used.
     """
 
     def __init__(
@@ -74,6 +80,7 @@ class _LM:
         self.X = X
         self.y = y.reshape(-1, 1)
         self.W = W
+
         if X_proj is None or y_proj is None or W_proj is None:
             if Z is None:
                 raise ValueError("Z must be provided to compute the projection.")
@@ -284,7 +291,7 @@ class _LM:
 
 
 def lagrange_multiplier_test(
-    Z, X, y, beta, W=None, C=None, fit_intercept=True, **kwargs
+    Z, X, y, beta, W=None, C=None, D=None, fit_intercept=True, **kwargs
 ):
     """
     Perform the Lagrange multiplier test for ``beta`` by :cite:t:`kleibergen2002pivotal`.
@@ -317,12 +324,14 @@ def lagrange_multiplier_test(
         Regressors of interest.
     y: np.ndarray of dimension (n,)
         Outcomes.
-    beta: np.ndarray of dimension (mx,)
+    beta: np.ndarray of dimension (mx + md,)
         Coefficients to test.
     W: np.ndarray of dimension (n, mw) or None, optional, default=None
         Endogenous regressors not of interest.
     C: np.ndarray of dimension (n, mc) or None, optional, default=None
         Exogenous regressors not of interest.
+    D: np.ndarray of dimension (n, md) or None, optional, default=None
+        Exogenous regressors of interest.
     fit_intercept: bool, optional, default=True
         Whether to fit an intercept. This is equivalent to centering the inputs.
 
@@ -341,21 +350,25 @@ def lagrange_multiplier_test(
     ValueError:
         If the dimensions of the inputs are incorrect.
     """
-    Z, X, y, W, C, beta = _check_test_inputs(Z, X, y, W=W, C=C, beta=beta)
+    Z, X, y, W, C, D, beta = _check_test_inputs(Z, X, y, W=W, C=C, D=D, beta=beta)
 
     n, k = Z.shape
-    mx = X.shape[1]
+    mx, mw, mc, md = X.shape[1], W.shape[1], C.shape[1], D.shape[1]
 
     if fit_intercept:
         C = np.hstack([np.ones((n, 1)), C])
 
     if C.shape[1] > 0:
-        X, y, Z, W = oproj(C, X, y, Z, W)
+        X, y, Z, W, D = oproj(C, X, y, Z, W, D)
 
-    if W.shape[1] > 0:
-        statistic = _LM(X=X, y=y, W=W, Z=Z, dof=n - k - C.shape[1], **kwargs).lm(beta)
+    if md > 0:
+        X = np.hstack([X, D])
+        Z = np.hstack([Z, D])
 
-        p_value = 1 - scipy.stats.chi2.cdf(statistic, df=mx)
+    if mw > 0:
+        statistic = _LM(X=X, y=y, W=W, Z=Z, dof=n - k - mc - md, **kwargs).lm(beta)
+
+        p_value = 1 - scipy.stats.chi2.cdf(statistic, df=mx + md)
 
     else:
         residuals = y - X @ beta
@@ -372,9 +385,9 @@ def lagrange_multiplier_test(
         X_tilde_proj_residuals = proj(X_tilde_proj, residuals)
         # (y - X beta) P_{P_Z X_tilde} (y - X beta) / (y - X_beta) M_Z (y - X beta)
         statistic = np.square(X_tilde_proj_residuals).sum() / sigma_hat
-        statistic *= n - k - C.shape[1]
+        statistic *= n - k - mc - fit_intercept - md
 
-        p_value = 1 - scipy.stats.chi2.cdf(statistic, df=mx)
+        p_value = 1 - scipy.stats.chi2.cdf(statistic, df=mx + md)
 
     return statistic, p_value
 
@@ -386,6 +399,7 @@ def inverse_lagrange_multiplier_test(
     alpha=0.05,
     W=None,
     C=None,
+    D=None,
     fit_intercept=True,
     tol=1e-4,
     max_value=1e8,
@@ -394,8 +408,8 @@ def inverse_lagrange_multiplier_test(
     """
     Return an approximation of the confidence set by inversion of the LM test.
 
-    This is only implemented if ``X.shape[1] == 1``. The confidence set is computed by
-    a root finding algorithm, see the docs of
+    This is only implemented if ``X.shape[1] + D.shape[1] == 1``. The confidence set is
+    computed by a root finding algorithm, see the docs of
     :func:`~ivmodels.tests.utils._find_roots` for more details.
 
     Parameters
@@ -412,6 +426,8 @@ def inverse_lagrange_multiplier_test(
         Endogenous regressors not of interest.
     C: np.ndarray of dimension (n, mc) or None, optional, default=None
         Exogenous regressors not of interest.
+    D: np.ndarray of dimension (n, md) or None, optional, default=None
+        Exogenous regressors of interest.
     fit_intercept: bool, optional, default=True
         Whether to fit an intercept. This is equivalent to centering the inputs.
     tol: float, optional, default=1e-4
@@ -425,28 +441,28 @@ def inverse_lagrange_multiplier_test(
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1).")
 
-    Z, X, y, W, C, _ = _check_test_inputs(Z, X, y, W=W, C=C)
+    Z, X, y, W, C, D, _ = _check_test_inputs(Z, X, y, W=W, C=C, D=D)
 
-    n, mx = X.shape
-    if not mx == 1:
-        raise ValueError("mx must be 1.")
+    n, k = Z.shape
+    mx, mc, md = X.shape[1], C.shape[1], D.shape[1]
 
-    k = Z.shape[1]
+    if not mx + md == 1:
+        raise ValueError("mx + md must be 1.")
 
     if fit_intercept:
-        C_ = np.hstack([np.ones((n, 1)), C])
-    else:
-        C_ = C
+        C = np.hstack([np.ones((n, 1)), C])
 
-    if C_.shape[1] > 0:
-        X_, y_, Z_, W_ = oproj(C_, X, y, Z, W)
-    else:
-        X_, y_, Z_, W_ = X, y, Z, W
+    if C.shape[1] > 0:
+        X, y, Z, W, D = oproj(C, X, y, Z, W, D)
 
-    dof = n - k - C_.shape[1]
-    lm = _LM(X=X_, W=W_, y=y_, Z=Z_, dof=dof)
-    critical_value = scipy.stats.chi2(df=mx).ppf(1 - alpha)
-    liml = lm.liml()
+    dof = n - k - mc - md - fit_intercept
+
+    lm = _LM(X=np.hstack([X, D]), W=W, y=y, Z=np.hstack([Z, D]), dof=dof)
+    critical_value = scipy.stats.chi2(df=mx + md).ppf(1 - alpha)
+    if md == 0:
+        liml = lm.liml()
+    else:
+        liml = KClass(kappa="liml", fit_intercept=False).fit(X, y, Z=Z, C=D).coef_
 
     left = _find_roots(
         lambda x: lm.lm(x) - critical_value,

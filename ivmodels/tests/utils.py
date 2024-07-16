@@ -34,10 +34,12 @@ def _check_test_inputs(Z, X, y, W=None, C=None, D=None, beta=None):
         Regressors to control for. If input was None, returns an empty matrix of
         shape (n, 0).
     C: np.ndarray of dimension (n, mc)
-        Exogenous regressors not of interest.
+        Exogenous regressors not of interest. If input was None, returns an empty matrix
+        of shape (n, 0).
     D: np.ndarray of dimension (n, md)
-        Exogenous regressors of interest.
-    beta: np.ndarray of dimension (mx,) or None
+        Exogenous regressors of interest. If input was None, returns an empty matrix of
+        shape (n, 0).
+    beta: np.ndarray of dimension (mx + md,) or None
         Coefficients.
 
     Raises
