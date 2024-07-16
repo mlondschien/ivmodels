@@ -44,7 +44,7 @@ def rank_test(Z, X, C=None, fit_intercept=True):
         of the :math:`\\chi^2(k - m_X + 1)` distribution.
 
     """
-    Z, X, _, _, C, _ = _check_test_inputs(Z, X, y=None, C=C)
+    Z, X, _, _, C, D, _ = _check_test_inputs(Z, X, y=None, C=C)
 
     n, k = Z.shape
     m = X.shape[1]
@@ -56,7 +56,8 @@ def rank_test(Z, X, C=None, fit_intercept=True):
         C = np.hstack([np.ones((n, 1)), C])
 
     if C.shape[1] > 0:
-        X, Z = oproj(C, X, Z)
+        # TODO: How to handle D here?
+        X, Z, D = oproj(C, X, Z, D)
 
     X_proj = proj(Z, X)
 

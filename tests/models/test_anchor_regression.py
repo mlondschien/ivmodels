@@ -14,7 +14,7 @@ from ivmodels.utils import proj
 def test_linear_anchor_regression_equal_to_ols(alpha, l1_ratio, n, mx, k, u):
     n = 100
 
-    A, X, y, _, _ = simulate_gaussian_iv(n=n, mx=mx, u=u, k=k)
+    A, X, y, _, _, _ = simulate_gaussian_iv(n=n, mx=mx, u=u, k=k)
     df = pd.DataFrame(
         np.hstack([X, A]),
         columns=[f"X{i}" for i in range(mx)] + [f"anchor{i}" for i in range(k)],
@@ -39,7 +39,7 @@ def test_linear_anchor_regression_equal_to_ols(alpha, l1_ratio, n, mx, k, u):
 @pytest.mark.parametrize("n, mx, k, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
 @pytest.mark.parametrize("gamma", [0.01, 1, 5])
 def test_linear_anchor_regression_different_inputs(gamma, n, mx, k, u):
-    A, X, y, _, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u)
+    A, X, y, _, _, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u)
 
     anchors = [f"A{i}" for i in range(k)]
     df = pd.DataFrame(np.hstack([X, A]), columns=[f"X{i}" for i in range(mx)] + anchors)
@@ -56,7 +56,7 @@ def test_linear_anchor_regression_different_inputs(gamma, n, mx, k, u):
 
 
 def test_score():
-    A, X, y, _, _ = simulate_gaussian_iv(n=100, k=2, mx=2, mw=1)
+    A, X, y, _, _, _ = simulate_gaussian_iv(n=100, k=2, mx=2, mw=1)
     model = AnchorRegression(gamma=1).fit(X, y, A)
     assert model.score(X, y) > 0.5
 
@@ -71,7 +71,7 @@ def test_anchor_solution_minimizes_loss(n, mx, k, u, mc, gamma):
 
     This indirectly checks the mapping kappa <-> gamma for validity.
     """
-    Z, X, y, C, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, mc=mc)
+    Z, X, y, C, _, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, mc=mc)
 
     ar = AnchorRegression(gamma=gamma, fit_intercept=False).fit(X, y, Z, C=C)
 

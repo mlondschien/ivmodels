@@ -15,7 +15,7 @@ from ivmodels.tests import wald_test
 def test_compare_wald_tests_with_linearmodels(
     n, mx, mw, md, k, u, estimator, fit_intercept
 ):
-    Z, X, y, D, W = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, mw=mw, mc=md)
+    Z, X, y, _, W, D = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, mw=mw, md=md)
 
     XW = np.hstack([X, W])
 

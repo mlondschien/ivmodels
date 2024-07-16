@@ -67,7 +67,7 @@ def test_subvector_test_size(test, n, mx, mw, k, u, mc, fit_intercept):
     p_values = np.zeros(n_seeds)
 
     for seed in range(n_seeds):
-        Z, X, y, C, W, beta = simulate_gaussian_iv(
+        Z, X, y, C, W, _, beta = simulate_gaussian_iv(
             n=n,
             mx=mx,
             k=k,
@@ -190,7 +190,7 @@ def test_test_size(test, n, mx, k, u, mc, fit_intercept):
     p_values = np.zeros(n_seeds)
 
     for seed in range(n_seeds):
-        Z, X, y, C, _, beta = simulate_gaussian_iv(
+        Z, X, y, C, _, _, beta = simulate_gaussian_iv(
             n=n,
             mx=mx,
             k=k,
@@ -279,7 +279,7 @@ def test_test_round_trip(test, inverse_test, data, p_value, fit_intercept):
         if test == conditional_likelihood_ratio_test and mx > 1:
             pytest.skip("CLR test inverse not implemented for mx > 1")
 
-        Z, X, y, C, _ = simulate_gaussian_iv(
+        Z, X, y, C, _, _ = simulate_gaussian_iv(
             n=n, mx=mx, k=k, u=u, mc=mc, seed=0, include_intercept=fit_intercept
         )
 
@@ -311,9 +311,9 @@ def test_test_round_trip(test, inverse_test, data, p_value, fit_intercept):
 @pytest.mark.parametrize(
     "data",
     [
-        # (100, 1, 3, 1, 2, 3),
-        # (100, 2, 5, 2, 3, 0),
-        # (100, 1, 10, 5, None, 0),
+        (100, 1, 3, 1, 2, 3, 1),
+        (100, 2, 5, 2, 3, 0, 0),
+        (100, 1, 10, 5, None, 0, 2),
         "guggenberger12",
     ],
 )
@@ -328,14 +328,16 @@ def test_subvector_round_trip(test, inverse_test, data, p_value, fit_intercept):
     if data == "guggenberger12":
         Z, X, y, C, W = simulate_guggenberger12(n=10000, k=10, seed=0)
     else:
-        n, mx, k, mw, u, mc = data
+        n, mx, k, mw, u, mc, md = data
 
         if test == lagrange_multiplier_test and mx > 1:
             pytest.skip("LM test inverse not implemented for mx > 1")
         if test == conditional_likelihood_ratio_test and mx > 1:
             pytest.skip("CLR test inverse not implemented for mx > 1")
 
-        Z, X, y, C, W = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, mw=mw, mc=mc, seed=0)
+        Z, X, y, C, W, D = simulate_gaussian_iv(
+            n=n, mx=mx, k=k, u=u, mw=mw, mc=mc, md=md, seed=0
+        )
 
     kwargs = {"Z": Z, "X": X, "y": y, "W": W, "C": C, "fit_intercept": fit_intercept}
 
@@ -369,7 +371,7 @@ def test_subvector_round_trip(test, inverse_test, data, p_value, fit_intercept):
 @pytest.mark.parametrize("n, mx, k, u, mc", [(100, 2, 2, 1, 3), (100, 2, 5, 2, 0)])
 def test_p_value_of_estimator(test, kappa, n, mx, k, u, mc):
     """The estimated coefficient should be in the confidence set with 95% coverage."""
-    Z, X, y, C, _ = simulate_gaussian_iv(n=n, mx=mx, mc=mc, k=k, u=u)
+    Z, X, y, C, _, _ = simulate_gaussian_iv(n=n, mx=mx, mc=mc, k=k, u=u)
     estimator = KClass(kappa=kappa).fit(X, y.flatten(), Z=Z, C=C)
     p_value = test(Z, X, y, beta=estimator.coef_[:mx], C=C)[1]
     assert p_value > 0.05
@@ -379,7 +381,7 @@ def test_p_value_of_estimator(test, kappa, n, mx, k, u, mc):
 @pytest.mark.parametrize("n, mx, k, u, mc", [(100, 2, 2, 1, 3), (100, 2, 5, 2, 0)])
 def test_ar_test_monotonic_in_kappa(test, n, mx, k, u, mc):
     """AR(beta(kappa)) should be decreasing in kappa increasing towards kappa."""
-    Z, X, Y, C, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, mc=mc)
+    Z, X, Y, C, _, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, mc=mc)
     Y = Y.flatten()
     kappas = np.linspace(0, KClass.ar_min(X, Y, Z) + 1, 10)
     models = [KClass(kappa=kappa).fit(X, Y, Z=Z) for kappa in kappas]
@@ -404,7 +406,7 @@ def test_ar_test_monotonic_in_kappa(test, n, mx, k, u, mc):
 )
 def test_inverse_test_sorted(inverse_test, n, mx, k, u, mc):
     """The volume of confidence sets should be increasing in the p-value."""
-    Z, X, y, C, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, mc=mc, seed=0)
+    Z, X, y, C, _, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, mc=mc, seed=0)
 
     p_values = [0.5, 0.2, 0.1, 0.05]
     quadrics = [inverse_test(Z, X, y, C=C, alpha=p_value) for p_value in p_values]
@@ -418,7 +420,7 @@ def test_inverse_test_sorted(inverse_test, n, mx, k, u, mc):
 @pytest.mark.parametrize("n, mx, mw, u, mc", [(100, 2, 0, 2, 2), (100, 2, 2, 2, 2)])
 def test_ar_lm_clr_yield_same_result(n, mx, mw, u, mc, fit_intercept):
     """The AR, LM, and CLR tests should yield the same result if k = m."""
-    Z, X, y, C, W = simulate_gaussian_iv(n=n, mx=mx, k=mx + mw, u=u, mw=mw, mc=mc)
+    Z, X, y, C, W, _ = simulate_gaussian_iv(n=n, mx=mx, k=mx + mw, u=u, mw=mw, mc=mc)
 
     for seed in range(5):
         rng = np.random.RandomState(seed)
@@ -453,7 +455,7 @@ def test_test_output_type(n, mx, mw, u, mc, test):
     if test == pulse_test and mw > 0:
         pytest.skip("Pulse test does not have a subvector version.")
 
-    Z, X, y, C, W, beta = simulate_gaussian_iv(
+    Z, X, y, C, W, _, beta = simulate_gaussian_iv(
         n=n, mx=mx, k=mx + mw, u=u, mw=mw, mc=mc, return_beta=True
     )
 

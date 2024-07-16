@@ -114,6 +114,7 @@ def simulate_gaussian_iv(
     u=None,
     mw=0,
     mc=0,
+    md=0,
     seed=0,
     include_intercept=True,
     return_beta=False,
@@ -171,15 +172,17 @@ def simulate_gaussian_iv(
     ux = rng.normal(0, 1, (u, m))
     uy = rng.normal(0, 1, (u, 1))
 
-    alpha = rng.normal(0, 1, (mc, 1))
+    alpha = rng.normal(0, 1, (mc + md, 1))
     beta = rng.normal(0, 1, (m, 1))
 
     Pi_ZX = rng.normal(0, 1, (k, m))
-    Pi_CX = rng.normal(0, 1, (mc, m))
-    Pi_CZ = rng.normal(0, 1, (mc, k))
+    Pi_CX = rng.normal(0, 1, (mc + md, m))
+    Pi_CZ = rng.normal(0, 1, (mc + md, k))
 
     U = rng.normal(0, 1, (n, u))
-    C = rng.normal(0, 1, (n, mc)) + include_intercept * rng.normal(0, 1, (1, mc))
+    C = rng.normal(0, 1, (n, mc + md)) + include_intercept * rng.normal(
+        0, 1, (1, mc + md)
+    )
 
     Z = (
         rng.normal(0, 1, (n, k))
@@ -192,11 +195,12 @@ def simulate_gaussian_iv(
     y = C @ alpha + X @ beta + U @ uy
     y += rng.normal(0, 1, (n, 1)) + include_intercept * rng.normal(0, 1, (1, 1))
 
+    X, W, C, D = X[:, :mx], X[:, mx:], C[:, :mc], C[:, mc:]
     if return_beta and return_gamma:
-        return Z, X[:, :mx], y.flatten(), C, X[:, mx:], beta[:mx], beta[mx:]
+        return Z, X, y.flatten(), C, W, D, beta[:mx], beta[mx:]
     elif return_beta:
-        return Z, X[:, :mx], y.flatten(), C, X[:, mx:], beta[:mx]
+        return Z, X, y.flatten(), C, W, D, beta[:mx]
     elif return_gamma:
-        return Z, X[:, :mx], y.flatten(), C, X[:, mx:], beta[mx:]
+        return Z, X, y.flatten(), C, W, D, beta[mx:]
     else:
-        return Z, X[:, :mx], y.flatten(), C, X[:, mx:]
+        return Z, X, y.flatten(), C, W, D

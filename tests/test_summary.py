@@ -18,7 +18,7 @@ from ivmodels.simulate import simulate_gaussian_iv
     "n, mx, k, mc, fit_intercept", [(100, 2, 3, 0, False), (100, 4, 10, 2, True)]
 )
 def test_kclass_summary(test, n, mx, k, mc, fit_intercept):
-    Z, X, y, C, _ = simulate_gaussian_iv(
+    Z, X, y, C, _, _ = simulate_gaussian_iv(
         n=n, mx=mx, k=k, mc=mc, mw=0, include_intercept=fit_intercept
     )
 

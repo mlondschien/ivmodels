@@ -101,6 +101,8 @@ class _LM:
 
         self.optimizer = optimizer
         self.gamma_0 = ["liml"] if gamma_0 is None else gamma_0
+        if isinstance(self.gamma_0, str):
+            self.gamma_0 = [self.gamma_0]
 
     def liml(self, beta=None):
         """
@@ -148,6 +150,7 @@ class _LM:
 
         if not jac:  # not jac -> not hess
             residuals_proj_St = proj(St_proj, residuals_proj)
+
             return (
                 self.dof * residuals_proj_St.T @ residuals_proj_St / sigma_hat,
                 None,
@@ -275,7 +278,9 @@ class _LM:
                 )
             )
 
-        return np.min([r.fun for r in results])
+        res = min(results, key=lambda r: r.fun)
+
+        return res.fun
 
 
 def lagrange_multiplier_test(
@@ -358,7 +363,7 @@ def lagrange_multiplier_test(
 
         orth_residuals = residuals - residuals_proj
 
-        sigma_hat = residuals.T @ orth_residuals
+        sigma_hat = orth_residuals.T @ orth_residuals
         Sigma = orth_residuals.T @ X / sigma_hat
 
         # X - (y - X beta) * (y - X beta)^T M_Z X / (y - X beta)^T M_Z (y - X beta)
@@ -367,7 +372,6 @@ def lagrange_multiplier_test(
         X_tilde_proj_residuals = proj(X_tilde_proj, residuals)
         # (y - X beta) P_{P_Z X_tilde} (y - X beta) / (y - X_beta) M_Z (y - X beta)
         statistic = np.square(X_tilde_proj_residuals).sum() / sigma_hat
-
         statistic *= n - k - C.shape[1]
 
         p_value = 1 - scipy.stats.chi2.cdf(statistic, df=mx)
