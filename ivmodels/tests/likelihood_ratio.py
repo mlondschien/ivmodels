@@ -46,7 +46,7 @@ def likelihood_ratio_test(Z, X, y, beta, W=None, C=None, D=None, fit_intercept=T
         Regressors.
     y: np.ndarray of dimension (n,)
         Outcomes.
-    beta: np.ndarray of dimension (mx,)
+    beta: np.ndarray of dimension (mx + md,)
         Coefficients to test.
     W: np.ndarray of dimension (n, mw) or None, optional, default=None
         Endogenous regressors not of interest.

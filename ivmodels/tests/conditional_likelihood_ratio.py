@@ -277,11 +277,11 @@ def conditional_likelihood_ratio_test(
     ----------
     Z: np.ndarray of dimension (n, k)
         Instruments.
-    X: np.ndarray of dimension (n, mx + md)
+    X: np.ndarray of dimension (n, mx)
         Regressors.
     y: np.ndarray of dimension (n,)
         Outcomes.
-    beta: np.ndarray of dimension (mx,)
+    beta: np.ndarray of dimension (mx + md,)
         Coefficients to test.
     W: np.ndarray of dimension (n, mw) or None, optional, default = None
         Endogenous regressors not of interest.

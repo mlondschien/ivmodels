@@ -25,7 +25,7 @@ def pulse_test(Z, X, y, beta, C=None, W=None, D=None, fit_intercept=True):
         Regressors.
     y: np.ndarray of dimension (n,)
         Outcomes.
-    beta: np.ndarray of dimension (mx,)
+    beta: np.ndarray of dimension (mx + md,)
         Coefficients to test.
     C: np.ndarray of dimension (n, mc) or None, optional, default=None
         Exogenous regressors not of interest.

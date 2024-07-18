@@ -51,7 +51,7 @@ def wald_test(
         Exogenous regressors not of interest.
     D: np.ndarray of dimension (n, md) or None
         Exogenous regressors of interest.
-    beta: np.ndarray of dimension (mx,)
+    beta: np.ndarray of dimension (mx + md,)
         Coefficients to test.
     estimator: str or float, optional, default = "liml"
         Estimator to use. Passed to ``kappa`` argument of ``KClass``.

@@ -19,7 +19,7 @@ def _check_test_inputs(Z, X, y, W=None, C=None, D=None, beta=None):
         Exogenous regressors not of interest.
     D: np.ndarray of dimension (n, md), optional, default=None
         Exogenous regressors of interest.
-    beta: np.ndarray of dimension (mx,), optional, default=None
+    beta: np.ndarray of dimension (mx + md,), optional, default=None
         Coefficients.
 
     Returns
