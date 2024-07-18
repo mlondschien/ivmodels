@@ -460,13 +460,13 @@ def inverse_lagrange_multiplier_test(
     lm = _LM(X=np.hstack([X, D]), W=W, y=y, Z=np.hstack([Z, D]), dof=dof)
     critical_value = scipy.stats.chi2(df=mx + md).ppf(1 - alpha)
     if md == 0:
-        liml = lm.liml()
+        liml = lm.liml()[0]
     else:
-        liml = KClass(kappa="liml", fit_intercept=False).fit(X, y, Z=Z, C=D).coef_
+        liml = KClass(kappa="liml", fit_intercept=False).fit(W, y, Z=Z, C=D).coef_[-1]
 
     left = _find_roots(
         lambda x: lm.lm(x) - critical_value,
-        a=liml[0],
+        a=liml,
         b=-np.inf,
         tol=tol,
         max_value=max_value,
@@ -474,7 +474,7 @@ def inverse_lagrange_multiplier_test(
     )
     right = _find_roots(
         lambda x: lm.lm(x) - critical_value,
-        a=liml[0],
+        a=liml,
         b=np.inf,
         tol=tol,
         max_value=max_value,
