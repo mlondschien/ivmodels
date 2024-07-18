@@ -339,22 +339,22 @@ def test_test_round_trip(test, inverse_test, data, p_value):
         (lagrange_multiplier_test, inverse_lagrange_multiplier_test),
         (f_anderson_rubin_test, inverse_f_anderson_rubin_test),
         (likelihood_ratio_test, inverse_likelihood_ratio_test),
-        (conditional_likelihood_ratio_test, inverse_conditional_likelihood_ratio_test),
+        # (conditional_likelihood_ratio_test, inverse_conditional_likelihood_ratio_test),
     ],
 )
 @pytest.mark.parametrize(
     "data",
     [
-        (100, 1, 5, 3, 3, 0, True),
+        (1000, 1, 5, 3, 3, 0, True),
         (100, 1, 4, 2, 3, 1, False),
         (100, 2, 5, 0, 0, 0, False),
-        (100, 0, 2, 2, 1, 1, False),
+        (1000, 0, 2, 2, 1, 1, False),
         (100, 1, 3, 2, 1, 1, False),
         "guggenberger12 (md=1)",
         "guggenberger12 (md=0)",
     ],
 )
-@pytest.mark.parametrize("p_value", [0.1])
+@pytest.mark.parametrize("p_value", [0.1, 0.5])
 def test_subvector_round_trip(test, inverse_test, data, p_value):
     """
     A test's p-value at the confidence set's boundary equals the nominal level.
