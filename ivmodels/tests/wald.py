@@ -200,6 +200,9 @@ def inverse_wald_test(
     residuals = y - kclass.predict(XW, C=D)
     hat_sigma_sq = np.sum(residuals**2) / (n - mx - mw - md - mc - fit_intercept)
 
+    if md > 0:
+        Z = np.hstack([Z, D])
+
     X_proj, W_proj = proj(Z, X, W)
     X_proj = np.hstack([X_proj, D])
     X = np.hstack([X, D])

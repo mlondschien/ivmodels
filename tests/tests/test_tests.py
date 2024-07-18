@@ -470,3 +470,67 @@ def test_test_output_type(n, mx, mw, u, mc, test):
     statistic, p_values = test(Z, X, y, beta=beta, W=W, C=C)
     assert isinstance(statistic, float)
     assert isinstance(p_values, float)
+
+
+@pytest.mark.parametrize(
+    "test, inverse_test",
+    [
+        (wald_test, inverse_wald_test),
+        (anderson_rubin_test, inverse_anderson_rubin_test),
+        (lagrange_multiplier_test, inverse_lagrange_multiplier_test),  # type: ignore
+    ],
+)
+@pytest.mark.parametrize(
+    "n, mx, mw, mc, md, fit_intercept",
+    [
+        (100, 1, 0, 2, 3, True),
+        (100, 0, 0, 2, 1, False),
+        (100, 0, 2, 2, 1, False),
+        (100, 0, 0, 2, 3, True),
+    ],
+)
+def test_d_and_z_same_result(n, mx, mw, mc, md, fit_intercept, test, inverse_test):
+    """
+    For the AR, LM, and Wald(tsls) test, passing D or including D into Z, W is the same.
+
+    For Wald LIML, computation of kappa fails.
+    """
+    Z, X, y, C, W, D = simulate_gaussian_iv(n=n, mx=mx, k=mx + mw, mw=mw, mc=mc, md=md)
+
+    if test != lagrange_multiplier_test:
+        inverse_test_1 = inverse_test(
+            Z=Z, X=X, y=y, C=C, W=W, D=D, fit_intercept=fit_intercept
+        )
+        inverse_test_2 = inverse_test(
+            Z=np.hstack([Z, D]),
+            X=np.hstack([X, D]),
+            y=y,
+            C=C,
+            W=W,
+            D=None,
+            fit_intercept=fit_intercept,
+        )
+
+        assert np.allclose(
+            inverse_test_1.A / inverse_test_1.c, inverse_test_2.A / inverse_test_2.c
+        )
+        assert np.allclose(
+            inverse_test_1.b / inverse_test_2.c, inverse_test_2.b / inverse_test_2.c
+        )
+
+    for seed in range(5):
+        rng = np.random.RandomState(seed)
+        beta = rng.normal(size=(mx + md, 1))
+
+        test_result_1 = test(Z, X, y, beta, W, C=C, D=D, fit_intercept=fit_intercept)
+        test_result_2 = test(
+            np.hstack([Z, D]),
+            np.hstack([X, D]),
+            y,
+            beta,
+            W,
+            C=C,
+            D=None,
+            fit_intercept=fit_intercept,
+        )
+        assert np.allclose(test_result_1, test_result_2)
