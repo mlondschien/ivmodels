@@ -208,7 +208,11 @@ def anderson_rubin_test(
                 "The critical value function proposed by Guggenberger et al. (2019) is "
                 "only available for the subvector variant where W is not None."
             )
-
+        if md > 0:
+            raise ValueError(
+                "The critical value function proposed by Guggenberger et al. (2019) is "
+                "not valid if D is not None"
+            )
         kappa_max = (n - k - mc - md) * KClass._spectrum(
             X=W, y=y - X @ beta, Z=Z, subset_by_index=[mw, mw]
         )[0]

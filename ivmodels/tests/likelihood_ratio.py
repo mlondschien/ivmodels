@@ -194,7 +194,9 @@ def inverse_likelihood_ratio_test(
 
     kappa_liml = np.real(
         scipy.linalg.eigvalsh(
-            a=XWy.T @ XWy_proj, b=XWy.T @ (XWy - XWy_proj), subset_by_index=[0, 0]
+            a=oproj(D, XWy).T @ XWy_proj,
+            b=XWy.T @ (XWy - XWy_proj),
+            subset_by_index=[0, 0],
         )[0]
     )
 
