@@ -21,6 +21,16 @@ Changelog
   `endogenous_names_`, `exogenous_names_`,  and `instrument_names_`. If pandas is
   installed, there's also `names_coefs_`.
 
+- The tests :func:`~ivmodels.tests.anderson_rubin_test`,
+  :func:`~ivmodels.tests.lagrange_multiplier_test`,
+  :func:`~ivmodels.tests.likelihood_ratio_test`, and
+  :func:`~ivmodels.tests.wald_test` and their inverses
+  :func:`~ivmodels.tests.inverse_anderson_rubin_test`,
+  :func:`~ivmodels.tests.inverse_lagrange_multiplier_test`,
+  :func:`~ivmodels.tests.inverse_likelihood_ratio_test`, and
+  :func:`~ivmodels.tests.inverse_wald_test` now support an additional parameter `D`
+  of exogenous covariates to be included in the test. This is not supported for
+  the conditional likelihood ratio test.
 
 
 **Other changes:**
