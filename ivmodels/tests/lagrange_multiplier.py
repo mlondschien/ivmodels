@@ -408,7 +408,7 @@ def inverse_lagrange_multiplier_test(
     """
     Return an approximation of the confidence set by inversion of the LM test.
 
-    This is only implemented if ``X.shape[1] + D.shape[1] == 1``. The confidence set is
+    This is only implemented if `mx + md = 1`. The confidence set is
     computed by a root finding algorithm, see the docs of
     :func:`~ivmodels.tests.utils._find_roots` for more details.
 
@@ -416,7 +416,7 @@ def inverse_lagrange_multiplier_test(
     ----------
     Z: np.ndarray of dimension (n, k)
         Instruments.
-    X: np.ndarray of dimension (n, 1)
+    X: np.ndarray of dimension (n, mx)
         Regressors of interest.
     y: np.ndarray of dimension (n,)
         Outcomes.
