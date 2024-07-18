@@ -32,7 +32,7 @@ class Tests:
             )
         else:
             k, mx, mw, mc = data
-            Z, X, y, C, W, beta = simulate_gaussian_iv(
+            Z, X, y, C, W, _, beta = simulate_gaussian_iv(
                 n=n, mx=mx, k=k, u=mx, mc=mc, mw=mw, return_beta=True
             )
 

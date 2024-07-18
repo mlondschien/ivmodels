@@ -6,7 +6,7 @@ from ivmodels.tests.utils import _check_test_inputs
 from ivmodels.utils import oproj, proj
 
 
-def pulse_test(Z, X, y, beta, C=None, W=None, fit_intercept=True):
+def pulse_test(Z, X, y, beta, C=None, W=None, D=None, fit_intercept=True):
     """
     Test proposed by :cite:t:`jakobsen2022distributional` with null hypothesis: :math:`Z` and :math:`y - X \\beta` are uncorrelated.
 
@@ -25,7 +25,7 @@ def pulse_test(Z, X, y, beta, C=None, W=None, fit_intercept=True):
         Regressors.
     y: np.ndarray of dimension (n,)
         Outcomes.
-    beta: np.ndarray of dimension (mx,)
+    beta: np.ndarray of dimension (mx + md,)
         Coefficients to test.
     C: np.ndarray of dimension (n, mc) or None, optional, default=None
         Exogenous regressors not of interest.
@@ -55,10 +55,20 @@ def pulse_test(Z, X, y, beta, C=None, W=None, fit_intercept=True):
 
        jakobsen2022distributional
     """
-    Z, X, y, W, C, beta = _check_test_inputs(Z, X, y, C=C, W=W, beta=beta)
+    Z, X, y, W, C, D, beta = _check_test_inputs(Z, X, y, C=C, W=W, D=D, beta=beta)
 
     if W.shape[1] > 0:
         raise ValueError("No subvector variant of the pulse test is implemented.")
+
+    if D.shape[1] > 0:
+        return pulse_test(
+            np.hstack([Z, D]),
+            np.hstack([Z, X]),
+            y,
+            beta,
+            C=C,
+            fit_intercept=fit_intercept,
+        )
 
     n, k = Z.shape
 
@@ -77,9 +87,19 @@ def pulse_test(Z, X, y, beta, C=None, W=None, fit_intercept=True):
     return statistic, p_value
 
 
-def inverse_pulse_test(Z, X, y, C=None, alpha=0.05, fit_intercept=True):
+def inverse_pulse_test(Z, X, y, C=None, D=None, alpha=0.05, fit_intercept=True):
     """Return the quadric for the inverse pulse test's acceptance region."""
-    Z, X, y, _, C, _ = _check_test_inputs(Z, X, y, C=C)
+    Z, X, y, _, C, D, _ = _check_test_inputs(Z, X, y, C=C, D=D)
+
+    if D.shape[1] > 0:
+        return inverse_pulse_test(
+            np.hstack([Z, D]),
+            np.hstack([Z, X]),
+            y,
+            C=C,
+            alpha=alpha,
+            fit_intercept=fit_intercept,
+        )
 
     n, k = Z.shape
 

@@ -5,7 +5,7 @@ from ivmodels.utils import oproj
 
 
 def simulate_guggenberger12(
-    n, *, k, seed=0, h11=100, h12=1, rho=0.95, cov=None, return_beta=False
+    n, *, k, seed=0, h11=100, h12=1, rho=0.95, cov=None, return_beta=False, md=0
 ):
     """
     Generate data by process as proposed by :cite:t:`guggenberger2012asymptotic`.
@@ -96,14 +96,18 @@ def simulate_guggenberger12(
 
     Z = rng.normal(0, 1, (n, k))
 
+    Pi_ZD = rng.normal(0, 1, (k, md))
+    D = rng.normal(0, 1, (n, md)) + Z @ Pi_ZD
+    delta = rng.normal(0, 0.1, (md, 1))
+
     X = Z @ Pi_X + noise[:, 1:2]
     W = Z @ Pi_W + noise[:, 2:]
-    y = X @ beta + W @ gamma + noise[:, 0:1]
+    y = X @ beta + W @ gamma + D @ delta + noise[:, 0:1]
 
     if return_beta:
-        return Z, X, y.flatten(), None, W, beta.flatten()
+        return Z, X, y.flatten(), None, W, D, np.concatenate([beta, delta]).flatten()
     else:
-        return Z, X, y.flatten(), None, W
+        return Z, X, y.flatten(), None, W, D
 
 
 def simulate_gaussian_iv(
@@ -114,6 +118,7 @@ def simulate_gaussian_iv(
     u=None,
     mw=0,
     mc=0,
+    md=0,
     seed=0,
     include_intercept=True,
     return_beta=False,
@@ -171,32 +176,37 @@ def simulate_gaussian_iv(
     ux = rng.normal(0, 1, (u, m))
     uy = rng.normal(0, 1, (u, 1))
 
-    alpha = rng.normal(0, 1, (mc, 1))
+    alpha = rng.normal(0, 1, (mc + md, 1))
     beta = rng.normal(0, 1, (m, 1))
 
     Pi_ZX = rng.normal(0, 1, (k, m))
-    Pi_CX = rng.normal(0, 1, (mc, m))
-    Pi_CZ = rng.normal(0, 1, (mc, k))
+    Pi_CX = rng.normal(0, 1, (mc + md, m))
+    Pi_CZ = rng.normal(0, 1, (mc + md, k))
 
     U = rng.normal(0, 1, (n, u))
-    C = rng.normal(0, 1, (n, mc)) + include_intercept * rng.normal(0, 1, (1, mc))
+    C = rng.normal(0, 1, (n, mc + md))
+    if include_intercept:
+        C += rng.normal(0, 1, (1, mc + md))
 
-    Z = (
-        rng.normal(0, 1, (n, k))
-        + include_intercept * rng.normal(0, 1, (1, k))
-        + C @ Pi_CZ
-    )
+    Z = rng.normal(0, 1, (n, k)) + C @ Pi_CZ
+    if include_intercept:
+        Z += rng.normal(0, 1, (1, k))
 
     X = Z @ Pi_ZX + C @ Pi_CX + U @ ux
     X += rng.normal(0, 1, (n, m)) + include_intercept * rng.normal(0, 1, (1, m))
     y = C @ alpha + X @ beta + U @ uy
     y += rng.normal(0, 1, (n, 1)) + include_intercept * rng.normal(0, 1, (1, 1))
 
+    X, W, C, D = X[:, :mx], X[:, mx:], C[:, :mc], C[:, mc:]
+
+    gamma0 = beta[mx:]
+    beta0 = np.concatenate([beta[:mx], alpha[mc:]])
+
     if return_beta and return_gamma:
-        return Z, X[:, :mx], y.flatten(), C, X[:, mx:], beta[:mx], beta[mx:]
+        return Z, X, y.flatten(), C, W, D, beta0, gamma0
     elif return_beta:
-        return Z, X[:, :mx], y.flatten(), C, X[:, mx:], beta[:mx]
+        return Z, X, y.flatten(), C, W, D, beta0
     elif return_gamma:
-        return Z, X[:, :mx], y.flatten(), C, X[:, mx:], beta[mx:]
+        return Z, X, y.flatten(), C, W, D, gamma0
     else:
-        return Z, X[:, :mx], y.flatten(), C, X[:, mx:]
+        return Z, X, y.flatten(), C, W, D

@@ -3,7 +3,7 @@ import pytest
 import scipy
 
 from ivmodels.simulate import simulate_gaussian_iv
-from ivmodels.tests.lagrange_multiplier import _LM
+from ivmodels.tests.lagrange_multiplier import _LM, lagrange_multiplier_test
 from ivmodels.utils import proj
 
 
@@ -46,7 +46,7 @@ def test__LM__init__(n, mx, mw, k):
     [(100, 1, 1, 2), (100, 1, 2, 5), (1000, 2, 5, 10), (1000, 5, 2, 10)],
 )
 def test_lm_gradient(n, mx, mw, k):
-    Z, X, y, _, W = simulate_gaussian_iv(
+    Z, X, y, _, W, _ = simulate_gaussian_iv(
         n=n, mx=mx, k=k, mw=mw, include_intercept=False
     )
     lm = _LM(X=X, y=y, W=W, dof=7, Z=Z)
@@ -90,25 +90,24 @@ def test_lm_gradient(n, mx, mw, k):
 
 
 @pytest.mark.parametrize(
-    "n, mx, mw, k",
-    [(100, 2, 5, 10), (100, 5, 2, 10)],
+    "n, mx, k",
+    [
+        (100, 1, 2),
+        (100, 1, 5),
+        (1000, 5, 10),
+    ],
 )
-def test_lm_gradient_beta_gamma(n, mx, mw, k):
-    Z, X, y, _, W = simulate_gaussian_iv(
-        n=n, mx=mx, k=k, mw=mw, include_intercept=False
+def test_compare_test_and_lm_derivative(n, mx, k):
+    Z, X, y, C, W, _ = simulate_gaussian_iv(
+        n=n, mx=mx, k=k, mc=0, include_intercept=False
     )
-    lm = _LM(X=X, y=y, W=W, dof=7, Z=Z)
+    lm = _LM(X=X, y=y, W=W, dof=n - k, Z=Z)
 
     rng = np.random.RandomState(0)
-    beta = rng.normal(0, 1, mx)
-    gamma = rng.normal(0, 1, mw)
-
-    assert np.allclose(
-        lm.derivative(np.concatenate([beta, gamma]))[0],
-        lm.derivative(beta, gamma)[0],
-    )
-
-    assert np.allclose(
-        lm.derivative(np.concatenate([beta, gamma]))[1],
-        lm.derivative(beta, gamma)[1],
-    )
+    for _ in range(5):
+        beta = rng.normal(0, 1, mx)
+        statistic1 = lm.derivative(beta=beta, jac=False, hess=False)[0]
+        statistic2 = lagrange_multiplier_test(
+            Z, X, y=y, beta=beta, C=C, fit_intercept=False
+        )[0]
+        assert np.allclose(statistic1, statistic2, rtol=1e-5, atol=1e-5)

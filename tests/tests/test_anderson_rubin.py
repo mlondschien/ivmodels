@@ -75,7 +75,7 @@ def test_more_powerful_sAR_critical_value_function_integrates_to_one(k, hat_kapp
 def test_inverse_anderson_rubin_confidence_set_alternative_formulation(
     alpha, n, k, mx, mw
 ):
-    Z, X, y, _, W = simulate_gaussian_iv(n=n, mx=mx, mw=mw, k=k)
+    Z, X, y, _, W, _ = simulate_gaussian_iv(n=n, mx=mx, mw=mw, k=k)
     S = np.hstack([X, W])
 
     inverse_ar = inverse_anderson_rubin_test(

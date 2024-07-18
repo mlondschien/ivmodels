@@ -9,36 +9,45 @@ from ivmodels.tests import wald_test
 @pytest.mark.parametrize("fit_intercept", [True, False])
 @pytest.mark.parametrize("estimator", ["liml", "tsls"])
 @pytest.mark.parametrize(
-    "n, mx, mw, k, u", [(100, 2, 0, 2, 1), (100, 2, 0, 5, 2), (100, 1, 2, 4, 1)]
+    "n, mx, mw, md, k, u",
+    [(100, 2, 0, 0, 2, 1), (100, 2, 0, 1, 5, 2), (100, 1, 2, 2, 4, 1)],
 )
 def test_compare_wald_tests_with_linearmodels(
-    n, mx, mw, k, u, estimator, fit_intercept
+    n, mx, mw, md, k, u, estimator, fit_intercept
 ):
-    Z, X, y, _, W = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, mw=mw)
+    Z, X, y, _, W, D = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, mw=mw, md=md)
 
     XW = np.hstack([X, W])
 
     if fit_intercept:
-        intercept = np.ones((n, 1))
-    else:
-        intercept = None
+        D = np.hstack([np.ones((n, 1)), D])
 
     if estimator == "liml":
-        linearmodel = IVLIML(y, intercept, XW, Z)
+        linearmodel = IVLIML(y, D, XW, Z)
     elif estimator == "tsls":
-        linearmodel = IV2SLS(y, intercept, XW, Z)
+        linearmodel = IV2SLS(y, D, XW, Z)
 
     results = linearmodel.fit(cov_type="unadjusted", debiased=True)
-    mat = np.eye(mx + mw + fit_intercept)[int(fit_intercept) : (mx + fit_intercept), :]
-    lm_wald_result = results.wald_test(mat, np.zeros(mx))
+
+    from ivmodels import KClass
+
+    KClass(estimator).fit(X=XW, y=y, Z=Z, C=D[:, fit_intercept:]).summary(
+        X=XW, y=y, Z=Z, C=D[:, fit_intercept:]
+    )
+
+    mat = np.eye(mx + mw + md + fit_intercept)[
+        int(fit_intercept) : (mx + md + fit_intercept), :
+    ]
+    lm_wald_result = results.wald_test(mat, np.zeros(mx + md))
     ivmodels_wald_result = wald_test(
         Z,
         X,
         y,
-        beta=np.zeros(mx),
+        beta=np.zeros(mx + md),
         estimator=estimator,
         fit_intercept=fit_intercept,
         W=W,
+        D=D[:, fit_intercept:],
     )
 
     np.testing.assert_allclose(

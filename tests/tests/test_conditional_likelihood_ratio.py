@@ -2,8 +2,11 @@ import numpy as np
 import pytest
 import scipy
 
+from ivmodels.models.kclass import KClass
+from ivmodels.simulate import simulate_gaussian_iv
 from ivmodels.tests.conditional_likelihood_ratio import (
     conditional_likelihood_ratio_critical_value_function,
+    conditional_likelihood_ratio_test,
 )
 
 
@@ -88,3 +91,25 @@ def test_conditional_likelihood_ratio_critical_value_function_some_by_method(
         ),
         atol=2 * tol,
     )
+
+
+@pytest.mark.parametrize(
+    "n, k, mx, mw, mc, md, fit_intercept",
+    [(100, 2, 1, 1, 0, 0, False), (100, 5, 2, 2, 1, 0, True)],
+)
+def test_conditional_likelihood_ratio_test_minimum_is_zero(
+    n, k, mx, mw, mc, md, fit_intercept
+):
+    Z, X, y, C, W, D = simulate_gaussian_iv(n=n, mx=mx, mw=mw, k=k, mc=mc, md=md)
+
+    liml = KClass(kappa="liml", fit_intercept=fit_intercept).fit(
+        X=np.hstack([X, W]), y=y, Z=Z, C=np.hstack([D, C])
+    )
+
+    x0 = np.concatenate([liml.coef_[:mx], liml.coef_[(mx + mw) : (mx + mw + md)]])
+
+    def f(x):
+        return conditional_likelihood_ratio_test(Z, X, y, x, W, C, D, fit_intercept)[0]
+
+    scipy.optimize.check_grad(func=f, grad=lambda _: 0, x0=x0)
+    assert np.allclose(f(x0), 0, atol=1e-8)

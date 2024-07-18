@@ -93,6 +93,8 @@ class Summary:
         if not str(self.test).lower() in _TESTS:
             raise ValueError(f"Test {self.test} not recognized.")
 
+        n = X.shape[0]
+
         test_, inverse_test_ = _TESTS.get(str(self.test).lower())
 
         self.estimates_ = self.kclass.coef_.tolist()
@@ -102,40 +104,42 @@ class Summary:
 
         (X, Z, C), _ = self.kclass._X_Z_C(X, Z, C, predict=False)
 
-        self.feature_names_ = self.kclass.endogenous_names_
-        # + self.kclass.exogenous_names_
+        self.feature_names_ = (
+            self.kclass.endogenous_names_ + self.kclass.exogenous_names_
+        )
 
         idx = 0
-        # if self.kclass.fit_intercept:
-        #     self.feature_names_ = ["intercept"] + self.feature_names_
-        #     self.estimates_ = [self.kclass.intercept_] + self.estimates_
-        #     idx -= 1
+        if self.kclass.fit_intercept:
+            self.feature_names_ = ["intercept"] + self.feature_names_
+            self.estimates_ = [self.kclass.intercept_] + self.estimates_
+            idx -= 1
+
         for name in self.feature_names_:
             if name in self.kclass.endogenous_names_:
                 mask = np.zeros(len(self.kclass.endogenous_names_), dtype=bool)
                 mask[idx] = True
 
-                X_, W_, C_, Z_ = X[:, mask], X[:, ~mask], C, Z
+                X_, W_, C_, D_ = X[:, mask], X[:, ~mask], C, np.zeros((n, 0))
                 fit_intercept_ = True
 
             elif name in self.kclass.exogenous_names_:
                 mask = np.zeros(len(self.kclass.exogenous_names_), dtype=bool)
                 mask[idx - len(self.kclass.endogenous_names_)] = True
 
-                X_, W_, C_, Z_ = C[:, mask], X, C[:, ~mask], np.hstack([Z, C[:, mask]])
+                X_, W_, C_, D_ = np.zeros((n, 0)), X, C[:, ~mask], C[:, mask]
                 fit_intercept_ = True
 
             elif name == "intercept":
-                ones = np.ones((X.shape[0], 1))
-                X_, W_, C_, Z_ = ones, X, C, np.hstack([Z, ones])
+                X_, W_, C_, D_ = np.zeros((n, 0)), X, C, np.ones((n, 1))
                 fit_intercept_ = False
 
             test_result = test_(
-                Z=Z_,
+                Z=Z,
                 X=X_,
                 W=W_,
                 y=y,
                 C=C_,
+                D=D_,
                 beta=np.array([0]),
                 fit_intercept=fit_intercept_,
                 **kwargs,
@@ -144,11 +148,12 @@ class Summary:
             self.p_values_.append(test_result[1])
 
             confidence_set = inverse_test_(
-                Z=Z_,
+                Z=Z,
                 X=X_,
                 W=W_,
                 y=y,
                 C=C_,
+                D=D_,
                 alpha=self.alpha,
                 fit_intercept=fit_intercept_,
                 **kwargs,
@@ -173,7 +178,7 @@ class Summary:
             return "Summary not fitted yet."
 
         def format_p_value(x):
-            return f"{x:{format_spec}}" if x > 1e-16 else "<1e-16"
+            return f"{x:{format_spec}}" if np.isnan(x) or x > 1e-16 else "<1e-16"
 
         estimate_str = [f"{e:{format_spec}}" for e in self.estimates_]
         statistics_str = [f"{s:{format_spec}}" for s in self.statistics_]

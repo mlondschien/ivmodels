@@ -16,7 +16,7 @@ class KClass:
             Z, X, y, C, _ = simulate_guggenberger12(n=1000, k=10, seed=0)
         else:
             n, mx, k, mc = data
-            Z, X, y, C, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=mx, mc=mc)
+            Z, X, y, C, _, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=mx, mc=mc)
 
         self.data = {
             "Z": Z,

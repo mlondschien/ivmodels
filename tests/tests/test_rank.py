@@ -11,7 +11,7 @@ from ivmodels.tests import inverse_anderson_rubin_test, rank_test
 @pytest.mark.parametrize("n, mx, k, u", [(40, 2, 2, 1), (40, 2, 5, 2), (40, 1, 2, 2)])
 @pytest.mark.parametrize("fit_intercept", [True, False])
 def test_bounded_inverse_anderson_rubin_p_value(n, mx, k, u, fit_intercept):
-    Z, X, y, _, _ = simulate_gaussian_iv(
+    Z, X, y, _, _, _ = simulate_gaussian_iv(
         n=n, mx=mx, k=k, u=u, seed=0, include_intercept=fit_intercept
     )
 
@@ -32,7 +32,7 @@ def test_bounded_inverse_anderson_rubin_p_value(n, mx, k, u, fit_intercept):
 
 
 def test_rank_test_raises():
-    Z, X, y, _, _ = simulate_gaussian_iv(n=10, k=1, mx=2, u=0)
+    Z, X, y, _, _, _ = simulate_gaussian_iv(n=10, k=1, mx=2, u=0)
 
     with pytest.raises(ValueError, match=re.escape("Need `Z.shape[1] >= X.shape[1]`.")):
         _ = rank_test(Z, X)

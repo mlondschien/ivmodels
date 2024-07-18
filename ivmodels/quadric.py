@@ -137,9 +137,9 @@ class Quadric:
                 )
 
         if np.all(self.D > 0) and (self.c_standardized > 0):
-            return np.zeros(shape=(0, 1))
+            return np.zeros(shape=(0, len(self.D)))
         if np.all(self.D < 0) and (self.c_standardized <= 0):
-            return np.zeros(shape=(0, 1))
+            return np.zeros(shape=(0, len(self.D)))
 
         # If both entries of D have the opposite sign as c_standardized, the
         # boundary of the quadric is an ellipse.
@@ -239,7 +239,7 @@ class Quadric:
         if mask.all():
             return self
 
-        if (  # [~mask, ~mask] will to a .reshape(-1) on the matrix
+        if (  # [~mask, ~mask] does a .reshape(-1) on the matrix
             scipy.linalg.eigvalsh(self.A[:, ~mask][~mask, :], subset_by_index=[0, 0])[0]
             < 0
         ):
