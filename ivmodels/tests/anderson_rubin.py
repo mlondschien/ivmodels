@@ -339,9 +339,5 @@ def inverse_anderson_rubin_test(
     if isinstance(c, np.ndarray):
         c = c.item()
 
-    if W is not None:
-        coordinates = np.concatenate([np.arange(mx), np.arange(mx + mw, mx + mw + md)])
-        return Quadric(A, b, c).project(coordinates)
-
-    else:
-        return Quadric(A, b, c)
+    coordinates = np.concatenate([np.arange(mx), np.arange(mx + mw, mx + mw + md)])
+    return Quadric(A, b, c).project(coordinates)
