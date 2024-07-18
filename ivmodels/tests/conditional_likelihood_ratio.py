@@ -287,8 +287,8 @@ def conditional_likelihood_ratio_test(
         Endogenous regressors not of interest.
     C: np.ndarray of dimension (n, mc) or None, optional, default = None
         Exogenous regressors not of interest.
-    D: np.ndarray of dimension (n, md) or None, optional, default = None
-        Exogenous regressors of interest.
+    D: np.ndarray of dimension (n, 0) or None, optional, default = None
+        Exogenous regressors of interest. Not supported for this test.
     fit_intercept: bool, optional, default: True
         Whether to include an intercept. This is equivalent to centering the inputs.
     method: str, optional, default: "numerical_integration"
@@ -324,20 +324,21 @@ def conditional_likelihood_ratio_test(
     n, k = Z.shape
     mx, mw, mc, md = X.shape[1], W.shape[1], C.shape[1], D.shape[1]
 
+    if md > 0:
+        return (np.nan, 1)
+
     if fit_intercept:
         C = np.hstack([np.ones((n, 1)), C])
 
     if C.shape[1] > 0:
         X, y, Z, W, D = oproj(C, X, y, Z, W, D)
 
-    if md > 0:
-        Z = np.hstack([Z, D])
-
     X_proj, y_proj, W_proj = proj(Z, X, y, W)
 
+    residuals = y - X @ beta
+    residuals_proj = y_proj - X_proj @ beta
+
     if mw == 0:
-        residuals = y - np.hstack([X, D]) @ beta
-        residuals_proj = y_proj - np.hstack([X_proj, D]) @ beta
         residuals_orth = residuals - residuals_proj
 
         Sigma = (residuals_orth.T @ X) / (residuals_orth.T @ residuals_orth)
@@ -353,9 +354,6 @@ def conditional_likelihood_ratio_test(
 
         Xy = np.concatenate([X, y.reshape(-1, 1)], axis=1)
         Xy_proj = np.hstack([X_proj, y_proj.reshape(-1, 1)])
-
-        if md > 0:
-            Xy = oproj(D, Xy)
 
         ar_min = (
             scipy.linalg.eigvalsh(
@@ -374,9 +372,6 @@ def conditional_likelihood_ratio_test(
         XWy = np.concatenate([X, W, y.reshape(-1, 1)], axis=1)
         XWy_proj = np.concatenate([X_proj, W_proj, y_proj.reshape(-1, 1)], axis=1)
 
-        if md > 0:
-            XWy = oproj(D, XWy)
-
         XWy_eigenvals = (
             np.sort(
                 np.real(
@@ -389,9 +384,6 @@ def conditional_likelihood_ratio_test(
             )
             - 1
         )
-
-        residuals = y - np.hstack([X, D]) @ beta
-        residuals_proj = y_proj - np.hstack([X_proj, D]) @ beta
 
         kclass = KClass(kappa="liml").fit(X=W, y=residuals, Z=Z)
         ar = kclass.ar_min(X=W, y=residuals, X_proj=W_proj, y_proj=residuals_proj)
@@ -418,6 +410,9 @@ def inverse_conditional_likelihood_ratio_test(
 
     n, k = Z.shape
     mx, mw, mc, md = X.shape[1], W.shape[1], C.shape[1], D.shape[1]
+
+    if md > 0:
+        return ConfidenceSet(boundaries=[(-np.inf, np.inf)])
 
     if fit_intercept:
         C = np.hstack([np.ones((n, 1)), C])

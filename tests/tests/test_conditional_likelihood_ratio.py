@@ -95,7 +95,7 @@ def test_conditional_likelihood_ratio_critical_value_function_some_by_method(
 
 @pytest.mark.parametrize(
     "n, k, mx, mw, mc, md, fit_intercept",
-    [(100, 2, 1, 1, 0, 0, False), (100, 5, 2, 2, 1, 1, True)],
+    [(100, 2, 1, 1, 0, 0, False), (100, 5, 2, 2, 1, 0, True)],
 )
 def test_conditional_likelihood_ratio_test_minimum_is_zero(
     n, k, mx, mw, mc, md, fit_intercept

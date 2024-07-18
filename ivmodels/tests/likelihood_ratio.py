@@ -92,15 +92,12 @@ def likelihood_ratio_test(Z, X, y, beta, W=None, C=None, D=None, fit_intercept=T
 
     XWy_proj = np.hstack([X_proj, W_proj, y_proj.reshape(-1, 1)])
 
-    ar_min = (
-        np.real(
-            scipy.linalg.eigvalsh(
-                a=oproj(D, XWy).T @ XWy,
-                b=XWy.T @ (XWy - XWy_proj),
-                subset_by_index=[0, 0],
-            )[0]
-        )
-        - 1
+    ar_min = np.real(
+        scipy.linalg.eigvalsh(
+            a=oproj(D, XWy).T @ XWy_proj,
+            b=XWy.T @ (XWy - XWy_proj),
+            subset_by_index=[0, 0],
+        )[0]
     )
 
     if md > 0:
@@ -111,10 +108,11 @@ def likelihood_ratio_test(Z, X, y, beta, W=None, C=None, D=None, fit_intercept=T
     residuals_proj = y_proj - X_proj @ beta
 
     if mw == 0:
-        statistic = np.linalg.norm(residuals) ** 2
+        statistic = np.linalg.norm(residuals_proj) ** 2
         statistic /= np.linalg.norm(residuals - residuals_proj) ** 2
         statistic -= ar_min
 
+        statistic *= n - k - mc - md - fit_intercept
     else:
         Wy = np.hstack([W, residuals.reshape(-1, 1)])
         Wy_proj = np.hstack([W_proj, residuals_proj.reshape(-1, 1)])
@@ -129,8 +127,8 @@ def likelihood_ratio_test(Z, X, y, beta, W=None, C=None, D=None, fit_intercept=T
             )
             - ar_min
         )
+        statistic *= n - k - mc - md - fit_intercept
 
-    statistic *= n - k - mc - md - fit_intercept
     p_value = 1 - scipy.stats.chi2.cdf(statistic, df=mx + md)
 
     return statistic, p_value
