@@ -220,7 +220,4 @@ def inverse_wald_test(
     if isinstance(c, np.ndarray):
         c = c.item()
 
-    if W is not None:
-        return Quadric(A, b, c)  # .project(range(XW.shape[1] - W.shape[1]))
-    else:
-        return Quadric(A, b, c)
+    return Quadric(A, b, c)
