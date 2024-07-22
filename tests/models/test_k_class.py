@@ -133,18 +133,17 @@ def test_ar_min_positive(n, mx, k, u):
 
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
-@pytest.mark.parametrize("n, mx, k, u", [(100, 2, 2, 1), (100, 2, 5, 2)])
-def test_liml_minimizes_anderson_rubin(fit_intercept, n, mx, k, u):
-    Z, X, y, _, _, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u)
+@pytest.mark.parametrize("n, mx, mc, k, u", [(100, 2, 0, 2, 1), (100, 2, 2, 5, 2)])
+def test_liml_minimizes_anderson_rubin(fit_intercept, n, mx, mc, k, u):
+    Z, X, y, C, _, _ = simulate_gaussian_iv(n=n, mx=mx, k=k, u=u, mc=mc)
 
     kclass = KClass(kappa="liml", fit_intercept=fit_intercept)
-    kclass.fit(X, y, Z=Z)
+    kclass.fit(X, y, Z=Z, C=C)
 
-    # TODO: Use C once implemented for tests.
     def ar(beta):
-        return anderson_rubin_test(Z, X, y, beta, fit_intercept=fit_intercept)[0]
+        return anderson_rubin_test(Z, X, y, beta, C=C, fit_intercept=fit_intercept)[0]
 
-    grad = scipy.optimize.approx_fprime(kclass.coef_, ar, 1e-8)
+    grad = scipy.optimize.approx_fprime(kclass.coef_[:mx], ar, 1e-8)
     np.testing.assert_allclose(grad, 0, atol=1e-4)
 
 
