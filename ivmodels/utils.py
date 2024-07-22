@@ -87,14 +87,23 @@ def oproj(Z, *args):
         return (*(x - x_proj for x, x_proj in zip(args, proj(Z, *args))),)
 
 
-def to_numpy(x):
-    """Convert x to a numpy array."""
-    if isinstance(x, np.ndarray):
-        return x
-    elif _PANDAS_INSTALLED and isinstance(x, pd.DataFrame):
-        return x.to_numpy()
+def to_numpy(*args):
+    """Convert input args to a numpy array."""
+    out = []
+    for x in args:
+        if x is None:
+            out.append(None)
+        elif isinstance(x, np.ndarray):
+            out.append(x)
+        elif _PANDAS_INSTALLED and isinstance(x, (pd.DataFrame, pd.Series)):
+            out.append(x.to_numpy())
+        else:
+            raise ValueError(f"Invalid type: {type(x)}")
+
+    if len(args) == 1:
+        return out[0]
     else:
-        raise ValueError(f"Invalid type: {type(x)}")
+        return (*out,)
 
 
 def _check_inputs(Z, X, y, W=None, C=None, D=None, beta=None):
@@ -146,23 +155,17 @@ def _check_inputs(Z, X, y, W=None, C=None, D=None, beta=None):
     """
     if X is None:
         X = np.empty((Z.shape[0], 0))
-    elif not isinstance(X, np.ndarray):
-        X = to_numpy(X)
 
     if W is None:
         W = np.empty((Z.shape[0], 0))
-    elif not isinstance(W, np.ndarray):
-        W = to_numpy(W)
 
     if C is None:
         C = np.empty((Z.shape[0], 0))
-    elif not isinstance(C, np.ndarray):
-        C = to_numpy(C)
 
     if D is None:
         D = np.empty((Z.shape[0], 0))
-    elif not isinstance(D, np.ndarray):
-        D = to_numpy(D)
+
+    Z, X, y, W, C, D = to_numpy(Z, X, y, W, C, D)
 
     if Z.ndim != 2:
         raise ValueError(f"Z must be a matrix. Got shape {Z.shape}.")
