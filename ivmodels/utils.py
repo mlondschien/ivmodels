@@ -97,9 +97,9 @@ def to_numpy(x):
         raise ValueError(f"Invalid type: {type(x)}")
 
 
-def _check_test_inputs(Z, X, y, W=None, C=None, D=None, beta=None):
+def _check_inputs(Z, X, y, W=None, C=None, D=None, beta=None):
     """
-    Test dimensions of inputs to tests.
+    Test dimensions of inputs to tests and estimators.
 
     Parameters
     ----------

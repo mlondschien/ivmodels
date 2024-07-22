@@ -2,7 +2,7 @@ import numpy as np
 import scipy
 
 from ivmodels.quadric import Quadric
-from ivmodels.utils import _check_test_inputs, oproj, proj
+from ivmodels.utils import _check_inputs, oproj, proj
 
 
 def pulse_test(Z, X, y, beta, C=None, W=None, D=None, fit_intercept=True):
@@ -54,7 +54,7 @@ def pulse_test(Z, X, y, beta, C=None, W=None, D=None, fit_intercept=True):
 
        jakobsen2022distributional
     """
-    Z, X, y, W, C, D, beta = _check_test_inputs(Z, X, y, C=C, W=W, D=D, beta=beta)
+    Z, X, y, W, C, D, beta = _check_inputs(Z, X, y, C=C, W=W, D=D, beta=beta)
 
     if W.shape[1] > 0:
         raise ValueError("No subvector variant of the pulse test is implemented.")
@@ -88,7 +88,7 @@ def pulse_test(Z, X, y, beta, C=None, W=None, D=None, fit_intercept=True):
 
 def inverse_pulse_test(Z, X, y, C=None, D=None, alpha=0.05, fit_intercept=True):
     """Return the quadric for the inverse pulse test's acceptance region."""
-    Z, X, y, _, C, D, _ = _check_test_inputs(Z, X, y, C=C, D=D)
+    Z, X, y, _, C, D, _ = _check_inputs(Z, X, y, C=C, D=D)
 
     if D.shape[1] > 0:
         return inverse_pulse_test(

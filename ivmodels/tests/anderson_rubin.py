@@ -3,7 +3,7 @@ import scipy
 
 from ivmodels.models.kclass import KClass
 from ivmodels.quadric import Quadric
-from ivmodels.utils import _check_test_inputs, oproj, proj
+from ivmodels.utils import _check_inputs, oproj, proj
 
 
 def more_powerful_subvector_anderson_rubin_critical_value_function(
@@ -168,7 +168,7 @@ def anderson_rubin_test(
        guggenberger2012asymptotic
        guggenberger2019more
     """
-    Z, X, y, W, C, D, beta = _check_test_inputs(Z, X, y, W=W, C=C, D=D, beta=beta)
+    Z, X, y, W, C, D, beta = _check_inputs(Z, X, y, W=W, C=C, D=D, beta=beta)
 
     n, k = Z.shape
     mw, mc, md = W.shape[1], C.shape[1], D.shape[1]
@@ -294,7 +294,7 @@ def inverse_anderson_rubin_test(
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1).")
 
-    Z, X, y, W, C, D, _ = _check_test_inputs(Z, X, y, W=W, C=C, D=D)
+    Z, X, y, W, C, D, _ = _check_inputs(Z, X, y, W=W, C=C, D=D)
 
     n, k = Z.shape
     mx, mw, mc, md = X.shape[1], W.shape[1], C.shape[1], D.shape[1]

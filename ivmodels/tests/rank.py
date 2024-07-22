@@ -1,7 +1,7 @@
 import numpy as np
 import scipy
 
-from ivmodels.utils import _check_test_inputs, oproj, proj
+from ivmodels.utils import _check_inputs, oproj, proj
 
 
 def rank_test(Z, X, C=None, fit_intercept=True):
@@ -43,7 +43,7 @@ def rank_test(Z, X, C=None, fit_intercept=True):
         of the :math:`\\chi^2(k - m_X + 1)` distribution.
 
     """
-    Z, X, _, _, C, _, _ = _check_test_inputs(Z, X, y=None, C=C)
+    Z, X, _, _, C, _, _ = _check_inputs(Z, X, y=None, C=C)
 
     n, k = Z.shape
     m = X.shape[1]
