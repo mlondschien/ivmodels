@@ -211,8 +211,5 @@ def inverse_likelihood_ratio_test(
     b = -2 * (XW_proj - 1 / dfd * quantile * XW_orth).T @ y
     c = y.T @ (y_proj - 1 / dfd * quantile * y_orth)
 
-    if isinstance(c, np.ndarray):
-        c = c.item()
-
     coordinates = np.concatenate([np.arange(mx), np.arange(mx + mw, mx + mw + md)])
     return Quadric(A, b, c).project(coordinates)

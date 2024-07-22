@@ -116,7 +116,4 @@ def inverse_pulse_test(Z, X, y, C=None, D=None, alpha=0.05, fit_intercept=True):
     b = -2 * (X_proj - 1 / (n - k - C.shape[1]) * quantile * X).T @ y
     c = y.T @ (y_proj - 1 / (n - k - C.shape[1]) * quantile * y)
 
-    if isinstance(c, np.ndarray):
-        c = c.item()
-
     return Quadric(A, b, c)

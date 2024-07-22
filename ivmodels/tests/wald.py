@@ -216,7 +216,4 @@ def inverse_wald_test(
     b = -2 * A @ beta
     c = beta.T @ A @ beta - hat_sigma_sq * z_alpha
 
-    if isinstance(c, np.ndarray):
-        c = c.item()
-
     return Quadric(A, b, c)

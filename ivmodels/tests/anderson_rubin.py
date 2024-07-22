@@ -335,8 +335,5 @@ def inverse_anderson_rubin_test(
     b = -2 * (S_proj - quantile * S_orth).T @ y
     c = y.T @ (y_proj - quantile * y_orth)
 
-    if isinstance(c, np.ndarray):
-        c = c.item()
-
     coordinates = np.concatenate([np.arange(mx), np.arange(mx + mw, mx + mw + md)])
     return Quadric(A, b, c).project(coordinates)
