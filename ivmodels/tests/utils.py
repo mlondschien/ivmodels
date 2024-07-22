@@ -1,5 +1,7 @@
 import numpy as np
 
+from ivmodels.utils import to_numpy
+
 
 def _check_test_inputs(Z, X, y, W=None, C=None, D=None, beta=None):
     """
@@ -50,15 +52,23 @@ def _check_test_inputs(Z, X, y, W=None, C=None, D=None, beta=None):
     """
     if X is None:
         X = np.empty((Z.shape[0], 0))
+    elif not isinstance(X, np.ndarray):
+        X = to_numpy(X)
 
     if W is None:
         W = np.empty((Z.shape[0], 0))
+    elif not isinstance(W, np.ndarray):
+        W = to_numpy(W)
 
     if C is None:
         C = np.empty((Z.shape[0], 0))
+    elif not isinstance(C, np.ndarray):
+        C = to_numpy(C)
 
     if D is None:
         D = np.empty((Z.shape[0], 0))
+    elif not isinstance(D, np.ndarray):
+        D = to_numpy(D)
 
     if Z.ndim != 2:
         raise ValueError(f"Z must be a matrix. Got shape {Z.shape}.")
