@@ -535,7 +535,7 @@ class KClass(KClassMixin, GeneralizedLinearRegressor):
     This includes the the ordinary least-squares (OLS) estimator (:math:`\\kappa = 0`),
     the two-stage least-squares (2SLS) estimator
     (:math:`\\kappa = 1`), the limited information maximum likelihood (LIML) estimator
-    (:math:`\\kappa = \\hat\\kappa_\\mathrm{LIML}`), and the Fuller estimator
+    (:math:`\\kappa = \\hat\\kappa_\\mathrm{LIML}`), and the Fuller estimators
     (:math:`\\kappa = \\hat\\kappa_\\mathrm{LIML} - \\alpha / (n - k)`) as special
     cases.
 
@@ -545,8 +545,13 @@ class KClass(KClassMixin, GeneralizedLinearRegressor):
     Parameters
     ----------
     kappa: float or { "ols", "tsls", "2sls", "liml", "fuller", "fuller(a)"}
-        The kappa parameter of the k-class estimator. If float, then kappa must be in
-        :math:`[0, \\hat\\kappa_\\mathrm{LIML}]`, where
+        The kappa parameter of the k-class estimator.
+        If string, then must be one of ``"ols"``, ``"2sls"``, ``"tsls"``, ``"liml"``,
+        ``"fuller"``, or ``"fuller(a)"``, where ``a`` is numeric. If ``kappa="ols"``,
+        then ``kappa=0`` and the k-class estimator is the ordinary least squares
+        estimator. If ``kappa="tsls"`` or ``kappa="2sls"``, then ``kappa=1`` and the
+        k-class estimator is the two-stage least-squares estimator. If ``kappa="liml"``,
+        then :math:`\\kappa = \\hat\\kappa_\\mathrm{LIML}` is used, where
         :math:`\\kappa_\\mathrm{LIML} \\geq 1` is the smallest eigenvalue of the
         matrix :math:`((X \\ \\ y)^T M_Z (X \\ \\ y))^{-1} (X \\ \\ y)^T (X \\ y)`,
         where :math:`P_Z` is the projection matrix onto the subspace spanned by :math:`Z`
@@ -554,14 +559,8 @@ class KClass(KClassMixin, GeneralizedLinearRegressor):
         If exogenous included regressors math:`C` are specified, then
         :math:`\\kappa_\\mathrm{LIML}` is the smallest eigenvalue of the matrix
         :math:`((X \\ \\ y)^T M_{[Z, C]} (X \\ \\ y))^{-1} (X \\ \\ y)^T M_C (X \\ y)`.
-        If string, then must be one of ``"ols"``, ``"2sls"``, ``"tsls"``, ``"liml"``,
-        ``"fuller"``, or ``"fuller(a)"``, where ``a`` is numeric. If ``kappa="ols"``,
-        then ``kappa=0`` and the k-class estimator is the ordinary least squares
-        estimator. If ``kappa="tsls"`` or ``kappa="2sls"``, then ``kappa=1`` and the
-        k-class estimator is the two-stage least-squares estimator. If ``kappa="liml"``,
-        then :math:`\\kappa = \\hat\\kappa_\\mathrm{LIML}` is used. If
-        ``kappa="fuller(a)"``, then
-        :math:`\\kappa = \\hat\\kappa_\\mathrm{LIML} - a / (n - k)`, where
+        If ``kappa="fuller(a)"``, then
+        :math:`\\kappa = \\hat\\kappa_\\mathrm{LIML} - a / (n - k - mc)`, where
         :math:`n` is the number of observations and :math:`q = \\mathrm{dim}(Z)` is the
         number of instruments. The string ``"fuller"`` is interpreted as
         ``"fuller(1.0)"``, yielding an estimator that is unbiased up to
@@ -601,7 +600,7 @@ class KClass(KClassMixin, GeneralizedLinearRegressor):
     intercept_: float
         The estimated intercept for the linear regression problem.
     kappa_: float
-        The kappa parameter of the k-class estimator.
+        The numerical kappa parameter of the k-class estimator.
     fuller_alpha_: float
         If ``kappa`` is one of ``{"fuller", "fuller(a)", "liml"}`` for some numeric
         value ``a``, the alpha parameter of the Fuller estimator.
