@@ -2,8 +2,7 @@ import numpy as np
 import scipy
 
 from ivmodels.quadric import Quadric
-from ivmodels.tests.utils import _check_test_inputs
-from ivmodels.utils import oproj, proj
+from ivmodels.utils import _check_inputs, oproj, proj
 
 
 def likelihood_ratio_test(Z, X, y, beta, W=None, C=None, D=None, fit_intercept=True):
@@ -72,7 +71,7 @@ def likelihood_ratio_test(Z, X, y, beta, W=None, C=None, D=None, fit_intercept=T
     ValueError:
         If the dimensions of the inputs are incorrect.
     """
-    Z, X, y, W, C, D, beta = _check_test_inputs(Z, X, y, W=W, C=C, D=D, beta=beta)
+    Z, X, y, W, C, D, beta = _check_inputs(Z, X, y, W=W, C=C, D=D, beta=beta)
 
     n, k = Z.shape
     mx, mw, mc, md = X.shape[1], W.shape[1], C.shape[1], D.shape[1]
@@ -169,7 +168,7 @@ def inverse_likelihood_ratio_test(
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1).")
 
-    Z, X, y, W, C, D, _ = _check_test_inputs(Z, X, y, W=W, C=C, D=D)
+    Z, X, y, W, C, D, _ = _check_inputs(Z, X, y, W=W, C=C, D=D)
 
     n, k = Z.shape
     mx, mw, mc, md = X.shape[1], W.shape[1], C.shape[1], D.shape[1]
@@ -211,9 +210,6 @@ def inverse_likelihood_ratio_test(
     A = XW.T @ (XW_proj - 1 / dfd * quantile * XW_orth)
     b = -2 * (XW_proj - 1 / dfd * quantile * XW_orth).T @ y
     c = y.T @ (y_proj - 1 / dfd * quantile * y_orth)
-
-    if isinstance(c, np.ndarray):
-        c = c.item()
 
     coordinates = np.concatenate([np.arange(mx), np.arange(mx + mw, mx + mw + md)])
     return Quadric(A, b, c).project(coordinates)

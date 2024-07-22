@@ -4,8 +4,7 @@ import scipy
 from ivmodels.confidence_set import ConfidenceSet
 from ivmodels.models.kclass import KClass
 from ivmodels.quadric import Quadric
-from ivmodels.tests.utils import _check_test_inputs, _find_roots
-from ivmodels.utils import oproj, proj
+from ivmodels.utils import _check_inputs, _find_roots, oproj, proj
 
 
 def conditional_likelihood_ratio_critical_value_function(
@@ -319,7 +318,7 @@ def conditional_likelihood_ratio_test(
        moreira2003conditional
        kleibergen2021efficient
     """
-    Z, X, y, W, C, D, beta = _check_test_inputs(Z, X, y, W=W, C=C, D=D, beta=beta)
+    Z, X, y, W, C, D, beta = _check_inputs(Z, X, y, W=W, C=C, D=D, beta=beta)
 
     n, k = Z.shape
     mx, mw, mc, md = X.shape[1], W.shape[1], C.shape[1], D.shape[1]
@@ -406,7 +405,7 @@ def inverse_conditional_likelihood_ratio_test(
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1).")
 
-    Z, X, y, W, C, D, _ = _check_test_inputs(Z, X, y, W=W, C=C, D=D)
+    Z, X, y, W, C, D, _ = _check_inputs(Z, X, y, W=W, C=C, D=D)
 
     n, k = Z.shape
     mx, mw, mc, md = X.shape[1], W.shape[1], C.shape[1], D.shape[1]

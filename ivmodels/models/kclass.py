@@ -6,7 +6,7 @@ import scipy
 from glum import GeneralizedLinearRegressor
 
 from ivmodels.summary import Summary
-from ivmodels.utils import oproj, proj, to_numpy
+from ivmodels.utils import _check_inputs, oproj, proj, to_numpy
 
 try:
     import pandas as pd
@@ -356,6 +356,8 @@ class KClassMixin:
             ``exogenous_names`` and ``exogenous_regex`` must be ``None``.
         """
         (X, Z, C), names = self._X_Z_C(X, Z, C, predict=False)
+        Z, X, y, _, C, _, _ = _check_inputs(Z, X, y, C=C)
+
         self.endogenous_names_, self.instrument_names_, self.exogenous_names_ = names
 
         if self.fit_intercept and any("intercept" in n for n in names):

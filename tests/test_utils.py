@@ -1,7 +1,8 @@
 import numpy as np
+import pandas as pd
 import pytest
 
-from ivmodels.utils import oproj, proj
+from ivmodels.utils import oproj, proj, to_numpy
 
 
 def test_proj():
@@ -96,3 +97,19 @@ def test_oproj_raises():
 
     with pytest.raises(ValueError, match="args should have shapes"):
         oproj(X, z.reshape(10, 10, 5), z)
+
+
+def test_to_numpy():
+    rng = np.random.RandomState(0)
+    s1 = pd.Series(rng.normal(0, 1, 100))
+    df2 = pd.DataFrame(rng.normal(0, 1, (100, 1)))
+    df3 = pd.DataFrame(rng.normal(0, 1, (100, 2)))
+
+    x1, x2, x3 = to_numpy(s1, df2, df3)
+    assert np.allclose(x1, s1)
+    assert np.allclose(x2, df2)
+    assert np.allclose(x3, df3)
+
+    assert np.allclose(to_numpy(s1), s1)
+    assert np.allclose(to_numpy(df2), df2)
+    assert np.allclose(to_numpy(df3), df3)

@@ -32,10 +32,12 @@ Changelog
   of exogenous covariates to be included in the test. This is not supported for
   the conditional likelihood ratio test.
 
-
 **Other changes:**
 
 - The function :func:`~ivmodels.tests.lagrange_multiplier_test` is now slightly faster.
+
+- :class:`~ivmodels.models.kclass.KClass` now accepts `pandas.Series` as arguments to
+  `y`.
 
 0.2.0 - 2024-06-07
 ------------------
