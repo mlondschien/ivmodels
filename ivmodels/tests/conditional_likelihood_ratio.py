@@ -4,8 +4,7 @@ import scipy
 from ivmodels.confidence_set import ConfidenceSet
 from ivmodels.models.kclass import KClass
 from ivmodels.quadric import Quadric
-from ivmodels.tests.utils import _check_test_inputs, _find_roots
-from ivmodels.utils import oproj, proj
+from ivmodels.utils import _check_test_inputs, _find_roots, oproj, proj
 
 
 def conditional_likelihood_ratio_critical_value_function(

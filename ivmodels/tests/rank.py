@@ -1,8 +1,7 @@
 import numpy as np
 import scipy
 
-from ivmodels.tests.utils import _check_test_inputs
-from ivmodels.utils import oproj, proj
+from ivmodels.utils import _check_test_inputs, oproj, proj
 
 
 def rank_test(Z, X, C=None, fit_intercept=True):

@@ -32,7 +32,7 @@ def test_bounded_inverse_anderson_rubin_p_value(n, mx, k, u, fit_intercept):
 
 
 def test_rank_test_raises():
-    Z, X, y, _, _, _ = simulate_gaussian_iv(n=10, k=1, mx=2, u=0)
+    Z, X, _, _, _, _ = simulate_gaussian_iv(n=10, k=1, mx=2, u=0)
 
     with pytest.raises(ValueError, match=re.escape("Need `Z.shape[1] >= X.shape[1]`.")):
         _ = rank_test(Z, X)

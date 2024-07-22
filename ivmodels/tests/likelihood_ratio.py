@@ -2,8 +2,7 @@ import numpy as np
 import scipy
 
 from ivmodels.quadric import Quadric
-from ivmodels.tests.utils import _check_test_inputs
-from ivmodels.utils import oproj, proj
+from ivmodels.utils import _check_test_inputs, oproj, proj
 
 
 def likelihood_ratio_test(Z, X, y, beta, W=None, C=None, D=None, fit_intercept=True):

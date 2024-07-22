@@ -6,8 +6,7 @@ from scipy.optimize._optimize import MemoizeJac
 
 from ivmodels.confidence_set import ConfidenceSet
 from ivmodels.models.kclass import KClass
-from ivmodels.tests.utils import _check_test_inputs, _find_roots
-from ivmodels.utils import oproj, proj
+from ivmodels.utils import _check_test_inputs, _find_roots, oproj, proj
 
 
 # https://stackoverflow.com/a/68608349/10586763

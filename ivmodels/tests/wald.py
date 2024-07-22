@@ -3,8 +3,7 @@ import scipy
 
 from ivmodels.models.kclass import KClass
 from ivmodels.quadric import Quadric
-from ivmodels.tests.utils import _check_test_inputs
-from ivmodels.utils import oproj, proj
+from ivmodels.utils import _check_test_inputs, oproj, proj
 
 
 def wald_test(
