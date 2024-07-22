@@ -236,7 +236,7 @@ class _LM:
 
         return (self.dof * lm.item(), self.dof * d_lm.flatten(), self.dof * dd_lm)
 
-    def lm(self, beta):
+    def lm(self, beta, return_minimizer=False):
         """
         Compute the Lagrange multiplier test statistic at ``beta``.
 
@@ -286,7 +286,10 @@ class _LM:
 
         res = min(results, key=lambda r: r.fun)
 
-        return res.fun
+        if return_minimizer:
+            return res.fun, res.x
+        else:
+            return res.fun
 
 
 def lagrange_multiplier_test(
@@ -458,6 +461,7 @@ def inverse_lagrange_multiplier_test(
 
     lm = _LM(X=np.hstack([X, D]), W=W, y=y, Z=np.hstack([Z, D]), dof=dof)
     critical_value = scipy.stats.chi2(df=mx + md).ppf(1 - alpha)
+
     if md == 0:
         liml = lm.liml()[0]
     else:
