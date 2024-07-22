@@ -4,6 +4,7 @@ import numpy as np
 
 from ivmodels.confidence_set import ConfidenceSet
 from ivmodels.quadric import Quadric
+from ivmodels.utils import _check_inputs
 
 
 class Summary:
@@ -103,6 +104,7 @@ class Summary:
         self.confidence_sets_ = list()
 
         (X, Z, C), _ = self.kclass._X_Z_C(X, Z, C, predict=False)
+        Z, X, y, _, C, _, _ = _check_inputs(Z, X, y, C=C)
 
         self.feature_names_ = (
             self.kclass.endogenous_names_ + self.kclass.exogenous_names_
@@ -168,9 +170,13 @@ class Summary:
         self.statistic_, self.p_value_ = test_(
             Z=Z, X=X, y=y, C=C, beta=np.zeros(X.shape[1]), fit_intercept=True
         )
-        self.f_statistic_, self.f_p_value_ = tests.rank_test(
-            Z, X, C=C, fit_intercept=True
-        )
+        if self.kclass.kappa_ > 0:
+            self.f_statistic_, self.f_p_value_ = tests.rank_test(
+                Z, X, C=C, fit_intercept=True
+            )
+        else:
+            self.f_statistic_, self.f_p_value_ = np.nan, np.nan
+
         return self
 
     def __format__(self, format_spec: str) -> str:  # noqa D
