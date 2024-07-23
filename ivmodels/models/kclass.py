@@ -485,7 +485,17 @@ class KClassMixin:
         (X, _, C), _ = self._X_Z_C(X, C=C, Z=None, predict=True)
         return super().predict(np.hstack([X, C]), *args, **kwargs)
 
-    def summary(self, X, y, Z=None, C=None, test="wald", alpha=0.05, **kwargs):
+    def summary(
+        self,
+        X,
+        y,
+        Z=None,
+        C=None,
+        test="wald",
+        alpha=0.05,
+        feature_names=None,
+        **kwargs,
+    ):
         """
         Create Summary object for the fitted model.
 
@@ -512,10 +522,15 @@ class KClassMixin:
             "conditional likelihood-ratio".
         alpha: float, optional, default=0.05
             The significance level.
+        feature_names: list of str, optional
+            Names of the features to be included in the summary. If not specified, all
+            features will be included.
         **kwargs
             Additional keyword arguments to pass to the test and its inversion.
         """
-        summary = Summary(kclass=self, test=test, alpha=alpha)
+        summary = Summary(
+            kclass=self, test=test, alpha=alpha, feature_names=feature_names
+        )
         return summary.fit(X, y, Z=Z, C=C, **kwargs)
 
 

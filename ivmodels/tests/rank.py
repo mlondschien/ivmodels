@@ -49,7 +49,7 @@ def rank_test(Z, X, C=None, fit_intercept=True):
     m = X.shape[1]
 
     if k < m:
-        raise ValueError("Need `Z.shape[1] >= X.shape[1]`.")
+        return np.nan, np.nan
 
     if fit_intercept:
         C = np.hstack([np.ones((n, 1)), C])
