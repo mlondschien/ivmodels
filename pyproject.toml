@@ -5,7 +5,7 @@ requires = ['setuptools', 'setuptools-scm', 'wheel']
 name = "ivmodels"
 description = "IV Models"
 readme = "README.md"
-version = "0.2.0"
+version = "0.3.0"
 requires-python = ">=3.7"
 authors = [
     { name = "Malte Londschien", email = "malte@londschien.ch" },
