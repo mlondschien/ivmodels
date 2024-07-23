@@ -21,10 +21,13 @@ class Summary:
     alpha: float
         Significance level :math:`\\alpha` for the confidence sets, e.g., 0.05. The
         confidence of the confidence set will be :math:`1 - \\alpha`
+    feature_names: list of str, optional
+        Names of the features to be included in the summary. If not specified, all
+        features will be included.
 
     """
 
-    def __init__(self, kclass, test, alpha):
+    def __init__(self, kclass, test, alpha, feature_names=None):
         from ivmodels import KClass  # avoid circular imports
 
         if not isinstance(kclass, KClass):
@@ -33,6 +36,7 @@ class Summary:
         self.kclass = kclass
         self.test = test
         self.alpha = alpha
+        self.feature_names = feature_names
 
     def fit(self, X, y, Z=None, C=None, *args, **kwargs):
         """
@@ -66,6 +70,21 @@ class Summary:
         if not hasattr(self, "named_coefs_"):
             self.kclass.fit(X, y, Z=Z, C=C)
 
+        all_feature_names = self.kclass.endogenous_names_ + self.kclass.exogenous_names_
+        if self.kclass.fit_intercept:
+            all_feature_names = ["intercept"] + all_feature_names
+
+        if self.feature_names is None:
+            self.feature_names_ = all_feature_names
+        else:
+            extra_names = [n for n in self.feature_names if n not in all_feature_names]
+            if len(extra_names) > 0:
+                raise ValueError(
+                    f"Extra feature names {extra_names}. Available feature names are "
+                    f"{all_feature_names}. Got feature names {self.feature_names}."
+                )
+            self.feature_names_ = self.feature_names
+
         import ivmodels.tests as tests  # avoid circular imports
 
         _TESTS = {
@@ -98,7 +117,7 @@ class Summary:
 
         test_, inverse_test_ = _TESTS.get(str(self.test).lower())
 
-        self.estimates_ = self.kclass.coef_.tolist()
+        self.estimates_ = list()
         self.statistics_ = list()
         self.p_values_ = list()
         self.confidence_sets_ = list()
@@ -106,44 +125,31 @@ class Summary:
         (X, Z, C), _ = self.kclass._X_Z_C(X, Z, C, predict=False)
         Z, X, y, _, C, _, _ = _check_inputs(Z, X, y, C=C)
 
-        self.feature_names_ = (
-            self.kclass.endogenous_names_ + self.kclass.exogenous_names_
-        )
-
-        idx = 0
-        if self.kclass.fit_intercept:
-            self.feature_names_ = ["intercept"] + self.feature_names_
-            self.estimates_ = [self.kclass.intercept_] + self.estimates_
-            idx -= 1
+        mx = len(self.kclass.endogenous_names_)
+        fit_intercept = self.kclass.fit_intercept
 
         for name in self.feature_names_:
-            if name in self.kclass.endogenous_names_:
-                mask = np.zeros(len(self.kclass.endogenous_names_), dtype=bool)
-                mask[idx] = True
+            idx = np.where(np.array(all_feature_names) == name)[0][0]
+            mask = np.zeros(len(all_feature_names), dtype=bool)
+            mask[idx] = True
 
-                X_, W_, C_, D_ = X[:, mask], X[:, ~mask], C, np.zeros((n, 0))
-                fit_intercept_ = True
+            if fit_intercept:
+                mask = mask[1:]  # the first element corresponds to the intercept
 
-            elif name in self.kclass.exogenous_names_:
-                mask = np.zeros(len(self.kclass.exogenous_names_), dtype=bool)
-                mask[idx - len(self.kclass.endogenous_names_)] = True
-
-                X_, W_, C_, D_ = np.zeros((n, 0)), X, C[:, ~mask], C[:, mask]
-                fit_intercept_ = True
-
-            elif name == "intercept":
-                X_, W_, C_, D_ = np.zeros((n, 0)), X, C, np.ones((n, 1))
-                fit_intercept_ = False
+            if name == "intercept":
+                self.estimates_.append(self.kclass.intercept_)
+            else:
+                self.estimates_.append(self.kclass.coef_[idx - fit_intercept])
 
             test_result = test_(
                 Z=Z,
-                X=X_,
-                W=W_,
+                X=X[:, mask[:mx]],
+                W=X[:, ~mask[:mx]],
                 y=y,
-                C=C_,
-                D=D_,
+                C=C[:, ~mask[mx:]],
+                D=C[:, mask[mx:]] if name != "intercept" else np.ones((n, 1)),
                 beta=np.array([0]),
-                fit_intercept=fit_intercept_,
+                fit_intercept=fit_intercept and name != "intercept",
                 **kwargs,
             )
             self.statistics_.append(test_result[0])
@@ -151,31 +157,26 @@ class Summary:
 
             confidence_set = inverse_test_(
                 Z=Z,
-                X=X_,
-                W=W_,
+                X=X[:, mask[:mx]],
+                W=X[:, ~mask[:mx]],
                 y=y,
-                C=C_,
-                D=D_,
+                C=C[:, ~mask[mx:]],
+                D=C[:, mask[mx:]] if name != "intercept" else np.ones((n, 1)),
+                fit_intercept=fit_intercept and name != "intercept",
                 alpha=self.alpha,
-                fit_intercept=fit_intercept_,
                 **kwargs,
             )
-
             if isinstance(confidence_set, Quadric):
                 confidence_set = ConfidenceSet.from_quadric(confidence_set)
 
             self.confidence_sets_.append(confidence_set)
-            idx += 1
 
         self.statistic_, self.p_value_ = test_(
-            Z=Z, X=X, y=y, C=C, beta=np.zeros(X.shape[1]), fit_intercept=True
+            Z=Z, X=X, y=y, C=C, beta=np.zeros(X.shape[1]), fit_intercept=fit_intercept
         )
-        if self.kclass.kappa_ > 0:
-            self.f_statistic_, self.f_p_value_ = tests.rank_test(
-                Z, X, C=C, fit_intercept=True
-            )
-        else:
-            self.f_statistic_, self.f_p_value_ = np.nan, np.nan
+        self.f_statistic_, self.f_p_value_ = tests.rank_test(
+            Z, X, C=C, fit_intercept=fit_intercept
+        )
 
         return self
 
