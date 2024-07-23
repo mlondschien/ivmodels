@@ -20,6 +20,31 @@ Estimators
    :members: fit
    :noindex:
 
+Tests
+=====
+
+.. automodule:: ivmodels.tests
+   :members:
+   :noindex:
+
+Summary
+=======
+
+.. autoclass:: ivmodels.summary.Summary
+   :members:
+   :noindex:
+
+.. autoclass:: ivmodels.summary.CoefficientTable
+   :members:
+   :noindex:
+
+ConfidenceSet
+=============
+
+.. autoclass:: ivmodels.confidence_set.ConfidenceSet
+   :members:
+   :noindex:
+
 Quadric
 =======
 
@@ -27,12 +52,6 @@ Quadric
    :members:
    :noindex:
 
-Tests
-=====
-
-.. automodule:: ivmodels.tests
-   :members:
-   :noindex:
 
 Bibliography
 ============
