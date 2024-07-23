@@ -27,21 +27,22 @@ def test_kclass_summary(test, n, mx, k, mc, fit_intercept):
     kclass.fit(X, y, Z, C)
 
     summary = kclass.summary(X, y, Z, C, test=test)
+    table = summary.coefficient_table_
 
-    assert len(summary.estimates_) == len(kclass.coef_) + (1 if fit_intercept else 0)
-    assert len(summary.statistics_) == len(summary.estimates_)
-    assert len(summary.p_values_) == len(summary.estimates_)
-    assert len(summary.confidence_sets_) == len(summary.estimates_)
+    assert len(table.estimates) == len(kclass.coef_) + (1 if fit_intercept else 0)
+    assert len(table.statistics) == len(table.estimates)
+    assert len(table.p_values) == len(table.estimates)
+    assert len(table.confidence_sets) == len(table.estimates)
 
     if fit_intercept:
-        assert summary.estimates_[0] == kclass.intercept_
-        assert np.all(summary.estimates_[1:] == kclass.coef_)
+        assert table.estimates[0] == kclass.intercept_
+        assert np.all(table.estimates[1:] == kclass.coef_)
         names = ["intercept"] + kclass.endogenous_names_ + kclass.exogenous_names_
     else:
-        assert np.all(summary.estimates_ == kclass.coef_)
+        assert np.all(table.estimates == kclass.coef_)
         names = kclass.endogenous_names_ + kclass.exogenous_names_
 
-    assert summary.feature_names_ == names
+    assert table.feature_names == names
 
     summary_string = str(summary)
     for name in names:
@@ -64,13 +65,14 @@ def test_kclass_summary_names(n, mx, k, mc, fit_intercept, names):
     kclass.fit(X, y, Z, C=C)
 
     summary = kclass.summary(X, y, Z, C=C, test="wald", feature_names=names)
+    table = summary.coefficient_table_
 
-    assert len(summary.estimates_) == len(names)
-    assert len(summary.statistics_) == len(names)
-    assert len(summary.p_values_) == len(names)
-    assert len(summary.confidence_sets_) == len(names)
+    assert len(table.estimates) == len(names)
+    assert len(table.statistics) == len(names)
+    assert len(table.p_values) == len(names)
+    assert len(table.confidence_sets) == len(names)
 
-    assert summary.feature_names_ == names
+    assert table.feature_names == names
 
     summary_string = str(summary)
     for name in names:
