@@ -14,6 +14,9 @@ Changelog
 
 - New class :class:`~ivmodels.summary.Summary` holding information about the model fit.
 
+- New class :class:`~ivmodels.summary.CoefficientTable` holding a table of coefficients
+  and their p-values.
+
 - New method :func:`~ivmodels.models.kclass.KClass.summary` to create a summary of the
   model fit.
 
