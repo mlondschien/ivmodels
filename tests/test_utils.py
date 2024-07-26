@@ -125,7 +125,10 @@ def test_characteristic_roots(dim, rank):
     B = B @ B.T
 
     roots = _characteristic_roots(A, B)
+    finite_roots = sorted(roots, key=lambda x: np.abs(x))[:rank]
+    for root in finite_roots:
+        assert np.allclose(np.min(np.abs(scipy.linalg.eigvalsh(A - root * B))), 0)
 
-    for root in roots:
-        if np.abs(root) < 1e8:
-            assert np.allclose(np.min(np.abs(scipy.linalg.eigvalsh(A - root * B))), 0)
+    assert np.allclose(
+        _characteristic_roots(A, B, subset_by_index=[0, 0]), np.min(finite_roots)
+    )
