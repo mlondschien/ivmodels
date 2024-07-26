@@ -2,7 +2,7 @@ import numpy as np
 import scipy
 
 from ivmodels.quadric import Quadric
-from ivmodels.utils import _check_inputs, oproj, proj
+from ivmodels.utils import _characteristic_roots, _check_inputs, oproj, proj
 
 
 def likelihood_ratio_test(Z, X, y, beta, W=None, C=None, D=None, fit_intercept=True):
@@ -91,13 +91,11 @@ def likelihood_ratio_test(Z, X, y, beta, W=None, C=None, D=None, fit_intercept=T
 
     XWy_proj = np.hstack([X_proj, W_proj, y_proj.reshape(-1, 1)])
 
-    ar_min = np.real(
-        scipy.linalg.eigvalsh(
-            a=oproj(D, XWy).T @ XWy_proj,
-            b=XWy.T @ (XWy - XWy_proj),
-            subset_by_index=[0, 0],
-        )[0]
-    )
+    ar_min = _characteristic_roots(
+        a=oproj(D, XWy).T @ XWy_proj,
+        b=XWy.T @ (XWy - XWy_proj),
+        subset_by_index=[0, 0],
+    )[0]
 
     if md > 0:
         X = np.hstack([X, D])
@@ -118,7 +116,7 @@ def likelihood_ratio_test(Z, X, y, beta, W=None, C=None, D=None, fit_intercept=T
 
         statistic = (
             np.real(
-                scipy.linalg.eigvalsh(
+                _characteristic_roots(
                     a=Wy_proj.T @ Wy_proj,
                     b=Wy.T @ (Wy - Wy_proj),
                     subset_by_index=[0, 0],
@@ -192,7 +190,7 @@ def inverse_likelihood_ratio_test(
     XWy = np.concatenate([XW, y.reshape(-1, 1)], axis=1)
 
     kappa_liml = np.real(
-        scipy.linalg.eigvalsh(
+        _characteristic_roots(
             a=oproj(D, XWy).T @ XWy_proj,
             b=XWy.T @ (XWy - XWy_proj),
             subset_by_index=[0, 0],

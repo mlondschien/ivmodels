@@ -1,7 +1,7 @@
 import numpy as np
 import scipy
 
-from ivmodels.utils import _check_inputs, oproj, proj
+from ivmodels.utils import _characteristic_roots, _check_inputs, oproj, proj
 
 
 def rank_test(Z, X, C=None, fit_intercept=True):
@@ -60,7 +60,7 @@ def rank_test(Z, X, C=None, fit_intercept=True):
     X_proj = proj(Z, X)
 
     statistic = (n - k - C.shape[1]) * np.real(
-        scipy.linalg.eigvalsh(
+        _characteristic_roots(
             a=X.T @ X_proj, b=X.T @ (X - X_proj), subset_by_index=[0, 0]
         )[0]
     )

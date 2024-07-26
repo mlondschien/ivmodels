@@ -55,7 +55,6 @@ def proj(Z, *args):
         return (*(np.zeros_like(f) for f in args),)
 
     fs = np.dot(Z, scipy.linalg.lstsq(Z, fs, cond=None, lapack_driver="gelsy")[0])
-
     return (
         *(fs[:, i:j].reshape(f.shape) for i, j, f in zip(csum[:-1], csum[1:], args)),
     )
@@ -264,3 +263,89 @@ def _find_roots(f, a, b, tol, max_value, max_eval, n_points=50):
         max_value=None,
         max_eval=max_eval - n_points,
     )
+
+
+def _characteristic_roots(a, b, subset_by_index=None, symmetric=True):
+    """
+    Compute the solutions to det(A - B * lambda) = 0.
+
+    Parameters
+    ----------
+    a: np.ndarray of dimension (n, n)
+        The matrix A.
+    b: np.ndarray of dimension (n, n)
+        The matrix B.
+    subset_by_index: List[int] or None, optional, default=None
+        The subset of roots to return. If None, returns all roots.
+
+    Returns
+    -------
+    np.ndarray of dimension (n,)
+        The characteristic roots of the generalized eigenvalue problem.
+    """
+    cond = np.linalg.cond(b)
+
+    if cond < 0.5 / np.finfo(b.dtype).eps:
+        if symmetric:
+            return scipy.linalg.eigvalsh(a=a, b=b, subset_by_index=subset_by_index)
+        else:
+            return scipy.linalg.eigvals(a=a, b=b, subset_by_index=subset_by_index)
+
+    if not symmetric:
+        raise ValueError
+
+    if subset_by_index is not None:
+        subset_by_index = sorted([b.shape[0] - 1 - i for i in subset_by_index])
+
+    return 1 / np.real(scipy.linalg.eigvalsh(a=b, b=a, subset_by_index=subset_by_index))
+
+    # if symmetric:
+    #     eigvals, eigvecs = scipy.linalg.eigh(a=b)
+    # else:
+    #     eigvals, eigvecs = scipy.linalg.eig(a=b)
+
+    # mask = eigvals < np.sqrt(np.finfo(b.dtype).eps)
+    # eigvals[mask] = 0
+    # # eigvals, eigvecs = eigvals[~mask], eigvecs[:, ~mask]
+
+    # D = eigvecs * np.sqrt(eigvals)
+
+    # eigvals_inverse = 1 / eigvals
+    # eigvals_inverse[mask] = 0
+
+    # pinv = scipy.linalg.pinv(b)
+    # chol = scipy.linalg.cholesky(pinv)
+    # eigvals, eigvecs = scipy.linalg.eig(chol @ a @ chol.T)
+
+    # # D = scipy.linalg.cholesky(pinv)
+    # # eigvals, eigvecs = scipy.linalg.eigh(D.T @ a @ D)
+
+    # for eigval in eigvals:
+    #     print("")
+    #     print(eigval)
+    #     print(np.linalg.det(a - eigval * b))
+
+    # # assert np.allclose(eigvecs @ np.diag(eigvals) @ eigvecs.T, b)
+    # pinv = (eigvecs * np.sqrt(eigvals_inverse)).T
+    # breakpoint()
+    # eigvals, eigvecs = scipy.linalg.eig(pinv @ a @ pinv.T)
+    # eigvecs = pinv.T @ eigvecs
+
+    # breakpoint()
+    # # assert np.allclose(a @ eigvecs, b @ eigvecs * eigvals)
+
+    # return scipy.linalg.eigvalsh(pinv @ a @ pinv.T, subset_by_index=subset_by_index)
+    # breakpoint()
+
+    # U, S, Vh = scipy.linalg.svd(b)
+    # mask = S < np.sqrt(np.finfo(b.dtype).eps)
+    # U, S, Vh = U[:, ~mask], S[~mask], Vh[~mask, :]
+    # breakpoint()
+    # res = scipy.linalg.eigvals(a=np.linalg.solve(b, a))
+
+    # x = np.linspace(0, 0.03, 100)
+    # y = np.zeros_like(x)
+    # for i, x_ in enumerate(x):
+    #     y[i] = np.linalg.det(b * x_ - a)
+
+    # breakpoint()
