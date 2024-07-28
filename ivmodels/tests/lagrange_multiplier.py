@@ -6,7 +6,13 @@ from scipy.optimize._optimize import MemoizeJac
 
 from ivmodels.confidence_set import ConfidenceSet
 from ivmodels.models.kclass import KClass
-from ivmodels.utils import _check_inputs, _find_roots, oproj, proj
+from ivmodels.utils import (
+    _characteristic_roots,
+    _check_inputs,
+    _find_roots,
+    oproj,
+    proj,
+)
 
 
 # https://stackoverflow.com/a/68608349/10586763
@@ -125,19 +131,31 @@ class _LM:
             one_beta_id[1 : (1 + self.mx), 0] = -beta[:, 0]
             one_beta_id[(1 + self.mx) :, 1:] = np.diag(np.ones(self.mw))
 
-            X_proj_X = one_beta_id.T @ self.yS_proj_at_yS @ one_beta_id
-            X_orth_X = one_beta_id.T @ self.yS_orth_at_yS @ one_beta_id
+            resX_proj_resX = one_beta_id.T @ self.yS_proj_at_yS @ one_beta_id
+            resX_orth_resX = one_beta_id.T @ self.yS_orth_at_yS @ one_beta_id
         else:
-            X_proj_X = self.yS_proj_at_yS
-            X_orth_X = self.yS_orth_at_yS
+            resX_proj_resX = self.yS_proj_at_yS
+            resX_orth_resX = self.yS_orth_at_yS
 
-        eigval = scipy.linalg.eigh(
-            a=X_proj_X,
-            b=X_orth_X,
-            subset_by_index=[0, 0],
-        )[1]
+        cond = np.linalg.cond(resX_orth_resX)
+        if cond < 0.5 / np.finfo(resX_orth_resX.dtype).eps:
+            eigval = scipy.linalg.eigh(
+                a=resX_proj_resX,
+                b=resX_orth_resX,
+                subset_by_index=[0, 0],
+            )[1]
 
-        return -eigval[1:, 0] / eigval[0, 0]
+            liml = -eigval[1:, 0] / eigval[0, 0]
+        else:
+            kappa_liml = _characteristic_roots(
+                resX_proj_resX, resX_orth_resX, subset_by_index=[0, 0]
+            )[0]
+            liml = np.linalg.solve(
+                resX_proj_resX[1:, 1:] - kappa_liml * resX_orth_resX[1:, 1:],
+                resX_proj_resX[1:, 0] - kappa_liml * resX_orth_resX[1:, 0],
+            )
+
+        return liml
 
     def derivative(self, beta, gamma=None, jac=True, hess=True):
         """Return LM and derivative of LM at beta, gamma w.r.t. (beta, gamma)."""
@@ -284,12 +302,12 @@ class _LM:
                 )
             )
 
-        res = min(results, key=lambda r: r.fun)
+        minimizer = min(results, key=lambda r: r.fun).x
+        statistic = self.derivative(beta, minimizer, jac=False, hess=False)[0]
 
         if return_minimizer:
-            return res.fun, res.x
-        else:
-            return res.fun
+            return statistic, minimizer
+        return statistic
 
 
 def lagrange_multiplier_test(
@@ -369,7 +387,8 @@ def lagrange_multiplier_test(
 
     dof = n - k - mc - md - fit_intercept
     if mw > 0:
-        statistic = _LM(X=X, y=y, W=W, Z=Z, dof=dof, **kwargs).lm(beta)
+        lm = _LM(X=X, y=y, W=W, Z=Z, dof=dof, **kwargs)
+        statistic = lm.lm(beta)
 
         p_value = 1 - scipy.stats.chi2.cdf(statistic, df=mx + md)
 

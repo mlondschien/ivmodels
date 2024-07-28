@@ -2,11 +2,10 @@ import logging
 import re
 
 import numpy as np
-import scipy
 from glum import GeneralizedLinearRegressor
 
 from ivmodels.summary import Summary
-from ivmodels.utils import _check_inputs, oproj, proj, to_numpy
+from ivmodels.utils import _characteristic_roots, _check_inputs, oproj, proj, to_numpy
 
 try:
     import pandas as pd
@@ -274,7 +273,7 @@ class KClassMixin:
         Xy_proj = np.concatenate([X_proj, y_proj.reshape(-1, 1)], axis=1)
         # Here possibly Xy_proj.T @ Xy != Xy_proj.T @ Xy_proj, if called from
         # KClass.fit() with C!=None.
-        return scipy.linalg.eigvalsh(
+        return _characteristic_roots(
             a=Xy.T @ Xy_proj, b=(Xy - Xy_proj).T @ Xy, subset_by_index=subset_by_index
         )
 

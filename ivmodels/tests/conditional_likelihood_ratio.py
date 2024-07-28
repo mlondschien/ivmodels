@@ -4,7 +4,13 @@ import scipy
 from ivmodels.confidence_set import ConfidenceSet
 from ivmodels.models.kclass import KClass
 from ivmodels.quadric import Quadric
-from ivmodels.utils import _check_inputs, _find_roots, oproj, proj
+from ivmodels.utils import (
+    _characteristic_roots,
+    _check_inputs,
+    _find_roots,
+    oproj,
+    proj,
+)
 
 
 def conditional_likelihood_ratio_critical_value_function(
@@ -346,7 +352,7 @@ def conditional_likelihood_ratio_test(
         Xt_orth = Xt - Xt_proj
 
         s_min = np.real(
-            scipy.linalg.eigvalsh(
+            _characteristic_roots(
                 a=Xt_proj.T @ Xt_proj, b=Xt_orth.T @ Xt_orth, subset_by_index=[0, 0]
             )[0]
         ) * (n - k - mc - md - fit_intercept)
@@ -355,7 +361,7 @@ def conditional_likelihood_ratio_test(
         Xy_proj = np.hstack([X_proj, y_proj.reshape(-1, 1)])
 
         ar_min = (
-            scipy.linalg.eigvalsh(
+            _characteristic_roots(
                 a=Xy.T @ Xy,
                 b=(Xy - Xy_proj).T @ Xy,
                 subset_by_index=[0, 0],
@@ -374,7 +380,7 @@ def conditional_likelihood_ratio_test(
         XWy_eigenvals = (
             np.sort(
                 np.real(
-                    scipy.linalg.eigvalsh(
+                    _characteristic_roots(
                         a=XWy.T @ XWy,
                         b=(XWy - XWy_proj).T @ XWy,
                         subset_by_index=[0, 1],
@@ -429,7 +435,7 @@ def inverse_conditional_likelihood_ratio_test(
     Sy_orth = np.concatenate([S_orth, y_orth.reshape(-1, 1)], axis=1)
 
     Sy_eigvals = np.real(
-        scipy.linalg.eigvalsh(
+        _characteristic_roots(
             a=Sy_proj.T @ Sy_proj, b=Sy_orth.T @ Sy_orth, subset_by_index=[0, 1]
         )
     )
@@ -465,7 +471,7 @@ def inverse_conditional_likelihood_ratio_test(
         Wy_orth_[:, -1:] -= S_orth[:, :mx] * x
 
         eigval = np.real(
-            scipy.linalg.eigvalsh(
+            _characteristic_roots(
                 a=Wy_proj_.T @ Wy_proj_, b=Wy_orth_.T @ Wy_orth_, subset_by_index=[0, 0]
             )
         )

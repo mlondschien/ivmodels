@@ -1,8 +1,9 @@
 import numpy as np
 import pandas as pd
 import pytest
+import scipy
 
-from ivmodels.utils import oproj, proj, to_numpy
+from ivmodels.utils import _characteristic_roots, oproj, proj, to_numpy
 
 
 def test_proj():
@@ -113,3 +114,21 @@ def test_to_numpy():
     assert np.allclose(to_numpy(s1), s1)
     assert np.allclose(to_numpy(df2), df2)
     assert np.allclose(to_numpy(df3), df3)
+
+
+@pytest.mark.parametrize("dim, rank", [(10, 5), (10, 10), (10, 1)])
+def test_characteristic_roots(dim, rank):
+    rng = np.random.RandomState(0)
+    A = rng.normal(0, 1, (dim, dim))
+    A = A.T @ A
+    B = rng.normal(0, 1, (dim, rank))
+    B = B @ B.T
+
+    roots = _characteristic_roots(A, B)
+    finite_roots = sorted(roots, key=lambda x: np.abs(x))[:rank]
+    for root in finite_roots:
+        assert np.allclose(np.min(np.abs(scipy.linalg.eigvalsh(A - root * B))), 0)
+
+    assert np.allclose(
+        _characteristic_roots(A, B, subset_by_index=[0, 0]), np.min(finite_roots)
+    )
