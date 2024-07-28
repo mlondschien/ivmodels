@@ -265,16 +265,16 @@ def _find_roots(f, a, b, tol, max_value, max_eval, n_points=50):
     )
 
 
-def _characteristic_roots(a, b, subset_by_index=None, symmetric=True):
+def _characteristic_roots(a, b, subset_by_index=None):
     """
     Compute the solutions to det(A - B * lambda) = 0.
 
     Parameters
     ----------
     a: np.ndarray of dimension (n, n)
-        The matrix A.
+        The matrix A. Must be symmetric.
     b: np.ndarray of dimension (n, n)
-        The matrix B.
+        The matrix B. Must be symmetric.
     subset_by_index: List[int] or None, optional, default=None
         The subset of roots to return. If None, returns all roots.
 
@@ -286,13 +286,7 @@ def _characteristic_roots(a, b, subset_by_index=None, symmetric=True):
     cond = np.linalg.cond(b)
 
     if cond < 0.5 / np.finfo(b.dtype).eps:
-        if symmetric:
-            return scipy.linalg.eigvalsh(a=a, b=b, subset_by_index=subset_by_index)
-        else:
-            return scipy.linalg.eigvals(a=a, b=b, subset_by_index=subset_by_index)
-
-    if not symmetric:
-        raise ValueError
+        return scipy.linalg.eigvalsh(a=a, b=b, subset_by_index=subset_by_index)
 
     if subset_by_index is not None:
         subset_by_index = sorted([b.shape[0] - 1 - i for i in subset_by_index])
