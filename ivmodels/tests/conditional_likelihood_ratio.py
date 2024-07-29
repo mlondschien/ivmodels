@@ -418,7 +418,33 @@ def inverse_conditional_likelihood_ratio_test(
     max_value=1e6,
     max_eval=1000,
 ):
-    """Return an approximation of the confidence set by inversion of the CLR test."""
+    """
+    Return an approximation of the confidence set by inversion of the CLR test.
+
+    Z: np.ndarray of dimension (n, k)
+        Instruments.
+    X: np.ndarray of dimension (n, mx)
+        Regressors.
+    y: np.ndarray of dimension (n,)
+        Outcomes.
+    W: np.ndarray of dimension (n, mw) or None, optional, default = None
+        Endogenous regressors not of interest.
+    C: np.ndarray of dimension (n, mc) or None, optional, default = None
+        Exogenous regressors not of interest.
+    D: np.ndarray of dimension (n, 0) or None, optional, default = None
+        Exogenous regressors of interest. Not supported for this test.
+    fit_intercept: bool, optional, default: True
+        Whether to include an intercept. This is equivalent to centering the inputs.
+    tol: float, optional, default: 1e-4
+        The boundaries of the confidence set are computed up to this tolerance.
+    max_value: float, optional, default: 1e6
+        The maximum value to consider when searching for the boundaries of the
+        confidence set. That is, if the true confidence set is of the form
+        [0, max_value + 1], the confidence returned set will be [0, np.inf].
+    max_eval: int, optional, default: 1000
+        The maximum number of evaluations of the critical value function to find the
+        boundaries of the confidence set.
+    """
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1).")
 
