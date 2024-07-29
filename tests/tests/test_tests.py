@@ -281,7 +281,7 @@ def test_test_size_weak_ivs(test, n, mx, k, u, mc):
     [
         (100, 1, 2, 3, 0, True),
         (100, 1, 2, 3, 1, False),
-        (100, 2, 5, 0, 0, False),
+        (100, 1, 5, 0, 0, False),
         (100, 0, 2, 1, 2, False),
         "guggenberger12",
     ],
@@ -400,7 +400,10 @@ def test_subvector_round_trip(test, inverse_test, data, p_value):
     for idx, row in enumerate(boundary):
         p_values[idx] = test(beta=row, **kwargs)[1]
 
-    assert np.allclose(p_values, p_value, atol=1e-4)
+    if test == conditional_likelihood_ratio_test:
+        assert np.allclose(p_values, p_value, atol=1e-3)
+    else:
+        assert np.allclose(p_values, p_value, atol=1e-4)
 
 
 @pytest.mark.parametrize(

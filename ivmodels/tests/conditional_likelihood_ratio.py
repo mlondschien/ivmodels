@@ -4,6 +4,7 @@ import scipy
 from ivmodels.confidence_set import ConfidenceSet
 from ivmodels.models.kclass import KClass
 from ivmodels.quadric import Quadric
+from ivmodels.tests.anderson_rubin import inverse_anderson_rubin_test
 from ivmodels.utils import (
     _characteristic_roots,
     _check_inputs,
@@ -405,9 +406,45 @@ def conditional_likelihood_ratio_test(
 
 
 def inverse_conditional_likelihood_ratio_test(
-    Z, X, y, alpha=0.05, W=None, C=None, D=None, fit_intercept=True, tol=1e-4
+    Z,
+    X,
+    y,
+    alpha=0.05,
+    W=None,
+    C=None,
+    D=None,
+    fit_intercept=True,
+    tol=1e-4,
+    max_value=1e6,
+    max_eval=1000,
 ):
-    """Return an approximation of the confidence set by inversion of the CLR test."""
+    """
+    Return an approximation of the confidence set by inversion of the CLR test.
+
+    Z: np.ndarray of dimension (n, k)
+        Instruments.
+    X: np.ndarray of dimension (n, mx)
+        Regressors.
+    y: np.ndarray of dimension (n,)
+        Outcomes.
+    W: np.ndarray of dimension (n, mw) or None, optional, default = None
+        Endogenous regressors not of interest.
+    C: np.ndarray of dimension (n, mc) or None, optional, default = None
+        Exogenous regressors not of interest.
+    D: np.ndarray of dimension (n, 0) or None, optional, default = None
+        Exogenous regressors of interest. Not supported for this test.
+    fit_intercept: bool, optional, default: True
+        Whether to include an intercept. This is equivalent to centering the inputs.
+    tol: float, optional, default: 1e-4
+        The boundaries of the confidence set are computed up to this tolerance.
+    max_value: float, optional, default: 1e6
+        The maximum value to consider when searching for the boundaries of the
+        confidence set. That is, if the true confidence set is of the form
+        [0, max_value + 1], the confidence returned set will be [0, np.inf].
+    max_eval: int, optional, default: 1000
+        The maximum number of evaluations of the critical value function to find the
+        boundaries of the confidence set.
+    """
     if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1).")
 
@@ -418,6 +455,11 @@ def inverse_conditional_likelihood_ratio_test(
 
     if md > 0:
         return ConfidenceSet(boundaries=[(-np.inf, np.inf)])
+
+    if k == mx + mw:
+        return inverse_anderson_rubin_test(
+            Z=Z, X=X, W=W, y=y, fit_intercept=fit_intercept, alpha=alpha
+        )
 
     if fit_intercept:
         C = np.hstack([np.ones((n, 1)), C])
@@ -434,9 +476,11 @@ def inverse_conditional_likelihood_ratio_test(
     Sy_proj = np.concatenate([S_proj, y_proj.reshape(-1, 1)], axis=1)
     Sy_orth = np.concatenate([S_orth, y_orth.reshape(-1, 1)], axis=1)
 
-    Sy_eigvals = np.real(
-        _characteristic_roots(
-            a=Sy_proj.T @ Sy_proj, b=Sy_orth.T @ Sy_orth, subset_by_index=[0, 1]
+    Sy_eigvals = np.sort(
+        np.real(
+            _characteristic_roots(
+                a=Sy_proj.T @ Sy_proj, b=Sy_orth.T @ Sy_orth, subset_by_index=[0, 1]
+            )
         )
     )
 
@@ -446,9 +490,9 @@ def inverse_conditional_likelihood_ratio_test(
     # to be computed will contain the lower bound.
     quantile_lower = scipy.stats.chi2.ppf(1 - alpha, df=mx + md) + dof * Sy_eigvals[0]
 
-    A = S.T @ (dof * S_proj - quantile_lower * S_orth)
-    b = -2 * (dof * S_proj - quantile_lower * S_orth).T @ y
-    c = y.T @ (dof * y_proj - quantile_lower * y_orth)
+    A = S.T @ (S_proj - quantile_lower / dof * S_orth)
+    b = -2 * (S_proj - quantile_lower / dof * S_orth).T @ y
+    c = y.T @ (y_proj - quantile_lower / dof * y_orth)
     coordinates = np.concatenate([np.arange(mx), np.arange(mx + mw, mx + mw + md)])
     cs_lower = ConfidenceSet.from_quadric(Quadric(A, b, c).project(coordinates))
 
@@ -477,27 +521,34 @@ def inverse_conditional_likelihood_ratio_test(
         )
 
         s_min = dof * (Sy_eigvals[0] + Sy_eigvals[1] - eigval[0])
-        statistic = dof * eigval[0] - dof * Sy_eigvals[0]
-        return (
+        statistic = dof * (eigval[0] - Sy_eigvals[0])
+        return alpha - (
             conditional_likelihood_ratio_critical_value_function(
                 mx,
-                k - mx - mw,
+                k - mw,
                 s_min,
                 statistic,
                 method="numerical_integration",
                 tol=tol,
             )
-            - 1
-            + alpha
         )
 
     boundaries = []
     for left_upper, right_upper in cs_upper.boundaries:
-        left_lower_, right_lower_ = right_upper, left_upper
+        left_lower_, right_lower_ = None, None
         for left_lower, right_lower in cs_lower.boundaries:
             if left_upper <= left_lower and right_lower <= right_upper:
                 left_lower_, right_lower_ = left_lower, right_lower
                 break
+
+        if left_lower_ is None:
+            bounds = [max(left_upper, -max_value), min(right_upper, max_value)]
+            res = scipy.optimize.minimize_scalar(f, bounds=bounds)
+            if f(res.x) < 0:
+                left_lower_ = res.x
+                right_lower_ = res.x
+            else:
+                continue
 
         boundaries.append(
             (
@@ -506,16 +557,16 @@ def inverse_conditional_likelihood_ratio_test(
                     left_lower_,
                     left_upper,
                     tol=tol,
-                    max_value=1e6,
-                    max_eval=1000,
+                    max_value=max_value,
+                    max_eval=max_eval,
                 ),
                 _find_roots(
                     f,
                     right_lower_,
                     right_upper,
                     tol=tol,
-                    max_value=1e6,
-                    max_eval=1000,
+                    max_value=max_value,
+                    max_eval=max_eval,
                 ),
             )
         )
