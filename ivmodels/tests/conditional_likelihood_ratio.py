@@ -4,6 +4,7 @@ import scipy
 from ivmodels.confidence_set import ConfidenceSet
 from ivmodels.models.kclass import KClass
 from ivmodels.quadric import Quadric
+from ivmodels.tests.anderson_rubin import inverse_anderson_rubin_test
 from ivmodels.utils import (
     _characteristic_roots,
     _check_inputs,
@@ -405,7 +406,17 @@ def conditional_likelihood_ratio_test(
 
 
 def inverse_conditional_likelihood_ratio_test(
-    Z, X, y, alpha=0.05, W=None, C=None, D=None, fit_intercept=True, tol=1e-4
+    Z,
+    X,
+    y,
+    alpha=0.05,
+    W=None,
+    C=None,
+    D=None,
+    fit_intercept=True,
+    tol=1e-4,
+    max_value=1e6,
+    max_eval=1000,
 ):
     """Return an approximation of the confidence set by inversion of the CLR test."""
     if not 0 < alpha < 1:
@@ -418,6 +429,11 @@ def inverse_conditional_likelihood_ratio_test(
 
     if md > 0:
         return ConfidenceSet(boundaries=[(-np.inf, np.inf)])
+
+    if k == mx + mw:
+        return inverse_anderson_rubin_test(
+            Z=Z, X=X, W=W, y=y, fit_intercept=fit_intercept, alpha=alpha
+        )
 
     if fit_intercept:
         C = np.hstack([np.ones((n, 1)), C])
@@ -434,9 +450,11 @@ def inverse_conditional_likelihood_ratio_test(
     Sy_proj = np.concatenate([S_proj, y_proj.reshape(-1, 1)], axis=1)
     Sy_orth = np.concatenate([S_orth, y_orth.reshape(-1, 1)], axis=1)
 
-    Sy_eigvals = np.real(
-        _characteristic_roots(
-            a=Sy_proj.T @ Sy_proj, b=Sy_orth.T @ Sy_orth, subset_by_index=[0, 1]
+    Sy_eigvals = np.sort(
+        np.real(
+            _characteristic_roots(
+                a=Sy_proj.T @ Sy_proj, b=Sy_orth.T @ Sy_orth, subset_by_index=[0, 1]
+            )
         )
     )
 
@@ -446,9 +464,9 @@ def inverse_conditional_likelihood_ratio_test(
     # to be computed will contain the lower bound.
     quantile_lower = scipy.stats.chi2.ppf(1 - alpha, df=mx + md) + dof * Sy_eigvals[0]
 
-    A = S.T @ (dof * S_proj - quantile_lower * S_orth)
-    b = -2 * (dof * S_proj - quantile_lower * S_orth).T @ y
-    c = y.T @ (dof * y_proj - quantile_lower * y_orth)
+    A = S.T @ (S_proj - quantile_lower / dof * S_orth)
+    b = -2 * (S_proj - quantile_lower / dof * S_orth).T @ y
+    c = y.T @ (y_proj - quantile_lower / dof * y_orth)
     coordinates = np.concatenate([np.arange(mx), np.arange(mx + mw, mx + mw + md)])
     cs_lower = ConfidenceSet.from_quadric(Quadric(A, b, c).project(coordinates))
 
@@ -477,18 +495,16 @@ def inverse_conditional_likelihood_ratio_test(
         )
 
         s_min = dof * (Sy_eigvals[0] + Sy_eigvals[1] - eigval[0])
-        statistic = dof * eigval[0] - dof * Sy_eigvals[0]
-        return (
+        statistic = dof * (eigval[0] - Sy_eigvals[0])
+        return alpha - (
             conditional_likelihood_ratio_critical_value_function(
                 mx,
-                k - mx - mw,
+                k - mw,
                 s_min,
                 statistic,
                 method="numerical_integration",
                 tol=tol,
             )
-            - 1
-            + alpha
         )
 
     boundaries = []

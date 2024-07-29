@@ -1,6 +1,14 @@
 Changelog
 =========
 
+0.3.1 - 2024-07-29
+------------------
+
+** Bug fixes:**
+
+- Fixed bug in
+  :class:`~ivmodels.tests.conditional_likelihood_ratio.inverse_conditional_likelihood_ratio_test`.
+
 0.3.0 - 2024-07-23
 ------------------
 
