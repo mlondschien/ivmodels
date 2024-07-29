@@ -535,11 +535,20 @@ def inverse_conditional_likelihood_ratio_test(
 
     boundaries = []
     for left_upper, right_upper in cs_upper.boundaries:
-        left_lower_, right_lower_ = right_upper, left_upper
+        left_lower_, right_lower_ = None, None
         for left_lower, right_lower in cs_lower.boundaries:
             if left_upper <= left_lower and right_lower <= right_upper:
                 left_lower_, right_lower_ = left_lower, right_lower
                 break
+
+        if left_lower_ is None:
+            bounds = [max(left_upper, -max_value), min(right_upper, max_value)]
+            res = scipy.optimize.minimize_scalar(f, bounds=bounds)
+            if f(res.x) < 0:
+                left_lower_ = res.x
+                right_lower_ = res.x
+            else:
+                continue
 
         boundaries.append(
             (
