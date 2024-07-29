@@ -522,16 +522,16 @@ def inverse_conditional_likelihood_ratio_test(
                     left_lower_,
                     left_upper,
                     tol=tol,
-                    max_value=1e6,
-                    max_eval=1000,
+                    max_value=max_value,
+                    max_eval=max_eval,
                 ),
                 _find_roots(
                     f,
                     right_lower_,
                     right_upper,
                     tol=tol,
-                    max_value=1e6,
-                    max_eval=1000,
+                    max_value=max_value,
+                    max_eval=max_eval,
                 ),
             )
         )
