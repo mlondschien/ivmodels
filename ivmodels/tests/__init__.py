@@ -3,6 +3,7 @@ from .conditional_likelihood_ratio import (
     conditional_likelihood_ratio_test,
     inverse_conditional_likelihood_ratio_test,
 )
+from .j import j_test
 from .lagrange_multiplier import (
     inverse_lagrange_multiplier_test,
     lagrange_multiplier_test,
@@ -17,6 +18,7 @@ __all__ = [
     "inverse_anderson_rubin_test",
     "conditional_likelihood_ratio_test",
     "inverse_conditional_likelihood_ratio_test",
+    "j_test",
     "lagrange_multiplier_test",
     "inverse_lagrange_multiplier_test",
     "likelihood_ratio_test",
