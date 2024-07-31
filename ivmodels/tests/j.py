@@ -1,10 +1,11 @@
+import numpy as np
 import scipy
 
 from ivmodels.models.kclass import KClass
 from ivmodels.utils import _check_inputs, proj
 
 
-def j_test(Z, X, y, beta, C=None, fit_intercept=True, estimator="liml"):
+def j_test(Z, X, y, C=None, fit_intercept=True, estimator="liml"):
     """
     Perform the J-test for overidentifying restrictions.
 
@@ -28,7 +29,7 @@ def j_test(Z, X, y, beta, C=None, fit_intercept=True, estimator="liml"):
     Returns
     -------
     statistic: float
-        The test statistic :math:`\\mathrm{AR}(\\beta)`.
+        The test statistic :math:`J`.
     p_value: float
         The p-value of the test.
 
@@ -44,8 +45,8 @@ def j_test(Z, X, y, beta, C=None, fit_intercept=True, estimator="liml"):
     mx, mc = X.shape[1], C.shape[1]
 
     estimator = KClass(estimator, fit_intercept=fit_intercept)
-    residuals = y - X @ beta
-    residuals_proj = proj(Z, residuals)
+    residuals = y - estimator.fit(Z=Z, X=X, y=y, C=C).predict(X, C=C)
+    residuals_proj = proj(np.hstack([Z, C]), residuals)
     residuals_orth = residuals - residuals_proj
 
     statistic = residuals_proj.T @ residuals_proj
