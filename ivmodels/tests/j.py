@@ -44,8 +44,12 @@ def j_test(Z, X, y, C=None, fit_intercept=True, estimator="liml"):
     n, k = Z.shape
     mx, mc = X.shape[1], C.shape[1]
 
-    estimator = KClass(estimator, fit_intercept=fit_intercept)
+    estimator = KClass(kappa=estimator, fit_intercept=fit_intercept)
     residuals = y - estimator.fit(Z=Z, X=X, y=y, C=C).predict(X, C=C)
+
+    if fit_intercept:
+        C = np.hstack([np.ones((n, 1)), C])
+
     residuals_proj = proj(np.hstack([Z, C]), residuals)
     residuals_orth = residuals - residuals_proj
 
