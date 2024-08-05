@@ -453,13 +453,13 @@ def inverse_conditional_likelihood_ratio_test(
     n, k = Z.shape
     mx, mw, mc, md = X.shape[1], W.shape[1], C.shape[1], D.shape[1]
 
-    if md > 0:
-        return ConfidenceSet(boundaries=[(-np.inf, np.inf)])
-
     if k == mx + mw:
         return inverse_anderson_rubin_test(
-            Z=Z, X=X, W=W, y=y, fit_intercept=fit_intercept, alpha=alpha
+            Z=Z, X=X, W=W, y=y, C=C, D=D, fit_intercept=fit_intercept, alpha=alpha
         )
+
+    if md > 0:
+        return ConfidenceSet(boundaries=[(-np.inf, np.inf)])
 
     if fit_intercept:
         C = np.hstack([np.ones((n, 1)), C])
