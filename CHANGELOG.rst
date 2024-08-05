@@ -1,6 +1,13 @@
 Changelog
 =========
 
+0.4.0 - 2024-08-xx
+------------------
+
+**New features:**
+
+- New test :func:`~ivmodels.tests.j.j_test` of the overidentifying restrictions.
+
 0.3.1 - 2024-07-30
 ------------------
 
