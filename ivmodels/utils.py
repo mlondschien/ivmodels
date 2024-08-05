@@ -41,6 +41,7 @@ def proj(Z, *args):
         if len(args[0].shape) == 2 and args[0].shape[1] == 0:
             return np.zeros_like(args[0])
 
+        # return np.dot(Z, scipy.linalg.pinv(Z.T @ Z) @ Z.T @ args[0])
         return np.dot(
             Z, scipy.linalg.lstsq(Z, args[0], cond=None, lapack_driver="gelsy")[0]
         )
@@ -54,6 +55,7 @@ def proj(Z, *args):
         # The gelsy driver raises in this case - we handle it separately
         return (*(np.zeros_like(f) for f in args),)
 
+    # fs = np.dot(Z, scipy.linalg.pinv(Z.T @ Z) @ Z.T @ fs)
     fs = np.dot(Z, scipy.linalg.lstsq(Z, fs, cond=None, lapack_driver="gelsy")[0])
     return (
         *(fs[:, i:j].reshape(f.shape) for i, j, f in zip(csum[:-1], csum[1:], args)),
@@ -231,7 +233,6 @@ def _find_roots(f, a, b, tol, max_value, max_eval, n_points=50):
         return b  # conservative
     if np.isinf(a):
         return a
-
     sgn = np.sign(b - a)
     if np.isinf(b):
         grid = np.ones(n_points) * a
@@ -283,9 +284,13 @@ def _characteristic_roots(a, b, subset_by_index=None):
     np.ndarray of dimension (n,)
         The characteristic roots of the generalized eigenvalue problem.
     """
+    eps = np.sqrt(np.finfo(b.dtype).eps)
+    if a.shape == (1, 1) and np.abs(b.item() / a.item()) < eps:
+        return np.array([np.inf])
+
     cond = np.linalg.cond(b)
 
-    if cond < 0.5 / np.finfo(b.dtype).eps:
+    if cond < 1 / eps:
         return scipy.linalg.eigvalsh(a=a, b=b, subset_by_index=subset_by_index)
 
     if subset_by_index is not None:
