@@ -458,7 +458,7 @@ def inverse_conditional_likelihood_ratio_test(
 
     if k == mx + mw:
         return inverse_anderson_rubin_test(
-            Z=Z, X=X, W=W, y=y, fit_intercept=fit_intercept, alpha=alpha
+            Z=Z, X=X, W=W, y=y, C=C, D=D, fit_intercept=fit_intercept, alpha=alpha
         )
 
     if fit_intercept:

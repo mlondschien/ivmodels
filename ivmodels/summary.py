@@ -197,6 +197,9 @@ class Summary:
         self.f_statistic_, self.f_p_value_ = tests.rank_test(
             Z, X, C=C, fit_intercept=fit_intercept
         )
+        self.j_statistic_, self.j_p_value_ = tests.j_test(
+            Z, X, y=y, C=C, fit_intercept=fit_intercept
+        )
 
         return self
 
@@ -210,7 +213,8 @@ class Summary:
         string += f"""
 
 Endogenous model statistic: {self.statistic_:{format_spec}}, p-value: {_format_p_value(self.p_value_, format_spec)}
-(Multivariate) F-statistic: {self.f_statistic_:{format_spec}}, p-value: {_format_p_value(self.f_p_value_, format_spec)}"""
+(Multivariate) F-statistic: {self.f_statistic_:{format_spec}}, p-value: {_format_p_value(self.f_p_value_, format_spec)}
+J-statistic (LIML): {self.j_statistic_:{format_spec}}, p-value: {_format_p_value(self.j_p_value_, format_spec)}"""
         return string
 
     def __str__(self):  # noqa D

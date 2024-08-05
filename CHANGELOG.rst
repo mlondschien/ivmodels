@@ -8,6 +8,23 @@ Changelog
 
 - New test :func:`~ivmodels.tests.j.j_test` of the overidentifying restrictions.
 
+**Bug fixes:**
+
+- Fixed bug in :func:`~ivmodels.models.kclass.KClass.fit` when `C` is not `None` and
+  :math:`M_{[Z, C]} X` is not full rank.
+
+- Fixed bug in
+  :func:`~ivmodels.tests.conditional_likelihood_ratio.inverse_conditional_likelihood_ratio_test`
+  when `k == mw + mx` and `C`` is not `None`.
+
+- Fixed bug in :func:`~ivmodels.utils._characteristic_roots` if `b == np.array([[0]])`.
+  This now correctly returns `np.inf`.
+
+**Other changes:**
+
+- The :class:`~ivmodels.summary.Summary` now additionally reports the LIML variant of
+  the J-statistic.
+
 0.3.1 - 2024-07-30
 ------------------
 
