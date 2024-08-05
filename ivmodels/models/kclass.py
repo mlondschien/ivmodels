@@ -5,7 +5,7 @@ import numpy as np
 from glum import GeneralizedLinearRegressor
 
 from ivmodels.summary import Summary
-from ivmodels.utils import _characteristic_roots, _check_inputs, oproj, proj, to_numpy
+from ivmodels.utils import _characteristic_roots, _check_inputs, proj, to_numpy
 
 try:
     import pandas as pd
@@ -271,8 +271,7 @@ class KClassMixin:
 
         Xy = np.concatenate([X, y.reshape(-1, 1)], axis=1)
         Xy_proj = np.concatenate([X_proj, y_proj.reshape(-1, 1)], axis=1)
-        # Here possibly Xy_proj.T @ Xy != Xy_proj.T @ Xy_proj, if called from
-        # KClass.fit() with C!=None.
+
         return _characteristic_roots(
             a=Xy.T @ Xy_proj, b=(Xy - Xy_proj).T @ Xy, subset_by_index=subset_by_index
         )
@@ -385,11 +384,8 @@ class KClassMixin:
             y = y - y_mean
             Z = Z - Z.mean(axis=0)
 
-            if mc > 0:
-                c_mean = C.mean(axis=0)
-                C = C - c_mean
-            else:
-                c_mean = np.zeros(0)
+            c_mean = C.mean(axis=0)  # by _check_inputs, C=None -> C = np.zeros((n, 0))
+            C = C - c_mean
         else:
             x_mean, y_mean, c_mean = np.zeros(mx), 0, np.zeros(mc)
 
@@ -412,7 +408,6 @@ class KClassMixin:
             X_proj = np.hstack([X_proj, C])
             X = np.hstack([X, C])
             x_mean = np.hstack([x_mean, c_mean])
-
         else:
             X_proj, y_proj = proj(Z, X, y)
 
@@ -426,15 +421,22 @@ class KClassMixin:
                 # If C!=None, we compute the ar_min as if we removed C from all design
                 # matrices. I.e., we replace Z <- M_C Z, X <- M_C X, y <- M_C y.
                 # We also exclude the columns in X coming from C.
-                X_orth_C, y_orth_C = oproj(C, X[:, :mx], y)
+                X_proj_C, y_proj_C = proj(C, X[:, :mx], y)
+                # Here ar_min = lambdamin (
+                #   (X y)^T M_{[Z, C]} (X y)^{-1} (X y)^T P_{M_C Z} (X y)
+                # ).
+                # Thus X_proj <- P_[M_C Z] X = P_[Z, C] X - P_C X = X_proj - X_proj_C
+                # and X <- M_C X = X - X_proj_C. Some for y.
                 self.ar_min_ = self.ar_min(
-                    X_orth_C,
-                    y_orth_C,
-                    X_proj=X_proj[:, :mx],
-                    y_proj=y_proj,
+                    X[:, :mx] - X_proj_C,
+                    y - y_proj_C,
+                    X_proj=X_proj[:, :mx] - X_proj_C,
+                    y_proj=y_proj - y_proj_C,
                 )
                 self.kappa_liml_ = 1 + self.ar_min_
-                self.kappa_ = self.kappa_liml_ - self.fuller_alpha_ / (n - k - mc)
+                self.kappa_ = self.kappa_liml_ - self.fuller_alpha_ / (
+                    n - k - mc - self.fit_intercept
+                )
         else:
             self.kappa_ = self.kappa
 
