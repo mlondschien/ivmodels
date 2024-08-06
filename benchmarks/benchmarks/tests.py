@@ -27,7 +27,7 @@ class Tests:
     def setup(self, n, data):
 
         if data == "guggenberger12 (k=10)":
-            Z, X, y, C, W, beta = simulate_guggenberger12(
+            Z, X, y, C, W, _, beta = simulate_guggenberger12(
                 n=n, k=10, seed=0, return_beta=True
             )
         else:

@@ -533,7 +533,7 @@ def inverse_conditional_likelihood_ratio_test(
             )
         )
 
-    boundaries = []
+    roots = []
     for left_upper, right_upper in cs_upper.boundaries:
         left_lower_, right_lower_ = None, None
         for left_lower, right_lower in cs_lower.boundaries:
@@ -550,24 +550,26 @@ def inverse_conditional_likelihood_ratio_test(
             else:
                 continue
 
-        boundaries.append(
-            (
-                _find_roots(
-                    f,
-                    left_lower_,
-                    left_upper,
-                    tol=tol,
-                    max_value=max_value,
-                    max_eval=max_eval,
-                ),
-                _find_roots(
-                    f,
-                    right_lower_,
-                    right_upper,
-                    tol=tol,
-                    max_value=max_value,
-                    max_eval=max_eval,
-                ),
-            )
+        roots += _find_roots(
+            f,
+            left_lower_,
+            left_upper,
+            tol=tol,
+            max_value=max_value,
+            max_eval=max_eval,
+            max_depth=5,
         )
+        roots += _find_roots(
+            f,
+            right_lower_,
+            right_upper,
+            tol=tol,
+            max_value=max_value,
+            max_eval=max_eval,
+        )
+
+    roots = sorted(roots)
+
+    assert len(roots) % 2 == 0
+    boundaries = [(left, right) for left, right in zip(roots[::2], roots[1::2])]
     return ConfidenceSet(boundaries=boundaries)

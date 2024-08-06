@@ -215,13 +215,13 @@ def _check_inputs(Z, X, y, W=None, C=None, D=None, beta=None):
     return Z, X, y, W, C, D, beta
 
 
-def _find_roots(f, a, b, tol, max_value, max_eval, n_points=50):
+def _find_roots(f, a, b, tol, max_value, max_eval, n_points=50, max_depth=5):
     """
-    Find the root of function ``f`` between ``a`` and ``b`` closest to ``b``.
+    Find roots of function ``f`` between ``a`` and ``b``.
 
     Assumes ``f(a) < 0`` and ``f(b) > 0``. Finds root by building a grid between ``a``
-    and ``b`` with ``n_points``, evaluating ``f`` at each point, and finding the last
-    point where ``f`` is negative. If ``b`` is infinite, uses a logarithmic grid between
+    and ``b`` with ``n_points``, evaluating ``f`` at each point, and finding indices
+    where ``f`` switches sign. If ``b`` is infinite, uses a logarithmic grid between
     ``a`` and ``a + sign(b - a) * max_value``. The function is then called recursively
     on the new interval until the size of the interval is less than ``tol`` or the
     maximum number of evaluations ``max_eval`` of ``f`` is reached.
@@ -230,40 +230,57 @@ def _find_roots(f, a, b, tol, max_value, max_eval, n_points=50):
     closest to ``b``. Note that this is also not strictly ensured by this function.
     """
     if np.abs(b - a) < tol or max_eval < 0:
-        return b  # conservative
+        return [b]  # conservative, resulting in a larger interval
+
     if np.isinf(a):
-        return a
+        return [a]
+
+    roots = []
+
     sgn = np.sign(b - a)
     if np.isinf(b):
         grid = np.ones(n_points) * a
-        grid[1:] += sgn * np.logspace(0, np.log10(max_value), n_points - 1)
+        grid[1:] += sgn * np.logspace(tol, np.log10(max_value), n_points - 1)
     else:
         grid = np.linspace(a, b, n_points)
 
     y = np.zeros(n_points)
-    y[-1] = f(grid[-1])
-    if y[-1] < 0:
-        return sgn * np.inf
 
     y[0] = f(grid[0])
     if y[0] >= 0:
         raise ValueError("f(a) must be negative.")
 
-    for i, x in enumerate(grid[:-1]):
-        y[i] = f(x)
+    for i, x in enumerate(grid[1:]):
+        y[i + 1] = f(x)
 
-    last_positive = np.where(y < 0)[0][-1]
+    if y[-1] <= 0:
+        roots = [b]
 
-    # f(a_new) < 0 < f(b_new) -> repeat
-    return _find_roots(
-        f,
-        grid[last_positive],
-        grid[last_positive + 1],
-        tol=tol,
-        n_points=n_points,
-        max_value=None,
-        max_eval=max_eval - n_points,
-    )
+    y[y == 0] = np.finfo(y.dtype).eps
+    where = np.where(np.sign(y[:-1]) != np.sign(y[1:]))[0]
+
+    # Conservative. Focus on change closest to b.
+    if max_depth == 0:
+        where = where[-1:]
+
+    for idx, w in enumerate(where):
+        if idx % 2 == 0:
+            a, b = grid[w], grid[w + 1]
+        else:
+            a, b = grid[w + 1], grid[w]
+
+        roots += _find_roots(
+            f,
+            a,
+            b,
+            tol=tol,
+            n_points=n_points,
+            max_value=max_value,
+            max_eval=max_eval - n_points,
+            max_depth=max_depth - len(where) > 1,
+        )
+
+    return roots
 
 
 def _characteristic_roots(a, b, subset_by_index=None):
