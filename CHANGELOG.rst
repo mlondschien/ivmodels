@@ -8,6 +8,11 @@ Changelog
 
 - New test :func:`~ivmodels.tests.j.j_test` of the overidentifying restrictions.
 
+- The tests :func:`~ivmodels.tests.lagrange_multiplier.inverse_lagrange_multiplier_test`
+  and
+  :func:`~ivmodels.tests.conditional_likelihood_ratio.inverse_conditional_likelihood_ratio_test`
+  now possibly return unions of intervals, instead of one conservative large interval.
+
 **Bug fixes:**
 
 - Fixed bug in :func:`~ivmodels.models.kclass.KClass.fit` when `C` is not `None` and
