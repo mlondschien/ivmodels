@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 import scipy
 
-from ivmodels.utils import _characteristic_roots, oproj, proj, to_numpy
+from ivmodels.utils import _characteristic_roots, _find_roots, oproj, proj, to_numpy
 
 
 def test_proj():
@@ -132,3 +132,20 @@ def test_characteristic_roots(dim, rank):
     assert np.allclose(
         _characteristic_roots(A, B, subset_by_index=[0, 0]), np.min(finite_roots)
     )
+
+
+@pytest.mark.parametrize(
+    "f, a, b, expected",
+    [
+        (np.sin, -1, 8, [0, np.pi, 2 * np.pi]),
+        (lambda x: -np.sin(x), 8, -1, [0, np.pi, 2 * np.pi]),
+        (lambda x: x**2 - 1, 0, 2, [1]),
+        (lambda x: x**2 - 1, 0, -np.inf, [-1]),
+        (lambda x: x**3 - x, -2, 2, [-1, 0, 1]),
+        (lambda x: x**3 - x, 0.5, -np.inf, [-np.inf, -1, 0]),
+    ],
+)
+@pytest.mark.parametrize("tol", [1e-3, 1e-6])
+def test_find_roots(f, a, b, expected, tol):
+    roots = _find_roots(f, a, b, max_value=1e6, max_eval=1e4, tol=tol)
+    assert np.allclose(sorted(roots), expected, atol=tol)

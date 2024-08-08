@@ -490,7 +490,7 @@ def inverse_lagrange_multiplier_test(
     else:
         liml = KClass(kappa="liml", fit_intercept=False).fit(W, y, Z=Z, C=D).coef_[-1]
 
-    left = _find_roots(
+    roots = _find_roots(
         lambda x: lm.lm(x) - critical_value,
         a=liml,
         b=-np.inf,
@@ -498,7 +498,7 @@ def inverse_lagrange_multiplier_test(
         max_value=max_value,
         max_eval=max_eval,
     )
-    right = _find_roots(
+    roots += _find_roots(
         lambda x: lm.lm(x) - critical_value,
         a=liml,
         b=np.inf,
@@ -506,4 +506,8 @@ def inverse_lagrange_multiplier_test(
         max_value=max_value,
         max_eval=max_eval,
     )
-    return ConfidenceSet(boundaries=[(left, right)])
+
+    roots = sorted(roots)
+    assert len(roots) % 2 == 0
+    boundaries = [(left, right) for left, right in zip(roots[::2], roots[1::2])]
+    return ConfidenceSet(boundaries=boundaries)
