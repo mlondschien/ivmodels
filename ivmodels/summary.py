@@ -145,6 +145,7 @@ class Summary:
         fit_intercept = self.kclass.fit_intercept
 
         for name in feature_names:
+
             idx = np.where(np.array(all_feature_names) == name)[0][0]
             mask = np.zeros(len(all_feature_names), dtype=bool)
             mask[idx] = True
