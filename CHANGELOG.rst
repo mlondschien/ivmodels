@@ -1,6 +1,13 @@
 Changelog
 =========
 
+0.5.0 - 2024-0x-xx
+------------------
+
+**New features:**
+
+- The Wald test now supports robust covariance estimation.
+
 0.4.0 - 2024-08-08
 ------------------
 

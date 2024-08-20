@@ -17,7 +17,6 @@ def wald_test(
     estimator="tsls",
     fit_intercept=True,
     robust=False,
-    # weights=None,
 ):
     """
     Test based on asymptotic normality of the TSLS (or LIML) estimator.
@@ -68,6 +67,9 @@ def wald_test(
         Whether to include an intercept. The intercept will be included both in the
         complete and the (restricted) model. Including an intercept is equivalent to
         centering the columns of all design matrices.
+    robust: bool, optional, default = False
+        Whether to use a robust variance estimator. If ``True``, the sandwich estimator
+        is used.
 
     Returns
     -------
@@ -85,15 +87,6 @@ def wald_test(
 
     """
     Z, X, y, W, C, D, beta = _check_inputs(Z, X, y, W=W, C=C, D=D, beta=beta)
-
-    # if weights is not None:
-    #     sqrt_weights = np.sqrt(weights).reshape(-1, 1)
-    #     X = X * sqrt_weights
-    #     y = y * sqrt_weights.flatten()
-    #     Z = Z * sqrt_weights
-    #     W = W * sqrt_weights
-    #     C = C * sqrt_weights
-    #     D = D * sqrt_weights
 
     n, mx = X.shape
     mw, mc, md = W.shape[1], C.shape[1], D.shape[1]
