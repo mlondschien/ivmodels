@@ -7,7 +7,17 @@ from ivmodels.utils import _check_inputs, oproj, proj
 
 
 def wald_test(
-    Z, X, y, beta, W=None, C=None, D=None, estimator="tsls", fit_intercept=True
+    Z,
+    X,
+    y,
+    beta,
+    W=None,
+    C=None,
+    D=None,
+    estimator="tsls",
+    fit_intercept=True,
+    robust=False,
+    # weights=None,
 ):
     """
     Test based on asymptotic normality of the TSLS (or LIML) estimator.
@@ -76,6 +86,15 @@ def wald_test(
     """
     Z, X, y, W, C, D, beta = _check_inputs(Z, X, y, W=W, C=C, D=D, beta=beta)
 
+    # if weights is not None:
+    #     sqrt_weights = np.sqrt(weights).reshape(-1, 1)
+    #     X = X * sqrt_weights
+    #     y = y * sqrt_weights.flatten()
+    #     Z = Z * sqrt_weights
+    #     W = W * sqrt_weights
+    #     C = C * sqrt_weights
+    #     D = D * sqrt_weights
+
     n, mx = X.shape
     mw, mc, md = W.shape[1], C.shape[1], D.shape[1]
 
@@ -88,12 +107,8 @@ def wald_test(
     XW = np.concatenate([X, W], axis=1)
 
     estimator = KClass(kappa=estimator, fit_intercept=False).fit(XW, y, Z, C=D)
-
-    residuals = y - estimator.predict(XW, C=D)
-    sigma_hat_sq = np.sum(residuals**2) / (n - mx - mw - mc - md - fit_intercept)
-
     kappa = estimator.kappa_
-
+    residuals = y - estimator.predict(XW, C=D)
     if md > 0:
         Z = np.hstack([Z, D])
 
@@ -103,19 +118,39 @@ def wald_test(
         X_proj = np.hstack([X_proj, D])
         X = np.hstack([X, D])
 
-    Xkappa = kappa * X_proj + (1 - kappa) * X
-    cov_hat = Xkappa.T @ X
+    xd_mask = np.ones(mx + mw + md, bool)
+    xd_mask[mx : (mx + mw)] = False
 
-    if mw > 0:
-        Wkappa = kappa * W_proj + (1 - kappa) * W
-        cov_hat -= Xkappa.T @ W @ np.linalg.solve(Wkappa.T @ W, W.T @ Xkappa)
-        beta_hat = np.concatenate([estimator.coef_[:mx], estimator.coef_[(mx + mw) :]])
+    beta_hat = estimator.coef_[xd_mask]
+
+    dof = n - mx - mw - mc - md - fit_intercept
+
+    if robust:
+        if md > 0:
+            XW = np.hstack([X, W])
+        XW_proj = np.hstack([X_proj, W_proj])
+
+        XW_kappa = kappa * XW_proj + (1 - kappa) * XW
+        cov_hat = scipy.linalg.inv(XW_kappa.T @ XW)  # (X^T (P_Z - kappa M_Z) X)^-1
+        XW_proj_res = residuals.reshape(-1, 1) * XW_proj
+
+        # X^T P_Z diag(res^2) P_Z X, why the * n factor??
+        sigma_hat = XW_proj_res.T @ XW_proj_res * n / dof
+        cov_hat = cov_hat @ sigma_hat @ cov_hat  # sandwich
+        cov_hat_inv = scipy.linalg.inv(cov_hat[: (mx + md), : (mx + md)])
     else:
-        beta_hat = estimator.coef_
+        sigma_hat_sq = np.sum(residuals**2) / dof
 
-    statistic = (beta_hat - beta).T @ cov_hat @ (beta_hat - beta)
+        Xkappa = kappa * X_proj + (1 - kappa) * X
+        cov_hat_inv = Xkappa.T @ X
 
-    statistic /= sigma_hat_sq
+        if mw > 0:
+            Wkappa = kappa * W_proj + (1 - kappa) * W
+            cov_hat_inv -= Xkappa.T @ W @ np.linalg.solve(Wkappa.T @ W, W.T @ Xkappa)
+
+        cov_hat_inv /= sigma_hat_sq
+
+    statistic = (beta_hat - beta).T @ cov_hat_inv @ (beta_hat - beta)
 
     p_value = 1 - scipy.stats.chi2.cdf(statistic, df=mx + md)
 

@@ -22,6 +22,8 @@ from ivmodels.tests import (
 )
 
 liml_wald_test = partial(wald_test, estimator="liml")
+robust_liml_wald_test = partial(wald_test, estimator="liml", robust=True)
+robust_wald_test = partial(wald_test, robust=True)
 liml_inverse_wald_test = partial(inverse_wald_test, estimator="liml")
 guggenberger_anderson_rubin_test = partial(
     anderson_rubin_test, critical_values="guggenberger2019more"
@@ -51,7 +53,9 @@ TEST_PAIRS = [
         f_anderson_rubin_test,
         lagrange_multiplier_test,
         wald_test,
+        robust_wald_test,
         liml_wald_test,
+        robust_liml_wald_test,
         likelihood_ratio_test,
         conditional_likelihood_ratio_test,
     ],
@@ -98,7 +102,9 @@ def test_subvector_test_size(test, n, mx, mw, k, md, mc, fit_intercept):
         f_anderson_rubin_test,
         lagrange_multiplier_test,
         wald_test,
+        robust_wald_test,
         liml_wald_test,
+        robust_liml_wald_test,
         likelihood_ratio_test,
         conditional_likelihood_ratio_test,
     ],
@@ -189,7 +195,9 @@ def test_subvector_test_size_weak_instruments(test, n, k, md):
         anderson_rubin_test,
         f_anderson_rubin_test,
         wald_test,
+        robust_wald_test,
         liml_wald_test,
+        robust_liml_wald_test,
         likelihood_ratio_test,
         conditional_likelihood_ratio_test,
     ],
@@ -336,7 +344,7 @@ def test_test_round_trip(test, inverse_test, data, p_value):
         (wald_test, inverse_wald_test),
         (liml_wald_test, liml_inverse_wald_test),
         (anderson_rubin_test, inverse_anderson_rubin_test),
-        # (lagrange_multiplier_test, inverse_lagrange_multiplier_test),
+        (lagrange_multiplier_test, inverse_lagrange_multiplier_test),
         (f_anderson_rubin_test, inverse_f_anderson_rubin_test),
         (likelihood_ratio_test, inverse_likelihood_ratio_test),
         (conditional_likelihood_ratio_test, inverse_conditional_likelihood_ratio_test),
@@ -414,7 +422,9 @@ def test_subvector_round_trip(test, inverse_test, data, p_value):
         anderson_rubin_test,
         f_anderson_rubin_test,
         wald_test,
+        robust_wald_test,
         liml_wald_test,
+        robust_liml_wald_test,
         likelihood_ratio_test,
         conditional_likelihood_ratio_test,
     ],
