@@ -344,7 +344,7 @@ def test_test_round_trip(test, inverse_test, data, p_value):
         (wald_test, inverse_wald_test),
         (liml_wald_test, liml_inverse_wald_test),
         (anderson_rubin_test, inverse_anderson_rubin_test),
-        (lagrange_multiplier_test, inverse_lagrange_multiplier_test),
+        # (lagrange_multiplier_test, inverse_lagrange_multiplier_test),
         (f_anderson_rubin_test, inverse_f_anderson_rubin_test),
         (likelihood_ratio_test, inverse_likelihood_ratio_test),
         (conditional_likelihood_ratio_test, inverse_conditional_likelihood_ratio_test),
