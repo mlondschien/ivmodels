@@ -67,6 +67,8 @@ class _LM:
     gamma_0: list of str or np.ndarray of dimension (mw), optional, default=None
         Initial value for the minimization. If ``str``, must be one of "liml" or "zero".
         If ``None``, ``"liml"`` is used.
+    tol: float, optional, default=None
+        Tolerance for the optimization algorithm.
     """
 
     def __init__(
@@ -81,8 +83,8 @@ class _LM:
         W_proj=None,
         optimizer="bfgs",
         gamma_0=None,
+        tol=None,
     ):
-
         self.X = X
         self.y = y.reshape(-1, 1)
         self.W = W
@@ -116,6 +118,7 @@ class _LM:
         self.gamma_0 = ["liml"] if gamma_0 is None else gamma_0
         if isinstance(self.gamma_0, str):
             self.gamma_0 = [self.gamma_0]
+        self.tol = tol
 
     def liml(self, beta=None):
         """
@@ -299,7 +302,12 @@ class _LM:
 
             results.append(
                 scipy.optimize.minimize(
-                    objective, jac=jac, hess=hess, x0=gamma_0, method=self.optimizer
+                    objective,
+                    jac=jac,
+                    hess=hess,
+                    x0=gamma_0,
+                    method=self.optimizer,
+                    tol=self.tol,
                 )
             )
 

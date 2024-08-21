@@ -240,7 +240,7 @@ def _find_roots(f, a, b, tol, max_value, max_eval, n_points=50, max_depth=5):
     sgn = np.sign(b - a)
     if np.isinf(b):
         grid = np.ones(n_points) * a
-        grid[1:] += sgn * np.logspace(tol, np.log10(max_value), n_points - 1)
+        grid[1:] += sgn * np.logspace(np.log10(tol), np.log10(max_value), n_points - 1)
     else:
         grid = np.linspace(a, b, n_points)
 
