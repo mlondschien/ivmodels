@@ -16,7 +16,7 @@ from ivmodels.simulate import simulate_gaussian_iv
     ],
 )
 @pytest.mark.parametrize(
-    "n, mx, k, mc, fit_intercept", [(100, 2, 3, 0, False), (100, 4, 10, 2, True)]
+    "n, mx, k, mc, fit_intercept", [(100, 2, 3, 0, False), (1000, 4, 10, 2, True)]
 )
 def test_kclass_summary(test, n, mx, k, mc, fit_intercept):
     Z, X, y, C, _, _ = simulate_gaussian_iv(
