@@ -8,6 +8,13 @@ Changelog
 
 - The Wald test now supports robust covariance estimation.
 
+**Other changes:**
+
+- One can now pass the tolerance parameter `tol` to the optimization algorithm in
+  :func:`~ivmodels.tests.lagrange_multiplier.lagrange_multiplier_test` and
+  :func:`~ivmodels.tests.lagrange_multiplier.inverse_lagrange_multiplier_test` via the
+  `kwargs`.
+
 0.4.0 - 2024-08-08
 ------------------
 
