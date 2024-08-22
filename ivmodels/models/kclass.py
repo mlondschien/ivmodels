@@ -366,6 +366,11 @@ class KClassMixin:
         n, k = Z.shape
         mx, mc = X.shape[1], C.shape[1]
 
+        if k < mx:
+            raise ValueError(
+                f"Need at least as many instruments {k} as endogenous regressors {mx}."
+            )
+
         # Including an intercept is equivalent to replacing y <- M_1 y, X <- M_1 X,
         # C <- M_1 C, Z <- M_1 Z, where M_1 = Id - 1/n 1 1^T is the projection
         # orthogonal to np.ones(n). I.e., center the columns of all design matrices.
@@ -418,21 +423,25 @@ class KClassMixin:
                 self.kappa_ = 0
             else:
                 self.fuller_alpha_ = self._fuller_alpha(self.kappa)
-                # If C!=None, we compute the ar_min as if we removed C from all design
-                # matrices. I.e., we replace Z <- M_C Z, X <- M_C X, y <- M_C y.
-                # We also exclude the columns in X coming from C.
-                X_proj_C, y_proj_C = proj(C, X[:, :mx], y)
-                # Here ar_min = lambdamin (
-                #   (X y)^T M_{[Z, C]} (X y)^{-1} (X y)^T P_{M_C Z} (X y)
-                # ).
-                # Thus X_proj <- P_[M_C Z] X = P_[Z, C] X - P_C X = X_proj - X_proj_C
-                # and X <- M_C X = X - X_proj_C. Some for y.
-                self.ar_min_ = self.ar_min(
-                    X[:, :mx] - X_proj_C,
-                    y - y_proj_C,
-                    X_proj=X_proj[:, :mx] - X_proj_C,
-                    y_proj=y_proj - y_proj_C,
-                )
+
+                if mx == k:
+                    self.ar_min_ = 0
+                else:
+                    # If C!=None, we compute the ar_min as if we removed C from all design
+                    # matrices. I.e., we replace Z <- M_C Z, X <- M_C X, y <- M_C y.
+                    # We also exclude the columns in X coming from C.
+                    X_proj_C, y_proj_C = proj(C, X[:, :mx], y)
+                    # Here ar_min = lambdamin (
+                    #   (X y)^T M_{[Z, C]} (X y)^{-1} (X y)^T P_{M_C Z} (X y)
+                    # ).
+                    # Thus X_proj <- P_[M_C Z] X = P_[Z, C] X - P_C X = X_proj - X_proj_C
+                    # and X <- M_C X = X - X_proj_C. Some for y.
+                    self.ar_min_ = self.ar_min(
+                        X[:, :mx] - X_proj_C,
+                        y - y_proj_C,
+                        X_proj=X_proj[:, :mx] - X_proj_C,
+                        y_proj=y_proj - y_proj_C,
+                    )
                 self.kappa_liml_ = 1 + self.ar_min_
                 self.kappa_ = self.kappa_liml_ - self.fuller_alpha_ / (
                     n - k - mc - self.fit_intercept
