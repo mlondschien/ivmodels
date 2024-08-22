@@ -8,6 +8,8 @@ Changelog
 
 - The Wald test now supports robust covariance estimation.
 
+- New method `length` for :class:`~ivmodels.confidence_set.ConfidenceSet`.
+
 **Other changes:**
 
 - One can now pass the tolerance parameter `tol` to the optimization algorithm in
