@@ -366,9 +366,10 @@ class KClassMixin:
         n, k = Z.shape
         mx, mc = X.shape[1], C.shape[1]
 
-        if k < mx:
+        if self.kappa_ >= 1 and k < mx:
             raise ValueError(
-                f"Need at least as many instruments {k} as endogenous regressors {mx}."
+                f"Need at least as many instruments (got {k}) as endogenous regressors "
+                f"(got {mx})."
             )
 
         # Including an intercept is equivalent to replacing y <- M_1 y, X <- M_1 X,
