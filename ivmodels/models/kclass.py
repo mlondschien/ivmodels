@@ -366,7 +366,13 @@ class KClassMixin:
         n, k = Z.shape
         mx, mc = X.shape[1], C.shape[1]
 
-        if self.kappa_ >= 1 and k < mx:
+        if (
+            (
+                isinstance(self.kappa, str)
+                and self.kappa.lower() in {"tsls", "2sls", "liml"}
+            )
+            or (isinstance(self.kappa, (int, float)) and self.kappa >= 1)
+        ) and k < mx:
             raise ValueError(
                 f"Need at least as many instruments (got {k}) as endogenous regressors "
                 f"(got {mx})."
