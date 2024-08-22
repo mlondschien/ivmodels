@@ -13,7 +13,8 @@ It implements
    :maxdepth: 1
    :caption: Examples
 
-   Card <examples/card1995using.ipynb>
+   Card (1993) Using Geographic Variation in College Proximity to Estimate the Return to Schooling <examples/card1993using.ipynb>
+   Tanaka, Camerer, Nguyen (2010) Risk and time preferences: Linkining experimental and household survey data from vietnam <examples/tanaka2010risk.ipynb>
 
 
 Estimators
