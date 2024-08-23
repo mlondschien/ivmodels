@@ -8,17 +8,17 @@ Changelog
 
 - The Wald test now supports robust covariance estimation.
 
-- New method `length` for :class:`~ivmodels.confidence_set.ConfidenceSet`.
+- New method ``length`` for :class:`~ivmodels.confidence_set.ConfidenceSet`.
 
 **Other changes:**
 
-- One can now pass the tolerance parameter `tol` to the optimization algorithm in
+- One can now pass the tolerance parameter ``tol`` to the optimization algorithm in
   :func:`~ivmodels.tests.lagrange_multiplier.lagrange_multiplier_test` and
   :func:`~ivmodels.tests.lagrange_multiplier.inverse_lagrange_multiplier_test` via the
-  `kwargs`.
+  ``kwargs``.
 
-- :class:`~ivmodels.models.kclass.KClass` now raises if `kappa >= 1` (as for the LIML
-  and TSLS estimators) and the number of instruments is less than the number of
+- :class:`~ivmodels.models.kclass.KClass` now raises if ``kappa >= 1`` (as for the
+  LIML and TSLS estimators) and the number of instruments is less than the number of
   endogenous regressors.
 
 0.4.0 - 2024-08-08
@@ -35,15 +35,15 @@ Changelog
 
 **Bug fixes:**
 
-- Fixed bug in :func:`~ivmodels.models.kclass.KClass.fit` when `C` is not `None` and
+- Fixed bug in :func:`~ivmodels.models.kclass.KClass.fit` when ``C`` is not ``None`` and
   :math:`M_{[Z, C]} X` is not full rank.
 
 - Fixed bug in
   :func:`~ivmodels.tests.conditional_likelihood_ratio.inverse_conditional_likelihood_ratio_test`
-  when `k == mw + mx` and `C`` is not `None`.
+  when ``k == mw + mx`` and ``C`` is not ``None``.
 
-- Fixed bug in :func:`~ivmodels.utils._characteristic_roots` if `b == np.array([[0]])`.
-  This now correctly returns `np.inf`.
+- Fixed bug in :func:`~ivmodels.utils._characteristic_roots` if
+  ``b == np.array([[0]])``. This now correctly returns ``np.inf``.
 
 **Other changes:**
 
@@ -78,8 +78,8 @@ Changelog
   model fit.
 
 - The :class:`~ivmodels.models.kclass.KClass` gets new attributes after fitting a model:
-  `endogenous_names_`, `exogenous_names_`,  and `instrument_names_`. If pandas is
-  installed, there's also `names_coefs_`.
+  ``endogenous_names_``, ``exogenous_names_``,  and ``instrument_names_``. If pandas is
+  installed, there's also ``names_coefs_``.
 
 - The tests :func:`~ivmodels.tests.anderson_rubin_test`,
   :func:`~ivmodels.tests.lagrange_multiplier_test`,
@@ -88,7 +88,7 @@ Changelog
   :func:`~ivmodels.tests.inverse_anderson_rubin_test`,
   :func:`~ivmodels.tests.inverse_lagrange_multiplier_test`,
   :func:`~ivmodels.tests.inverse_likelihood_ratio_test`, and
-  :func:`~ivmodels.tests.inverse_wald_test` now support an additional parameter `D`
+  :func:`~ivmodels.tests.inverse_wald_test` now support an additional parameter ``D``
   of exogenous covariates to be included in the test. This is not supported for
   the conditional likelihood ratio test.
 
@@ -96,8 +96,8 @@ Changelog
 
 - The function :func:`~ivmodels.tests.lagrange_multiplier_test` is now slightly faster.
 
-- :class:`~ivmodels.models.kclass.KClass` now accepts `pandas.Series` as arguments to
-  `y`.
+- :class:`~ivmodels.models.kclass.KClass` now accepts ``pandas.Series`` as arguments to
+  ``y``.
 
 0.2.0 - 2024-06-07
 ------------------
@@ -114,7 +114,7 @@ Changelog
 **Other changes:**
 
 - The utility functions :func:`~ivmodels.utils.proj` and :func:`~ivmodels.utils.oproj`
-  now use the `scipy.linalg(..., lapack_driver="gelsy")`. This results in a speedup.
+  now use the ``scipy.linalg(..., lapack_driver="gelsy")``. This results in a speedup.
 
 - The numerical integration function
   :func:`~ivmodels.tests.conditional_likelihood_ratio.conditional_likelihood_ratio_critical_value_function`
