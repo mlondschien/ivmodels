@@ -1,8 +1,8 @@
-ivmodels
-========
+API
+===
 
 Estimators
-=============
+----------
 
 .. autoclass:: ivmodels.KClass
    :members: fit
@@ -21,14 +21,14 @@ Estimators
    :noindex:
 
 Tests
-=====
+-----
 
 .. automodule:: ivmodels.tests
    :members:
    :noindex:
 
 Summary
-=======
+-------
 
 .. autoclass:: ivmodels.summary.Summary
    :members:
@@ -39,14 +39,14 @@ Summary
    :noindex:
 
 ConfidenceSet
-=============
+-------------
 
 .. autoclass:: ivmodels.confidence_set.ConfidenceSet
    :members:
    :noindex:
 
 Quadric
-=======
+-------
 
 .. autoclass:: ivmodels.quadric.Quadric
    :members:
@@ -54,6 +54,6 @@ Quadric
 
 
 Bibliography
-============
+------------
 
 .. bibliography::
