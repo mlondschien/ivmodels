@@ -590,7 +590,7 @@ class KClass(KClassMixin, GeneralizedLinearRegressor):
         matrix :math:`((X \\ \\ y)^T M_Z (X \\ \\ y))^{-1} (X \\ \\ y)^T (X \\ y)`,
         where :math:`P_Z` is the projection matrix onto the subspace spanned by :math:`Z`
         and :math:`M_Z = Id - P_Z`.
-        If exogenous included regressors math:`C` are specified, then
+        If exogenous included regressors :math:`C` are specified, then
         :math:`\\kappa_\\mathrm{LIML}` is the smallest eigenvalue of the matrix
         :math:`((X \\ \\ y)^T M_{[Z, C]} (X \\ \\ y))^{-1} (X \\ \\ y)^T M_C (X \\ y)`.
         If ``kappa="fuller(a)"``, then
