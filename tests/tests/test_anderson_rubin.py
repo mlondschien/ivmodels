@@ -70,7 +70,7 @@ def test_more_powerful_sAR_critical_value_function_integrates_to_one(k, hat_kapp
 
 @pytest.mark.parametrize("alpha", [0.1, 0.05, 0.01])
 @pytest.mark.parametrize(
-    "n, k, mx, mw", [(100, 2, 1, 0), (100, 2, 2, 1), (100, 20, 5, 5)]
+    "n, k, mx, mw", [(100, 2, 2, 0), (100, 3, 2, 1), (100, 20, 5, 5)]
 )
 def test_inverse_anderson_rubin_confidence_set_alternative_formulation(
     alpha, n, k, mx, mw
