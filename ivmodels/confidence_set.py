@@ -64,3 +64,7 @@ class ConfidenceSet:
             return ConfidenceSet([(-np.inf, np.inf)])
         else:
             return ConfidenceSet([(-np.inf, boundary[0]), (boundary[1], np.inf)])
+
+    def length(self):
+        """Return the length of the confidence set."""
+        return sum(right - left for left, right in self.boundaries)

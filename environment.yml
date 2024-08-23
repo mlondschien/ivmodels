@@ -18,3 +18,5 @@ dependencies:
   - sphinx_rtd_theme  # docs
   - sphinxcontrib-bibtex  # docs
   - pip  # docs
+  - nbclassic  # docs
+  - nbsphinx  # docs
