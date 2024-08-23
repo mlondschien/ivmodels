@@ -17,6 +17,10 @@ Changelog
   :func:`~ivmodels.tests.lagrange_multiplier.inverse_lagrange_multiplier_test` via the
   `kwargs`.
 
+- :class:`~ivmodels.models.kclass.KClass` now raises if `kappa >= 1` (as for the LIML
+  and TSLS estimators) and the number of instruments is less than the number of
+  endogenous regressors.
+
 0.4.0 - 2024-08-08
 ------------------
 

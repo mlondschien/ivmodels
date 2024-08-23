@@ -76,6 +76,12 @@ def likelihood_ratio_test(Z, X, y, beta, W=None, C=None, D=None, fit_intercept=T
     n, k = Z.shape
     mx, mw, mc, md = X.shape[1], W.shape[1], C.shape[1], D.shape[1]
 
+    if k < mx + mw:
+        raise ValueError(
+            "The number of instruments must be at least the number of endogenous "
+            "regressors."
+        )
+
     if fit_intercept:
         C = np.hstack([np.ones((n, 1)), C])
 
@@ -91,11 +97,14 @@ def likelihood_ratio_test(Z, X, y, beta, W=None, C=None, D=None, fit_intercept=T
 
     XWy_proj = np.hstack([X_proj, W_proj, y_proj.reshape(-1, 1)])
 
-    ar_min = _characteristic_roots(
-        a=oproj(D, XWy).T @ XWy_proj,
-        b=XWy.T @ (XWy - XWy_proj),
-        subset_by_index=[0, 0],
-    )[0]
+    if k == mx + mw:
+        ar_min = 0
+    else:
+        ar_min = _characteristic_roots(
+            a=oproj(D, XWy).T @ XWy_proj,
+            b=XWy.T @ (XWy - XWy_proj),
+            subset_by_index=[0, 0],
+        )[0]
 
     if md > 0:
         X = np.hstack([X, D])
@@ -189,13 +198,16 @@ def inverse_likelihood_ratio_test(
     XWy_proj = np.concatenate([XW_proj, y_proj.reshape(-1, 1)], axis=1)
     XWy = np.concatenate([XW, y.reshape(-1, 1)], axis=1)
 
-    kappa_liml = np.real(
-        _characteristic_roots(
-            a=oproj(D, XWy).T @ XWy_proj,
-            b=XWy.T @ (XWy - XWy_proj),
-            subset_by_index=[0, 0],
-        )[0]
-    )
+    if k == mx + mw:
+        kappa_liml = 0
+    else:
+        kappa_liml = np.real(
+            _characteristic_roots(
+                a=oproj(D, XWy).T @ XWy_proj,
+                b=XWy.T @ (XWy - XWy_proj),
+                subset_by_index=[0, 0],
+            )[0]
+        )
 
     dfd = n - k - mc - md - fit_intercept
     quantile = scipy.stats.chi2.ppf(1 - alpha, df=mx + md) + dfd * kappa_liml
