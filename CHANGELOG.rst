@@ -24,6 +24,8 @@ Changelog
 - The :class:`~ivmodels.summary.Summary` now only includes and prints the results of the
   J-statistic and (multivariate) F-test for instrument strength if this makes sense.
 
+- The docs have been updated and include examples.
+
 0.4.0 - 2024-08-08
 ------------------
 
