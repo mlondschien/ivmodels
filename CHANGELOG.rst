@@ -1,7 +1,7 @@
 Changelog
 =========
 
-0.5.0 - 2024-0x-xx
+0.5.0 - 2024-08-27
 ------------------
 
 **New features:**
@@ -20,6 +20,11 @@ Changelog
 - :class:`~ivmodels.models.kclass.KClass` now raises if ``kappa >= 1`` (as for the
   LIML and TSLS estimators) and the number of instruments is less than the number of
   endogenous regressors.
+
+- The :class:`~ivmodels.summary.Summary` now only includes and prints the results of the
+  J-statistic and (multivariate) F-test for instrument strength if this makes sense.
+
+- The docs have been updated and include examples.
 
 0.4.0 - 2024-08-08
 ------------------

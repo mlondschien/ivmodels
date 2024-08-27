@@ -195,12 +195,18 @@ class Summary:
         self.statistic_, self.p_value_ = test_(
             Z=Z, X=X, y=y, C=C, beta=np.zeros(X.shape[1]), fit_intercept=fit_intercept
         )
-        self.f_statistic_, self.f_p_value_ = tests.rank_test(
-            Z, X, C=C, fit_intercept=fit_intercept
-        )
-        self.j_statistic_, self.j_p_value_ = tests.j_test(
-            Z, X, y=y, C=C, fit_intercept=fit_intercept
-        )
+
+        self.f_statistic_, self.f_p_value_ = (
+            tests.rank_test(Z, X, C=C, fit_intercept=fit_intercept)
+            if self.kclass._is_iv_estimator()
+            else None
+        ), None
+
+        self.j_statistic_, self.j_p_value_ = (
+            tests.j_test(Z, X, y=y, C=C, fit_intercept=fit_intercept)
+            if self.kclass._is_iv_estimator() and Z.shape[1] > X.shape[1]
+            else None
+        ), None
 
         return self
 
@@ -213,9 +219,14 @@ class Summary:
 
         string += f"""
 
-Endogenous model statistic: {self.statistic_:{format_spec}}, p-value: {_format_p_value(self.p_value_, format_spec)}
-(Multivariate) F-statistic: {self.f_statistic_:{format_spec}}, p-value: {_format_p_value(self.f_p_value_, format_spec)}
+Endogenous model statistic: {self.statistic_:{format_spec}}, p-value: {_format_p_value(self.p_value_, format_spec)}"""
+        if self.f_statistic_ is not None and self.f_p_value_ is not None:
+            string += f"""
+(Multivariate) F-statistic: {self.f_statistic_:{format_spec}}, p-value: {_format_p_value(self.f_p_value_, format_spec)}"""
+        if self.j_statistic_ is not None and self.j_p_value_ is not None:
+            string += f"""
 J-statistic (LIML): {self.j_statistic_:{format_spec}}, p-value: {_format_p_value(self.j_p_value_, format_spec)}"""
+
         return string
 
     def __str__(self):  # noqa D
