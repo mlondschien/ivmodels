@@ -257,6 +257,20 @@ class KClassMixin:
         else:
             return 0.0
 
+    def _is_iv_estimator(self, kappa=None):
+        """Check if the estimator is an IV estimator."""
+        if kappa is None:
+            kappa = self.kappa
+
+        if isinstance(kappa, str):
+            fuller_match = re.match(r"fuller(\(\d+\.?\d*\))?", kappa, re.IGNORECASE)
+            return kappa.lower() in {"tsls", "2sls", "liml"} or fuller_match is not None
+
+        # Note that this can be inconsistent, as fuller(1) is an IV estimator, but
+        # might result in kappa<1, e.g., if k=mx.
+        elif isinstance(kappa, (float, int)):
+            return self.kappa >= 1
+
     @staticmethod
     def _spectrum(X, y, Z=None, X_proj=None, y_proj=None, subset_by_index=None):
         if (y_proj is None or X_proj is None) and Z is None:
@@ -366,13 +380,7 @@ class KClassMixin:
         n, k = Z.shape
         mx, mc = X.shape[1], C.shape[1]
 
-        if (
-            (
-                isinstance(self.kappa, str)
-                and self.kappa.lower() in {"tsls", "2sls", "liml"}
-            )
-            or (isinstance(self.kappa, (int, float)) and self.kappa >= 1)
-        ) and k < mx:
+        if self._is_iv_estimator() and k < mx:
             raise ValueError(
                 f"Need at least as many instruments (got {k}) as endogenous regressors "
                 f"(got {mx})."
