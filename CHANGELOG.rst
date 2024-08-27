@@ -21,6 +21,9 @@ Changelog
   LIML and TSLS estimators) and the number of instruments is less than the number of
   endogenous regressors.
 
+- The :class:`~ivmodels.summary.Summary` now only includes and prints the results of the
+  J-statistic and (multivariate) F-test for instrument strength if this makes sense.
+
 0.4.0 - 2024-08-08
 ------------------
 
