@@ -73,8 +73,10 @@ jobs:
       - name: Build source distribution and wheel
         run: python -m build --sdist --wheel
 
-      - name: Test build
+      - name: Install wheel
         run: python -m pip install dist/*.whl
+
+      - name: Test import
         run: python -c "from ivmodels import KClass"
 
       - uses: actions/upload-artifact@v3
