@@ -1,6 +1,13 @@
 Changelog
 =========
 
+0.5.1 - 2024-09-16
+------------------
+
+**Bug fixes:**
+
+- Fixed the ``setuptools`` configuration.
+
 0.5.0 - 2024-08-27
 ------------------
 
