@@ -44,6 +44,13 @@ def test_kclass_summary(test, n, mx, k, mc, fit_intercept):
 
     assert table.feature_names == names
 
+    if k < mx:
+        assert summary.f_statistic_ > 0
+        assert 0 <= summary.f_p_value_ <= 1
+
+    assert summary.j_statistic_ > 0
+    assert 0 <= summary.j_p_value_ <= 1
+
     summary_string = str(summary)
     for name in names:
         assert name in summary_string
