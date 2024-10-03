@@ -23,6 +23,7 @@ jobs:
         with:
           micromamba-version: 1.5.10-0
           cache-env: true
+          environment-file: environment.yml
           extra-specs: |
             python=${{ matrix.PYTHON_VERSION }}
       - name: Install repository
