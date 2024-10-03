@@ -1,6 +1,13 @@
 Changelog
 =========
 
+0.5.2 - 2024-10-03
+------------------
+
+**Bug fixes:**
+
+- The :class:`~ivmodels.summary.Summary` now correctly includes the rank and J test results.
+
 0.5.1 - 2024-09-16
 ------------------
 

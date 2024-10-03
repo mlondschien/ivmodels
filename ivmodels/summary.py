@@ -199,14 +199,14 @@ class Summary:
         self.f_statistic_, self.f_p_value_ = (
             tests.rank_test(Z, X, C=C, fit_intercept=fit_intercept)
             if self.kclass._is_iv_estimator()
-            else None
-        ), None
+            else (None, None)
+        )
 
         self.j_statistic_, self.j_p_value_ = (
             tests.j_test(Z, X, y=y, C=C, fit_intercept=fit_intercept)
             if self.kclass._is_iv_estimator() and Z.shape[1] > X.shape[1]
-            else None
-        ), None
+            else (None, None)
+        )
 
         return self
 
