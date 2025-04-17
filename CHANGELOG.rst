@@ -1,6 +1,15 @@
 Changelog
 =========
 
+0.5.3 - 2025-04-17
+------------------
+
+**Bug fixes:**
+
+- The classes :class:`~ivmodels.models.kclass.KClass` and
+  :class:`~ivmodels.models.anchor_regression.AnchorRegression` now set attributes
+  ``n_features_in_`` and ``feature_names_in_`` to comply with sckit-learn SLEP 7 and 10.
+
 0.5.2 - 2024-10-03
 ------------------
 
