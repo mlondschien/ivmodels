@@ -69,12 +69,17 @@ class KClassMixin:
 
         Returns
         -------
-        X: np.array, shape (n_samples, n_features - n_instrument - n_exogenous)
-            The input data with instrument and exogenous columns removed.
-        Z: np.array, shape (n_samples, n_instrument)
-            The instrument data.
-        C: np.array, shape (n_samples, n_exogenous)
-            The exogenous data.
+        (X, Z, C): tuple of np.arrays
+            Tuple of:
+            - `X` of shape `(n_samples, n_features - n_instrument - n_exogenous)`, the
+              input data with instrument and exogenous columns removed.
+            - `Z` of shape `(n_samples, n_instrument)`, the instrument data.
+            - `C` of shape `(n_samples, n_exogenous)`, the exogenous data.
+        (endogenous_names, instrument_names, exogenous_names): tuple of lists
+            Tuple of:
+            - `endogenous_names`, the names of the endogenous columns.
+            - `instrument_names`, the names of the instrument columns.
+            - `exogenous_names`, the names of the exogenous columns.
 
         Raises
         ------
@@ -370,6 +375,10 @@ class KClassMixin:
         (X, Z, C), names = self._X_Z_C(X, Z, C, predict=False)
         Z, X, y, _, C, _, _ = _check_inputs(Z, X, y, C=C)
 
+        # for sklearn>=1.6 compatibility
+        self.n_features_in_ = X.shape[1] + C.shape[1]
+        self.feature_names_in_ = names[0] + names[2]
+
         self.endogenous_names_, self.instrument_names_, self.exogenous_names_ = names
 
         if self.fit_intercept and any("intercept" in n for n in names):
@@ -474,6 +483,7 @@ class KClassMixin:
             y_tilde = (
                 np.sqrt(1 - self.kappa_) * y + (1 - np.sqrt(1 - self.kappa_)) * y_proj
             ) + y_mean
+
             super().fit(X_tilde, y_tilde, *args, **kwargs)
 
         else:
