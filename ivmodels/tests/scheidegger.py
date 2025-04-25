@@ -95,7 +95,7 @@ def scheidegger_test(
     residuals_a = ya - iv_model_a.predict(Xa, C=Ca)
     nonlinear_model.fit(X=XCa, y=residuals_a)
 
-    iv_model_b = KClass(kappa, fit_intercept=fit_intercept).fit(Xb, yb, Za, C=Cb)
+    iv_model_b = KClass(kappa, fit_intercept=fit_intercept).fit(Xb, yb, Zb, C=Cb)
     residuals_b = yb - iv_model_b.predict(Xb, C=Cb).flatten()
 
     predictions_a = nonlinear_model.predict(X=XCa).flatten()
