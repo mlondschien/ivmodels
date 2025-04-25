@@ -1,5 +1,6 @@
 import numpy as np
 import scipy
+from sklearn.ensemble import RandomForestRegressor
 
 from ivmodels.models.kclass import KClass
 from ivmodels.utils import _check_inputs, proj
@@ -9,8 +10,8 @@ def scheidegger_test(
     Z,
     X,
     y,
-    nonlinear_model,
     C=None,
+    nonlinear_model=None,
     kappa="tsls",
     fit_intercept=True,
     train_fraction=None,
@@ -28,10 +29,11 @@ def scheidegger_test(
         Regressors.
     y: np.ndarray of dimension (n,)
         Outcomes.
-    nonlinear_model: object
-        Object with a `fit` and `predict` method.
     C: np.ndarray of dimension (n, mc) or None, optional, default = None
         Included exogenous regressors.
+    nonlinear_model: object, optional, default = None
+        Object with a `fit` and `predict` method. If `None`, uses an
+        `sklearn.ensemble.RandomForestRegressor()`.
     kappa: str, optional, default = "tsls"
         The instrumental variables estimator to use for the test. E.g., `"tsls"` or
         `"liml"`.
@@ -55,9 +57,10 @@ def scheidegger_test(
     ------
     ValueError:
         If the dimensions of the inputs are incorrect.
-
     ValueError:
         If `train_fraction` is not in (0, 1).
+    ValueError:
+        If `nonlinear_model` does not have a `fit` and `predict` method.
 
     References
     ----------
@@ -69,13 +72,20 @@ def scheidegger_test(
     Z, X, y, _, C, _, _ = _check_inputs(Z, X, y, C=C)
     ZC = np.hstack([Z, C])
 
-    n, k = Z.shape
+    n, _ = Z.shape
 
     if train_fraction is None:
         train_fraction = min(0.5, np.e / np.log(n))
     if not 0 < train_fraction < 1:
         raise ValueError("train_fraction must be in (0, 1).")
 
+    if nonlinear_model is None:
+        nonlinear_model = RandomForestRegressor(n_estimators=20, random_state=seed)
+    elif not hasattr(nonlinear_model, "fit") or not hasattr(nonlinear_model, "predict"):
+        raise ValueError(
+            "nonlinear_model must have a `fit` and `predict` method. If you want to "
+            "use a different model, please use the `sklearn` interface."
+        )
     # We split the data into 2 samples: _a and _b. A good choice for n_a is n / log(n).
     # We fit a linear iv estimator beta_a : ya ~ Xa | Za and a nonlinear model
     # (ya - Xa @ beta_a) ~ Za. Under H0: E[y - X beta_a | Z] = 0, there should be no
