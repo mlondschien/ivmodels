@@ -6,7 +6,7 @@ from sklearn.ensemble import RandomForestRegressor
 from ivmodels.tests import scheidegger_test
 
 
-@pytest.mark.parametrize("n, k, mx", [(100, 3, 0), (100, 3, 1), (100, 20, 5)])
+@pytest.mark.parametrize("n, k, mx", [(100, 3, 3), (100, 3, 1), (100, 20, 5)])
 @pytest.mark.parametrize("fit_intercept", [True, False])
 def test_scheidegger_test(n, k, mx, fit_intercept):
     rng = np.random.default_rng(0)
