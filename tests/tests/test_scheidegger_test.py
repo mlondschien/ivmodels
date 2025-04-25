@@ -33,7 +33,7 @@ def test_scheidegger_test(n, k, mx, fit_intercept):
             nonlinear_model=RandomForestRegressor(n_estimators=20),
             kappa="tsls",
             fit_intercept=fit_intercept,
-            train_fraction=0.4,
+            train_fraction=0.6,
             clipping_quantile=0.8,
             seed=0,
         )
