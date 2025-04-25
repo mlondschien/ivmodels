@@ -66,7 +66,7 @@ def scheidegger_test(
 
        scheidegger2025residual
     """
-    Z, X, y, C = _check_inputs(Z, X, y, C=C)
+    Z, X, y, _, C, _, _ = _check_inputs(Z, X, y, C=C)
     XC = np.hstack([X, C])
 
     n, k = Z.shape
@@ -91,18 +91,18 @@ def scheidegger_test(
     Xa, ya, Za, Ca, XCa = X[mask], y[mask], Z[mask], C[mask], XC[mask]
     Xb, yb, Zb, Cb, XCb = X[~mask], y[~mask], Z[~mask], C[~mask], XC[~mask]
 
-    iv_model_a = KClass(kappa, fit_inbrcept=fit_intercept).fit(Za, Xa, ya, C=Ca)
+    iv_model_a = KClass(kappa, fit_intercept=fit_intercept).fit(Xa, ya, Za, C=Ca)
     residuals_a = ya - iv_model_a.predict(Xa, C=Ca)
     nonlinear_model.fit(X=XCa, y=residuals_a)
 
-    iv_model_b = KClass(kappa, fit_intercept=fit_intercept).fit(Zb, Xb, yb, C=Cb)
-    residuals_b = yb - iv_model_b.predict(Xb, C=Cb)
+    iv_model_b = KClass(kappa, fit_intercept=fit_intercept).fit(Xb, yb, Za, C=Cb)
+    residuals_b = yb - iv_model_b.predict(Xb, C=Cb).flatten()
 
-    predictions_a = nonlinear_model.predict(X=XCa)
+    predictions_a = nonlinear_model.predict(X=XCa).flatten()
     clip = np.quantile(np.abs(predictions_a), clipping_quantile)
     wb = np.clip(nonlinear_model.predict(X=XCb) / clip, -1, 1)
 
-    XCb_proj = np.hstack([proj(np.hstack([Zb, Cb], Xb)), Cb])
+    XCb_proj = np.hstack([proj(np.hstack([Zb, Cb]), Xb), Cb])
     # pinv(X) = (X^T @ X)^(-1) @ X^T
     sigma_sq_hat = (
         np.mean(
@@ -111,6 +111,6 @@ def scheidegger_test(
         - np.mean(wb * residuals_b) ** 2
     )
 
-    stat = wb.T @ residuals_b / np.sqrt(sigma_sq_hat)
+    stat = wb.T @ residuals_b / np.sqrt(sigma_sq_hat) / np.sqrt(n)
     p_value = 1 - scipy.stats.norm.cdf(stat)
     return stat, p_value

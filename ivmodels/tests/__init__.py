@@ -11,6 +11,7 @@ from .lagrange_multiplier import (
 from .likelihood_ratio import inverse_likelihood_ratio_test, likelihood_ratio_test
 from .pulse import inverse_pulse_test, pulse_test
 from .rank import rank_test
+from .scheidegger import scheidegger_test
 from .wald import inverse_wald_test, wald_test
 
 __all__ = [
@@ -28,4 +29,5 @@ __all__ = [
     "wald_test",
     "inverse_wald_test",
     "rank_test",
+    "scheidegger_test",
 ]
