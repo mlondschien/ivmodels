@@ -3,14 +3,14 @@ import pytest
 import scipy
 from sklearn.ensemble import RandomForestRegressor
 
-from ivmodels.tests import scheidegger_test
+from ivmodels.tests import residual_prediction_test
 
 
 @pytest.mark.parametrize(
     "n, k, mx, fit_intercept",
     [(200, 3, 3, True), (200, 3, 1, False), (200, 15, 5, False)],
 )
-def test_scheidegger_test(n, k, mx, fit_intercept):
+def test_residual_prediction_test(n, k, mx, fit_intercept):
     rng = np.random.default_rng(0)
 
     Pi = rng.normal(size=(k, mx))
@@ -28,7 +28,7 @@ def test_scheidegger_test(n, k, mx, fit_intercept):
         X[:, 0] += Z[:, 0] ** 2  # allow for nonlinearity Z -> X
         y = X @ beta + U[:, 0:1] + U[:, 0:1] ** 3 + rng.normal(size=(n, 1))
 
-        statistics[idx], p_values[idx] = scheidegger_test(
+        statistics[idx], p_values[idx] = residual_prediction_test(
             Z=Z,
             X=X,
             y=y,
@@ -46,7 +46,7 @@ def test_scheidegger_test(n, k, mx, fit_intercept):
     )
 
 
-def test_scheidegger_test_rejects():
+def test_residual_prediction_test_rejects():
     rng = np.random.default_rng(0)
 
     Pi = rng.normal(size=(5, 2))
@@ -56,7 +56,7 @@ def test_scheidegger_test_rejects():
     X = Z @ Pi + rng.normal(size=(200, 2))
     y = X @ beta + Z[:, 0:1] ** 2 + rng.normal(size=(200, 1))
 
-    _, p_value = scheidegger_test(
+    _, p_value = residual_prediction_test(
         Z=Z,
         X=X,
         y=y,

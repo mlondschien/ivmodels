@@ -6,7 +6,7 @@ from ivmodels.models.kclass import KClass
 from ivmodels.utils import _check_inputs, proj
 
 
-def scheidegger_test(
+def residual_prediction_test(
     Z,
     X,
     y,
