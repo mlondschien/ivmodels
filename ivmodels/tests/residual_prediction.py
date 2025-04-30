@@ -20,12 +20,12 @@ def residual_prediction_test(
     seed=0,
 ):
     """
-    Perform the residual prediction test for well-specification of the model.
+    Perform the residual prediction test :cite:p:`scheidegger2025residual` model specification.
 
     This uses a nonlinear model to test
 
     .. math::
-       H_0: \\exists \\beta_0 \\in \\mathbb{R}^p \\mathrm{ such that } \\mathbb{E}[y - X \\beta | Z] = 0.
+       H_0: \\exists \\beta_0 \\in \\mathbb{R}^p \\mathrm{\\ such \\ that \\ } \\mathbb{E}[y - X \\beta | Z] = 0.
 
     Parameters
     ----------
