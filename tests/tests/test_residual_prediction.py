@@ -32,7 +32,7 @@ def test_residual_prediction_test(n, k, mx, fit_intercept):
             Z=Z,
             X=X,
             y=y,
-            nonlinear_model=RandomForestRegressor(n_estimators=20),
+            nonlinear_model=RandomForestRegressor(n_estimators=20, random_state=0),
             kappa="tsls",
             fit_intercept=fit_intercept,
             train_fraction=0.6,
