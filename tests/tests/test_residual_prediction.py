@@ -36,7 +36,6 @@ def test_residual_prediction_test(n, k, mx, fit_intercept):
             kappa="tsls",
             fit_intercept=fit_intercept,
             train_fraction=0.6,
-            clipping_quantile=0.8,
             seed=0,
         )
 
@@ -64,7 +63,6 @@ def test_residual_prediction_test_rejects():
         kappa="tsls",
         fit_intercept=False,
         train_fraction=None,
-        clipping_quantile=0.8,
         seed=0,
     )
     assert p_value < 0.05
