@@ -12,7 +12,6 @@ def residual_prediction_test(
     y,
     C=None,
     nonlinear_model=None,
-    kappa="tsls",
     fit_intercept=True,
     train_fraction=None,
     upper_clipping_quantile=0.9,
@@ -40,9 +39,6 @@ def residual_prediction_test(
     nonlinear_model: object, optional, default = None
         Object with a ``fit`` and ``predict`` method. If ``None``, uses an
         ``sklearn.ensemble.RandomForestRegressor()``.
-    kappa: str, optional, default = "tsls"
-        The instrumental variables estimator to use for the test. E.g., ``"tsls"`` or
-        ``"liml"``.
     fit_intercept: bool, optional, default = True
         Whether to include an intercept. This is equivalent to centering the inputs.
     train_fraction: float, optional, default = None
@@ -120,11 +116,11 @@ def residual_prediction_test(
     Xa, ya, Za, Ca, ZCa = X[mask], y[mask], Z[mask], C[mask], ZC[mask]
     Xb, yb, Zb, Cb, ZCb = X[~mask], y[~mask], Z[~mask], C[~mask], ZC[~mask]
 
-    iv_model_a = KClass(kappa, fit_intercept=fit_intercept).fit(Xa, ya, Za, C=Ca)
+    iv_model_a = KClass("tsls", fit_intercept=fit_intercept).fit(Xa, ya, Za, C=Ca)
     residuals_a = ya - iv_model_a.predict(Xa, C=Ca)
     nonlinear_model.fit(X=ZCa, y=residuals_a)
 
-    iv_model_b = KClass(kappa, fit_intercept=fit_intercept).fit(Xb, yb, Zb, C=Cb)
+    iv_model_b = KClass("tsls", fit_intercept=fit_intercept).fit(Xb, yb, Zb, C=Cb)
     residuals_b = yb - iv_model_b.predict(Xb, C=Cb).flatten()
 
     predictions_a = nonlinear_model.predict(X=ZCa).flatten()
