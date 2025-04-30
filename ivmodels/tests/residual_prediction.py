@@ -38,11 +38,11 @@ def residual_prediction_test(
     C: np.ndarray of dimension (n, mc) or None, optional, default = None
         Included exogenous regressors.
     nonlinear_model: object, optional, default = None
-        Object with a `fit` and `predict` method. If `None`, uses an
-        `sklearn.ensemble.RandomForestRegressor()`.
+        Object with a ``fit`` and ``predict`` method. If ``None``, uses an
+        ``sklearn.ensemble.RandomForestRegressor()``.
     kappa: str, optional, default = "tsls"
-        The instrumental variables estimator to use for the test. E.g., `"tsls"` or
-        `"liml"`.
+        The instrumental variables estimator to use for the test. E.g., ``"tsls"`` or
+        ``"liml"``.
     fit_intercept: bool, optional, default = True
         Whether to include an intercept. This is equivalent to centering the inputs.
     train_fraction: float, optional, default = None
@@ -53,12 +53,12 @@ def residual_prediction_test(
         Asymptotic normality requires the nonlinear model's prediction not to put too
         much weight in the tails. To avoid this, we clip its "test set" predictions by
         a certail threshold in absolute value. The threshold is the
-        `upper_clipping_quantile` of predictions on the "train" data. Must be between 0
+        ``upper_clipping_quantile`` of predictions on the "train" data. Must be between 0
         and 1.
     lower_clipping_value: float, optional, default = 0.1
         Asymptotic normality requires that the test statistics variance is not too
         small. We do a pre-test for this. Clipping the predictions of the nonlinear
-        model to `lower_clipping_value` in absolute value, after rescaling, let's us
+        model to ``lower_clipping_value`` in absolute value, after rescaling, let's us
         choose a reasonable threshold. Must be between 0 and 1. Set this to 0.0 to
         disable the pre-test.
     seed: int, optional, default = 0
@@ -76,9 +76,9 @@ def residual_prediction_test(
     ValueError:
         If the dimensions of the inputs are incorrect.
     ValueError:
-        If `train_fraction` is not in (0, 1).
+        If ``train_fraction`` is not in (0, 1).
     ValueError:
-        If `nonlinear_model` does not have a `fit` and `predict` method.
+        If ``nonlinear_model`` does not have a ``fit`` and ``predict`` method.
 
     References
     ----------
