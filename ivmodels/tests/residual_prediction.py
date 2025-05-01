@@ -84,6 +84,10 @@ def residual_prediction_test(
        scheidegger2025residual
     """
     Z, X, y, _, C, _, _ = _check_inputs(Z, X, y, C=C)
+
+    if fit_intercept:
+        C = np.hstack([np.ones((Z.shape[0], 1), dtype=C.dtype), C])
+
     ZC = np.hstack([Z, C])
 
     n, _ = Z.shape
@@ -116,11 +120,11 @@ def residual_prediction_test(
     Xa, ya, Za, Ca, ZCa = X[mask], y[mask], Z[mask], C[mask], ZC[mask]
     Xb, yb, Zb, Cb, ZCb = X[~mask], y[~mask], Z[~mask], C[~mask], ZC[~mask]
 
-    iv_model_a = KClass("tsls", fit_intercept=fit_intercept).fit(Xa, ya, Za, C=Ca)
+    iv_model_a = KClass("tsls", fit_intercept=False).fit(Xa, ya, Za, C=Ca)
     residuals_a = ya - iv_model_a.predict(Xa, C=Ca)
     nonlinear_model.fit(X=ZCa, y=residuals_a)
 
-    iv_model_b = KClass("tsls", fit_intercept=fit_intercept).fit(Xb, yb, Zb, C=Cb)
+    iv_model_b = KClass("tsls", fit_intercept=False).fit(Xb, yb, Zb, C=Cb)
     residuals_b = yb - iv_model_b.predict(Xb, C=Cb).flatten()
 
     predictions_a = nonlinear_model.predict(X=ZCa).flatten()
@@ -131,11 +135,10 @@ def residual_prediction_test(
     gamma = 0.1 * np.mean(residuals_b**2) * lower_clipping_value**2
 
     XCb_proj = np.hstack([proj(np.hstack([Zb, Cb]), Xb), Cb])
+    XCb = np.hstack([Xb, Cb])
     # pinv(X) = (X^T @ X)^(-1) @ X^T
     sigma_sq_hat = (
-        np.mean(
-            (wb - np.linalg.pinv(XCb_proj).T @ XCb_proj.T @ wb) ** 2 * residuals_b**2
-        )
+        np.mean((wb - np.linalg.pinv(XCb_proj).T @ XCb.T @ wb) ** 2 * residuals_b**2)
         - np.mean(wb * residuals_b) ** 2
     )
 
