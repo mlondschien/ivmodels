@@ -63,7 +63,7 @@ def residual_prediction_test(
     Returns
     -------
     statistic: float
-        The test statistic :math:`\\mathrm{AR}(\\beta)`.
+        The test statistic :math:`\\mathrm{T}`.
     p_value: float
         The p-value of the test.
 
