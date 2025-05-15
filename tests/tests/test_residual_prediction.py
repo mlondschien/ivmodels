@@ -40,6 +40,7 @@ def test_residual_prediction_test(n, k, mx, mc, fit_intercept, robust):
             X=X,
             y=y,
             C=C,
+            robust=robust,
             nonlinear_model=RandomForestRegressor(n_estimators=20, random_state=0),
             fit_intercept=fit_intercept,
             train_fraction=0.6,
