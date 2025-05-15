@@ -11,6 +11,7 @@ def residual_prediction_test(
     X,
     y,
     C=None,
+    robust=False,
     nonlinear_model=None,
     fit_intercept=True,
     train_fraction=None,
@@ -36,6 +37,8 @@ def residual_prediction_test(
         Outcomes.
     C: np.ndarray of dimension (n, mc) or None, optional, default = None
         Included exogenous regressors.
+    robust: bool or string, optional, default = False
+        Whether to use heteroskedasticity-robust standard errors.
     nonlinear_model: object, optional, default = None
         Object with a ``fit`` and ``predict`` method. If ``None``, uses an
         ``sklearn.ensemble.RandomForestRegressor()``.
@@ -136,15 +139,22 @@ def residual_prediction_test(
 
     XCb_proj = np.hstack([proj(np.hstack([Zb, Cb]), Xb), Cb])
     XCb = np.hstack([Xb, Cb])
-    # pinv(X) = (X^T @ X)^(-1) @ X^T
-    sigma_sq_hat = (
-        np.mean((wb - np.linalg.pinv(XCb_proj).T @ XCb.T @ wb) ** 2 * residuals_b**2)
-        - np.mean(wb * residuals_b) ** 2
-    )
+
+    if robust:
+        # pinv(X) = (X^T @ X)^(-1) @ X^T
+        sigma_sq_hat = (
+            np.mean(
+                (wb - np.linalg.pinv(XCb_proj).T @ XCb.T @ wb) ** 2 * residuals_b**2
+            )
+            - np.mean(wb * residuals_b) ** 2
+        )
+    else:
+        sigma_sq_hat = np.mean((wb - np.linalg.pinv(XCb_proj).T @ XCb.T @ wb) ** 2)
+        sigma_sq_hat *= np.mean(residuals_b**2)
 
     if sigma_sq_hat < gamma:  # Pre-test for variance
         return -np.inf, 1
 
-    stat = wb.T @ residuals_b / np.sqrt(sigma_sq_hat) / np.sqrt(n)
+    stat = wb.T @ residuals_b / np.sqrt(sigma_sq_hat) / np.sqrt(Xb.shape[0])
     p_value = 1 - scipy.stats.norm.cdf(stat)
     return stat, p_value
