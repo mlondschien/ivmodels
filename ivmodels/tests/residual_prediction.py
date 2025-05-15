@@ -155,6 +155,6 @@ def residual_prediction_test(
     if sigma_sq_hat < gamma:  # Pre-test for variance
         return -np.inf, 1
 
-    stat = wb.T @ residuals_b / np.sqrt(sigma_sq_hat) / np.sqrt(n)
+    stat = wb.T @ residuals_b / np.sqrt(sigma_sq_hat) / np.sqrt(Xb.shape[0])
     p_value = 1 - scipy.stats.norm.cdf(stat)
     return stat, p_value

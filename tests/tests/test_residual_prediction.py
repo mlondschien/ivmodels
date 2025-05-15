@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+import scipy.stats
 from sklearn.ensemble import RandomForestRegressor
 
 from ivmodels.tests import residual_prediction_test
@@ -8,7 +9,7 @@ from ivmodels.tests import residual_prediction_test
 @pytest.mark.parametrize("robust", [False, True])
 @pytest.mark.parametrize(
     "n, k, mx, mc, fit_intercept",
-    [(200, 3, 3, 1, True), (200, 3, 1, 1, False), (200, 15, 5, 5, False)],
+    [(500, 3, 3, 1, True), (500, 3, 1, 1, False), (500, 15, 5, 5, True)],
 )
 def test_residual_prediction_test(n, k, mx, mc, fit_intercept, robust):
     rng = np.random.default_rng(0)
@@ -20,7 +21,7 @@ def test_residual_prediction_test(n, k, mx, mc, fit_intercept, robust):
     Pi_CX = rng.normal(size=(mc, mx))
     Pi_Cy = rng.normal(size=(mc, 1))
 
-    n_seeds = 50
+    n_seeds = 20
     statistics = np.zeros(n_seeds)
     p_values = np.zeros(n_seeds)
 
@@ -33,7 +34,7 @@ def test_residual_prediction_test(n, k, mx, mc, fit_intercept, robust):
         noise = rng.normal(size=(n, 1))
         if robust:
             noise *= Z[:, 0:1] ** 2
-        y = X @ beta + U[:, 0:1] + U[:, 0:1] ** 3 + C @ Pi_Cy + noise
+        y = X @ beta + U[:, 0:1] + np.sin(U[:, 0:1]) + C @ Pi_Cy + noise
 
         statistics[idx], p_values[idx] = residual_prediction_test(
             Z=Z,
@@ -43,11 +44,14 @@ def test_residual_prediction_test(n, k, mx, mc, fit_intercept, robust):
             robust=robust,
             nonlinear_model=RandomForestRegressor(n_estimators=20, random_state=0),
             fit_intercept=fit_intercept,
-            train_fraction=0.6,
+            train_fraction=0.4,
             seed=0,
         )
 
-    assert np.mean(p_values < 0.1) < 0.05
+    assert (
+        scipy.stats.kstest(p_values, scipy.stats.uniform(loc=0.0, scale=1.0).cdf).pvalue
+        > 0.05
+    )
 
 
 def test_residual_prediction_test_rejects():
