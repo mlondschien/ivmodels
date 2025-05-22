@@ -20,7 +20,7 @@ def residual_prediction_test(
     seed=0,
 ):
     """
-    Perform the residual prediction test :cite:p:`scheidegger2025residual` model specification.
+    Perform the residual prediction test :cite:p:`scheidegger2025residual` for model specification.
 
     This uses a nonlinear model to test
 

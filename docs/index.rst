@@ -12,13 +12,13 @@ It implements
 Installation
 ============
 
-You can install the package through conda
+You can install the package with conda
 
 ::
 
    conda install ivmodels -c conda-forge
 
-or through pip
+or pip
 
 ::
 
