@@ -1,6 +1,14 @@
 Changelog
 =========
 
+0.6.0 - 2025-05-22
+------------------
+
+**New features:**
+
+- Added the :function:`~ivmodels.tests.residual_prediction.residual_prediction_test` for
+  model misspecification.
+
 0.5.3 - 2025-04-21
 ------------------
 
