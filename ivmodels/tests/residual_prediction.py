@@ -22,10 +22,31 @@ def residual_prediction_test(
     """
     Perform the residual prediction test :cite:p:`scheidegger2025residual` for model specification.
 
-    This uses a nonlinear model to test
+    This uses a nonlinear model to test the well specification of an IV model: "Is the
+    linear IV model appropriate for the data"? Formally, the null hypothesis is:
 
     .. math::
        H_0: \\exists \\beta_0 \\in \\mathbb{R}^p \\mathrm{\\ such \\ that \\ } \\mathbb{E}[y - X \\beta | Z] = 0.
+
+    The tests splits the data according to ``train_fraction`` into :math:`y_a, X_a, Z_a`
+    and :math:`y_b, X_b, Z_b` and fits a nonlinear model ``nonlinear_model``, regressing
+    :math:`\\hat \\varepsilon_a \\sim Z_a`` on the residuals
+    :math:`\\hat \\varepsilon_a := y_a - X_a \\hat \\hat \\beta_a` of a two-stage
+    least-squares (TSLS) estimator :math:`\\hat \\hat \\beta_a: y_a \\sim X_a | Z_a` on
+    the "train" data :math:`y_a, X_a, Z_a`.
+    The fitted nonlinear model is then used to predict the residuals on the "test" data
+    :math:`y_b, X_b, Z_b`, yielding
+    :math:`\\hat w_b := \\mathrm{nonlinear\\_model}(Z_b)`. Let
+    :math:`\\hat \\varepsilon_b := y_b - X_b \\hat \\hat \\beta_b` be the residuals of a
+    TSLS estimator :math:`\\hat \\hat \\beta_b: y_b \\sim X_b | Z_b` on the "test" data.
+    Let :math:`\\hat \\sigma^2` be an estimate of the variance of
+    :math:`w_b \\cdot \\hat \\varepsilon_b` under the null hypothesis. The test statistic
+    is
+
+    .. math::
+         T = \\frac{1}{\\sqrt{n_b}} \\frac{w_b^T \\hat \\varepsilon_b}{\\sqrt{\\hat \\sigma^2}}.
+
+    See also the test's `R implementation <https://github.com/cyrillsch/RPIV>`_.
 
     Parameters
     ----------
