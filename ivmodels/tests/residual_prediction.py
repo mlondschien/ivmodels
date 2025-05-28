@@ -30,23 +30,27 @@ def residual_prediction_test(
 
     The tests splits the data according to ``train_fraction`` into :math:`y_a, X_a, Z_a`
     and :math:`y_b, X_b, Z_b` and fits a nonlinear model ``nonlinear_model``, regressing
-    :math:`\\hat \\varepsilon_a \\sim Z_a`` on the residuals
-    :math:`\\hat \\varepsilon_a := y_a - X_a \\hat \\hat \\beta_a` of a two-stage
-    least-squares (TSLS) estimator :math:`\\hat \\hat \\beta_a: y_a \\sim X_a | Z_a` on
+    :math:`\\hat{\\varepsilon}_a \\sim Z_a` on the residuals
+    :math:`\\hat{\\varepsilon}_a := y_a - X_a \\hat \\beta_a` of a two-stage
+    least-squares (TSLS) estimator :math:` \\hat \\beta_a: y_a \\sim X_a | Z_a` on
     the "train" data :math:`y_a, X_a, Z_a`.
     The fitted nonlinear model is then used to predict the residuals on the "test" data
-    :math:`y_b, X_b, Z_b`, yielding
+    :math:`y_b, X_b, Z_b`, yielding weights
     :math:`\\hat w_b := \\mathrm{nonlinear\\_model}(Z_b)`. Let
-    :math:`\\hat \\varepsilon_b := y_b - X_b \\hat \\hat \\beta_b` be the residuals of a
-    TSLS estimator :math:`\\hat \\hat \\beta_b: y_b \\sim X_b | Z_b` on the "test" data.
-    Let :math:`\\hat \\sigma^2` be an estimate of the variance of
-    :math:`w_b \\cdot \\hat \\varepsilon_b` under the null hypothesis. The test statistic
+    :math:`\\hat \\varepsilon_b := y_b - X_b \\hat \\beta_b` be the residuals of a
+    TSLS estimator :math:`\\hat \\beta_b: y_b \\sim X_b | Z_b` on the "test" data and
+    :math:`\\hat \\sigma^2` be an estimate of the variance of
+    :math:`\\hat w_b \\cdot \\hat \\varepsilon_b` under the null hypothesis. The test
+    statistic
     is
 
     .. math::
          T = \\frac{1}{\\sqrt{n_b}} \\frac{w_b^T \\hat \\varepsilon_b}{\\sqrt{\\hat \\sigma^2}}.
 
-    See also the test's `R implementation <https://github.com/cyrillsch/RPIV>`_.
+    This is asymptotically :math:`\\mathcal{N}(0, 1)` under the null.
+
+    See also the test's `R implementation <https://github.com/cyrillsch/RPIV>`_ by
+    Cyrill Scheidegger.
 
     Parameters
     ----------
