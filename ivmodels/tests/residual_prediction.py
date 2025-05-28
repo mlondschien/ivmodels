@@ -47,7 +47,7 @@ def residual_prediction_test(
     .. math::
          T = \\frac{1}{\\sqrt{n_b}} \\frac{w_b^T \\hat \\varepsilon_b}{\\sqrt{\\hat \\sigma^2}}.
 
-    This is asymptotically :math:`\\mathcal{N}(0, 1)` under the null.
+    This is asymptotically standard Gaussian distributed under the null.
 
     See also the test's `R implementation <https://github.com/cyrillsch/RPIV>`_ by
     Cyrill Scheidegger.
@@ -63,7 +63,7 @@ def residual_prediction_test(
     C: np.ndarray of dimension (n, mc) or None, optional, default = None
         Included exogenous regressors.
     robust: bool or string, optional, default = False
-        Whether to use a heteroskedasticity-robust method to estimate
+        Whether to use a heteroskedasticity-robust method to estimate the noise level
         :math:`\\hat \\sigma^2`.
     nonlinear_model: object, optional, default = None
         Object with a ``fit`` and ``predict`` method. If ``None``, uses an
