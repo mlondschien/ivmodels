@@ -29,10 +29,10 @@ def residual_prediction_test(
        H_0: \\exists \\beta_0 \\in \\mathbb{R}^p \\mathrm{\\ such \\ that \\ } \\mathbb{E}[y - X \\beta | Z] = 0.
 
     The tests splits the data according to ``train_fraction`` into :math:`y_a, X_a, Z_a`
-    and :math:`y_b, X_b, Z_b` and fits a nonlinear model ``nonlinear_model``, regressing
+    and :math:`y_b, X_b, Z_b` and fits a nonlinear model regressing
     :math:`\\hat{\\varepsilon}_a \\sim Z_a` on the residuals
     :math:`\\hat{\\varepsilon}_a := y_a - X_a \\hat \\beta_a` of a two-stage
-    least-squares (TSLS) estimator :math:` \\hat \\beta_a: y_a \\sim X_a | Z_a` on
+    least-squares (TSLS) estimator :math:`\\hat \\beta_a: y_a \\sim X_a | Z_a` on
     the "train" data :math:`y_a, X_a, Z_a`.
     The fitted nonlinear model is then used to predict the residuals on the "test" data
     :math:`y_b, X_b, Z_b`, yielding weights
@@ -63,16 +63,17 @@ def residual_prediction_test(
     C: np.ndarray of dimension (n, mc) or None, optional, default = None
         Included exogenous regressors.
     robust: bool or string, optional, default = False
-        Whether to use heteroskedasticity-robust standard errors.
+        Whether to use a heteroskedasticity-robust method to estimate
+        :math:`\\hat \\sigma^2`.
     nonlinear_model: object, optional, default = None
         Object with a ``fit`` and ``predict`` method. If ``None``, uses an
         ``sklearn.ensemble.RandomForestRegressor()``.
     fit_intercept: bool, optional, default = True
         Whether to include an intercept. This is equivalent to centering the inputs.
     train_fraction: float, optional, default = None
-        Fraction of data to use to train the nonlinear model (`estimator`). Must be
+        Fraction of data to use to train the nonlinear model. Must be
         between 0 and 1. The remaining data is used to compute the test statistic. If
-        ``None``, 0.5 or ``e / log(n)`` is used, whichever is smaller.
+        ``None``, 0.5 or :math:`e / \\log(n)` is used, whichever is smaller.
     upper_clipping_quantile: float, optional, default = 0.9
         Asymptotic normality requires the nonlinear model's prediction not to put too
         much weight in the tails. To avoid this, we clip its "test set" predictions by
