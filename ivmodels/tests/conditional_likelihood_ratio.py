@@ -421,12 +421,16 @@ def inverse_conditional_likelihood_ratio_test(
     """
     Return an approximation of the confidence set by inversion of the CLR test.
 
+    Parameters
+    ----------
     Z: np.ndarray of dimension (n, k)
         Instruments.
     X: np.ndarray of dimension (n, mx)
         Regressors.
     y: np.ndarray of dimension (n,)
         Outcomes.
+    alpha: float, optional, default = 0.05
+        Significance level of the test.
     W: np.ndarray of dimension (n, mw) or None, optional, default = None
         Endogenous regressors not of interest.
     C: np.ndarray of dimension (n, mc) or None, optional, default = None
