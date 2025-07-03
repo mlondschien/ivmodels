@@ -32,6 +32,11 @@ f_anderson_rubin_test = partial(anderson_rubin_test, critical_values="f")
 inverse_f_anderson_rubin_test = partial(
     inverse_anderson_rubin_test, critical_values="f"
 )
+gkm_anderson_rubin_test = partial(anderson_rubin_test, critical_values="gkm")
+gkm_inverse_anderson_rubin_test = partial(
+    inverse_anderson_rubin_test, critical_values="gkm"
+)
+
 
 TEST_PAIRS = [
     (conditional_likelihood_ratio_test, inverse_conditional_likelihood_ratio_test),
@@ -277,6 +282,7 @@ def test_test_size_weak_ivs(test, n, mx, k, u, mc):
         (pulse_test, inverse_pulse_test),
         (anderson_rubin_test, inverse_anderson_rubin_test),
         (f_anderson_rubin_test, inverse_f_anderson_rubin_test),
+        (gkm_anderson_rubin_test, gkm_inverse_anderson_rubin_test),
         (wald_test, inverse_wald_test),
         (lagrange_multiplier_test, inverse_lagrange_multiplier_test),
         (liml_wald_test, liml_inverse_wald_test),
@@ -346,6 +352,7 @@ def test_test_round_trip(test, inverse_test, data, p_value):
         (anderson_rubin_test, inverse_anderson_rubin_test),
         # (lagrange_multiplier_test, inverse_lagrange_multiplier_test),
         (f_anderson_rubin_test, inverse_f_anderson_rubin_test),
+        (gkm_anderson_rubin_test, gkm_inverse_anderson_rubin_test),
         (likelihood_ratio_test, inverse_likelihood_ratio_test),
         (conditional_likelihood_ratio_test, inverse_conditional_likelihood_ratio_test),
     ],
@@ -373,7 +380,8 @@ def test_subvector_round_trip(test, inverse_test, data, p_value):
         md = 1 if data.endswith("(md=1)") else 0
         if test == lagrange_multiplier_test and md > 0:
             pytest.skip("LM test inverse not implemented for md + mx > 1")
-
+        if test == gkm_anderson_rubin_test and md > 0:
+            pytest.skip("GKM AR test inverse not implemented for md > 0")
         Z, X, y, C, W, D = simulate_guggenberger12(n=1000, k=5, seed=0, md=md)
         fit_intercept = False
     else:
@@ -383,7 +391,8 @@ def test_subvector_round_trip(test, inverse_test, data, p_value):
             pytest.skip("LM test inverse not implemented for mx + md > 1")
         if test == conditional_likelihood_ratio_test and mx + md > 1:
             pytest.skip("CLR test inverse not implemented for mx + md > 1")
-
+        if test == gkm_anderson_rubin_test and (mx != 1 or md != 0):
+            pytest.skip("GKM AR test inverse not implemented for mx != 1 or md != 0")
         Z, X, y, C, W, D = simulate_gaussian_iv(
             n=n, mx=mx, k=k, mw=mw, mc=mc, md=md, seed=0
         )
