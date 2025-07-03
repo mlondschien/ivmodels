@@ -367,6 +367,7 @@ def test_test_round_trip(test, inverse_test, data, p_value):
         (100, 1, 3, 2, 1, 1, False),
         "guggenberger12 (md=1)",
         "guggenberger12 (md=0)",
+        "guggenberger12 (md=0, h12=4)",
     ],
 )
 @pytest.mark.parametrize("p_value", [0.05, 0.1, 0.5])
@@ -377,14 +378,16 @@ def test_subvector_round_trip(test, inverse_test, data, p_value):
     This time for subvector tests.
     """
     if isinstance(data, str) and data.startswith("guggenberger12"):
-        md = 1 if data.endswith("(md=1)") else 0
+        md = 1 if "md=1" in data else 0
+        h12 = 4 if "h12=4" in data else 1
+
         if test == lagrange_multiplier_test and md > 0:
             pytest.skip("LM test inverse not implemented for md + mx > 1")
         if test == gkm_anderson_rubin_test and md > 0:
             pytest.skip("GKM AR test inverse not implemented for md > 0")
         # h12=4 leads to a "reasonably identified" setting with possibly infinite
         # confidence sets, which do not span the entire space.
-        Z, X, y, C, W, D = simulate_guggenberger12(n=1000, k=5, seed=0, md=md, h12=4)
+        Z, X, y, C, W, D = simulate_guggenberger12(n=1000, k=5, seed=0, md=md, h12=h12)
         fit_intercept = False
     else:
         n, mx, k, mw, mc, md, fit_intercept = data
