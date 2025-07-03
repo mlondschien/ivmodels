@@ -500,6 +500,8 @@ def inverse_conditional_likelihood_ratio_test(
     coordinates = np.concatenate([np.arange(mx), np.arange(mx + mw, mx + mw + md)])
     cs_lower = ConfidenceSet.from_quadric(Quadric(A, b, c).project(coordinates))
 
+    # "upper bound" on the confidence set to be computed. That is, the confidence set
+    # to be computed will be contained in the upper bound.
     quantile_upper = (
         scipy.stats.chi2.ppf(1 - alpha, df=k + md - mw) + dof * Sy_eigvals[0]
     )

@@ -287,6 +287,9 @@ def _characteristic_roots(a, b, subset_by_index=None):
     """
     Compute the solutions to det(A - B * lambda) = 0.
 
+    If B is full rank, this is equivalent to the generalized eigenvalue problem
+    A * v = lambda * B * v, where A and B are symmetric matrices.
+
     Parameters
     ----------
     a: np.ndarray of dimension (n, n)
@@ -310,7 +313,14 @@ def _characteristic_roots(a, b, subset_by_index=None):
     if cond < 1 / eps:
         return scipy.linalg.eigvalsh(a=a, b=b, subset_by_index=subset_by_index)
 
-    if subset_by_index is not None:
-        subset_by_index = sorted([b.shape[0] - 1 - i for i in subset_by_index])
+    else:
+        # If b is singular, eigvalsh will raise an error.
+        eigvals = np.clip(np.real(scipy.linalg.eigvals(a=a, b=b)), 0, None)
+        eigvals = np.sort(eigvals[np.isfinite(eigvals)])
 
-    return 1 / np.real(scipy.linalg.eigvalsh(a=b, b=a, subset_by_index=subset_by_index))
+        if subset_by_index is not None:
+            left = min(subset_by_index[0], eigvals.shape[0] - 1)
+            right = min(subset_by_index[-1] + 1, eigvals.shape[0])
+            return eigvals[left:right]
+        else:
+            return eigvals

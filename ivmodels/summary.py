@@ -124,6 +124,10 @@ class Summary:
                 tests.conditional_likelihood_ratio_test,
                 tests.inverse_conditional_likelihood_ratio_test,
             ),
+            "anderson-rubin (gkm)": (
+                partial(tests.anderson_rubin_test, critical_values="gkm"),
+                partial(tests.inverse_anderson_rubin_test, critical_values="gkm"),
+            ),
         }
 
         if not str(self.test).lower() in _TESTS:

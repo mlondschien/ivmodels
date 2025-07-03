@@ -1,9 +1,10 @@
 import numpy as np
 import scipy
 
+from ivmodels.confidence_set import ConfidenceSet
 from ivmodels.models.kclass import KClass
 from ivmodels.quadric import Quadric
-from ivmodels.utils import _check_inputs, oproj, proj
+from ivmodels.utils import _check_inputs, _find_roots, oproj, proj
 
 
 def more_powerful_subvector_anderson_rubin_critical_value_function(
@@ -21,7 +22,7 @@ def more_powerful_subvector_anderson_rubin_critical_value_function(
         The test statistic.
     kappa_1_hat: float
         The maximum eigenvalue of the matrix
-        :math:`M:=((X \\ y - X \\beta)^T M_Z (X \\ y - X \\beta))^{-1} (X \\ y-X \\beta)^T P_Z (X \\ y-X \\beta)`.
+        :math:`M:=((W \\ y - X \\beta)^T M_Z (W \\ y - X \\beta))^{-1} (W \\ y-X \\beta)^T P_Z (W \\ y-X \\beta)`.
         This is the conditioning statistic.
     k: int
         Number of instruments.
@@ -142,7 +143,7 @@ def anderson_rubin_test(
     critical_values: str, optional, default = "chi2"
         If ``"chi2"``, use the :math:`\\chi^2(k - m_W)` distribution to compute the p-value.
         If ``"f"``, use the :math:`F_{k - m_W, n - k}` distribution to compute the p-value.
-        If ``"guggenberger"``, use the critical value function proposed by
+        If ``"guggenberger"`` or ``"GKM"``, use the critical value function proposed by
         :cite:t:`guggenberger2019more` to compute the p-value.
     fit_intercept: bool, optional, default = True
         Whether to include an intercept. This is equivalent to centering the inputs.
@@ -201,23 +202,22 @@ def anderson_rubin_test(
         p_value = 1 - scipy.stats.chi2.cdf(statistic * dfn, df=dfn)
     elif critical_values == "f":
         p_value = 1 - scipy.stats.f.cdf(statistic, dfn=dfn, dfd=dfd)
-    elif critical_values.startswith("guggenberger"):
+    elif critical_values.startswith("guggenberger") or "gkm" in critical_values.lower():
         if mw == 0:
-            raise ValueError(
-                "The critical value function proposed by Guggenberger et al. (2019) is "
-                "only available for the subvector variant where W is not None."
-            )
-        if md > 0:
+            # For mw == 0, the GKM critical values are just the chi2 critical values.
+            p_value = 1 - scipy.stats.chi2.cdf(statistic * dfn, df=dfn)
+        elif md > 0:
             raise ValueError(
                 "The critical value function proposed by Guggenberger et al. (2019) is "
                 "not valid if D is not None"
             )
-        kappa_max = (n - k - mc - md) * KClass._spectrum(
-            X=W, y=y - X @ beta, Z=Z, subset_by_index=[mw, mw]
-        )[0]
-        p_value = more_powerful_subvector_anderson_rubin_critical_value_function(
-            statistic * dfn, kappa_max, k=k, mw=mw
-        )
+        else:
+            kappa_max = (n - k - mc - md) * KClass._spectrum(
+                X=W, y=y - X @ beta, Z=Z, subset_by_index=[mw, mw]
+            )[-1]
+            p_value = more_powerful_subvector_anderson_rubin_critical_value_function(
+                statistic * dfn, kappa_max, k=k, mw=mw
+            )
     else:
         raise ValueError(
             "critical_values must be one of 'chi2', 'f', or 'guggenberger'. Got "
@@ -236,6 +236,8 @@ def inverse_anderson_rubin_test(
     D=None,
     critical_values="chi2",
     fit_intercept=True,
+    tol=1e-6,
+    max_eval=1000,
 ):
     """
     Return the quadric for to the inverse Anderson-Rubin test's acceptance region.
@@ -282,8 +284,15 @@ def inverse_anderson_rubin_test(
         p-value.
         If ``"f"``, use the :math:`F_{k - m_W, n - k}` distribution to compute the
         p-value.
+        If ``"gkm"``, use the critical value function proposed by
+        :cite:t:`guggenberger2019more`.
     fit_intercept: bool, optional, default = True
         Whether to include an intercept. This is equivalent to centering the inputs.
+    tol: float, optional, default = 1e-6
+        Tolerance for the root finding algorithm when critical_values is ``"gkm"``.
+    max_eval: int, optional, default = 1000
+        Maximum number of evaluations for the root finding algorithm when
+        critical_values is ``"gkm"``.
 
     Returns
     -------
@@ -299,6 +308,19 @@ def inverse_anderson_rubin_test(
     n, k = Z.shape
     mx, mw, mc, md = X.shape[1], W.shape[1], C.shape[1], D.shape[1]
 
+    if critical_values.startswith("guggenberger") or "gkm" in critical_values.lower():
+        # For mw == 0, the GKM critical values are just the chi2 critical values.
+        if mw == 0:
+            critical_values = "chi2"
+        elif mx != 1 or md != 0:
+            raise ValueError(
+                "Test inversion for the Anderson-Rubin test with GKM critical values "
+                "is only implemented for mx = X.shape[1] == 1 and md = D.shape[1] == 0."
+                f"Got mx={mx}, md={md}."
+            )
+        else:
+            critical_values = "gkm"
+
     if fit_intercept:
         C = np.hstack([np.ones((n, 1)), C])
 
@@ -309,15 +331,6 @@ def inverse_anderson_rubin_test(
 
     dfn = k + md - mw
     dfd = n - k - mc - md - fit_intercept
-
-    if critical_values == "chi2":
-        quantile = scipy.stats.chi2.ppf(1 - alpha, df=dfn) / dfd
-    elif critical_values == "f":
-        quantile = scipy.stats.f.ppf(1 - alpha, dfn=dfn, dfd=dfd) * dfn / dfd
-    else:
-        raise ValueError(
-            "critical_values must be one of 'chi2', 'f'. Got " f"{critical_values}."
-        )
 
     if md > 0:
         Z = np.hstack([Z, D])
@@ -331,9 +344,98 @@ def inverse_anderson_rubin_test(
     S_orth = S - S_proj
     y_orth = y - y_proj
 
+    if critical_values in ["chi2", "gkm"]:
+        quantile = scipy.stats.chi2.ppf(1 - alpha, df=dfn) / dfd
+    elif critical_values == "f":
+        quantile = scipy.stats.f.ppf(1 - alpha, dfn=dfn, dfd=dfd) * dfn / dfd
+    else:
+        raise ValueError(
+            "critical_values must be one of 'chi2', 'f', 'gkm', or 'guggenberger'. "
+            f"Got {critical_values}."
+        )
+
     A = S.T @ (S_proj - quantile * S_orth)
     b = -2 * (S_proj - quantile * S_orth).T @ y
     c = y.T @ (y_proj - quantile * y_orth)
 
     coordinates = np.concatenate([np.arange(mx), np.arange(mx + mw, mx + mw + md)])
-    return Quadric(A, b, c).project(coordinates)
+
+    if critical_values in ["chi2", "f"]:
+        return Quadric(A, b, c).project(coordinates)
+
+    # For GKM's critical values, the "standard" inverse AR test CS with chi2 critical
+    # values acts as an upper bound on the confidence set to be computed. That is, the
+    # "standard" inverse AR test CS will contain the confidence set to be computed. This
+    # holds as the GKM critical values are (strictly) more powerful than the chi2
+    # critical values.
+    upper_bound = Quadric(A, b, c).project(coordinates)
+
+    def f(x):
+        x = np.array([x]).flatten()
+        spectrum = KClass._spectrum(
+            X=S[:, mx:],
+            X_proj=S_proj[:, mx:],
+            y=y - S[:, :mx] @ x,
+            y_proj=y_proj - S_proj[:, :mx] @ x,
+            subset_by_index=[0, mw],
+        )
+
+        return (
+            more_powerful_subvector_anderson_rubin_critical_value_function(
+                spectrum[0] * dfd, spectrum[-1] * dfd, k=k, mw=mw
+            )
+            - alpha
+        )
+
+    # The inverse AR CS is empty -> return empty.
+    if upper_bound.is_empty():
+        return upper_bound
+    # The inverse AR CS is a bounded set.
+    elif upper_bound.is_bounded():
+        # The liml minimizes the AR test statistic. As the inverse AR CS is nonempty
+        # it contains the liml and thus f(liml) > 0.
+        liml = KClass(kappa="liml", fit_intercept=False).fit(X=S, y=y, Z=Z, C=C)
+
+        boundary = upper_bound._boundary()
+        left = _find_roots(
+            f,
+            np.min(boundary),
+            liml.coef_[0],
+            max_value=None,
+            tol=tol,
+            max_eval=max_eval,
+        )[0]
+        right = _find_roots(
+            f,
+            np.max(boundary),
+            liml.coef_[0],
+            max_value=None,
+            tol=tol,
+            max_eval=max_eval,
+        )[0]
+        return ConfidenceSet(boundaries=[(left, right)])
+    # The inverse AR CS is unbounded.
+    else:
+        boundary = upper_bound._boundary()
+        if len(boundary) == 0:
+            # If the upper bound is the entire space, return the entire space.
+            return upper_bound
+
+        max_value = 1e3 * np.max(np.abs(np.diff(boundary.flatten())))
+        left = _find_roots(
+            f,
+            min(upper_bound._boundary()),
+            -np.inf,
+            max_value=max_value,
+            tol=tol,
+            max_eval=max_eval,
+        )[0]
+        right = _find_roots(
+            f,
+            max(upper_bound._boundary()),
+            np.inf,
+            max_value=max_value,
+            tol=tol,
+            max_eval=max_eval,
+        )[0]
+        return ConfidenceSet(boundaries=[(-np.inf, left), (right, np.inf)])
