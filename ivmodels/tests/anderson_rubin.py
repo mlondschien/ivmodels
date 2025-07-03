@@ -214,7 +214,7 @@ def anderson_rubin_test(
         else:
             kappa_max = (n - k - mc - md) * KClass._spectrum(
                 X=W, y=y - X @ beta, Z=Z, subset_by_index=[mw, mw]
-            )[0]
+            )[-1]
             p_value = more_powerful_subvector_anderson_rubin_critical_value_function(
                 statistic * dfn, kappa_max, k=k, mw=mw
             )
@@ -398,11 +398,21 @@ def inverse_anderson_rubin_test(
 
         boundary = upper_bound._boundary()
         left = _find_roots(
-            f, min(boundary), liml.coef_[0], max_value=None, tol=tol, max_eval=max_eval
-        )
+            f,
+            np.min(boundary),
+            liml.coef_[0],
+            max_value=None,
+            tol=tol,
+            max_eval=max_eval,
+        )[0]
         right = _find_roots(
-            f, max(boundary), liml.coef_[0], max_value=None, tol=tol, max_eval=max_eval
-        )
+            f,
+            np.max(boundary),
+            liml.coef_[0],
+            max_value=None,
+            tol=tol,
+            max_eval=max_eval,
+        )[0]
         return ConfidenceSet(boundaries=[(left, right)])
     # The inverse AR CS is unbounded.
     else:
@@ -418,7 +428,7 @@ def inverse_anderson_rubin_test(
             max_value=max_value,
             tol=tol,
             max_eval=max_eval,
-        )
+        )[0]
         right = _find_roots(
             f,
             max(upper_bound._boundary()),
@@ -426,5 +436,5 @@ def inverse_anderson_rubin_test(
             max_value=max_value,
             tol=tol,
             max_eval=max_eval,
-        )
+        )[0]
         return ConfidenceSet(boundaries=[(left, right)])
