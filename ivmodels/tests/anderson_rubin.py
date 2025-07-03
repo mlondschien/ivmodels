@@ -420,7 +420,8 @@ def inverse_anderson_rubin_test(
         if len(boundary) == 0:
             # If the upper bound is the entire space, return the entire space.
             return upper_bound
-        max_value = 1e3 * np.abs(np.diff(boundary)).max()
+
+        max_value = 1e3 * np.max(np.abs(np.diff(boundary.flatten())))
         left = _find_roots(
             f,
             min(upper_bound._boundary()),
@@ -437,4 +438,4 @@ def inverse_anderson_rubin_test(
             tol=tol,
             max_eval=max_eval,
         )[0]
-        return ConfidenceSet(boundaries=[(left, right)])
+        return ConfidenceSet(boundaries=[(-np.inf, left), (right, np.inf)])
