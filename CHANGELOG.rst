@@ -1,6 +1,14 @@
 Changelog
 =========
 
+0.7.0 - 2025-06-03
+------------------
+
+**New features:**
+
+- The :func:`~ivmodels.tests.anderson_rubin.inverse_anderson_rubin_test` now
+  supports the GKM critical values by passing ``critical_values="gkm"``.
+
 0.6.0 - 2025-05-22
 ------------------
 
