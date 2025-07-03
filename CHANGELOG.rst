@@ -7,7 +7,13 @@ Changelog
 **New features:**
 
 - The :func:`~ivmodels.tests.anderson_rubin.inverse_anderson_rubin_test` now
-  supports the GKM critical values by passing ``critical_values="gkm"``.
+  supports the GKM critical values by passing ``critical_values="gkm"``. These can be
+  used by supplying ``test="anderson-rubin (gkm)"`` to
+  :class:`~ivmodels.summary.Summary` or :func:`~ivmodels.models.kclass.KClass.summary`.
+
+**Bug fixes:**
+
+- Make ``_characteristic_roots`` more robust if ``B`` is singular.
 
 0.6.0 - 2025-05-22
 ------------------
