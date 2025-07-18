@@ -9,24 +9,42 @@ except ImportError:
     _PANDAS_INSTALLED = False
 
 
+def _copy_attributes(old, new):
+    """
+    Copy-paste attributes from old to new.
+
+    Attributes are shape if old is a numpy array, index and (column) name(s) if old is a
+    pandas DataFrame or Series.
+    """
+    if isinstance(old, np.ndarray):
+        new = new.reshape(old.shape)
+    elif _PANDAS_INSTALLED and isinstance(old, pd.DataFrame):
+        new = pd.DataFrame(new, index=old.index, columns=old.columns)
+    elif _PANDAS_INSTALLED and isinstance(old, pd.Series):
+        new = pd.Series(new, index=old.index, name=old.name)
+
+    return new
+
+
 def proj(Z, *args):
     """Project f onto the subspace spanned by Z.
 
     Parameters
     ----------
-    Z: np.ndarray of dimension (n, d_Z)
+    Z: np.ndarray or pd.DataFrame of dimension (n, d_Z)
         The Z matrix. If None, returns np.zeros_like(f).
-    *args: np.ndarrays of dimension (n, d_f) or (n,)
-        vector or matrices to project.
+    *args: np.ndarrays or pd.DataFrames or pd.Series of dimension (n, d_f) or (n,)
+        Vector or matrices to project.
 
     Returns
     -------
-    np.ndarray of dimension (n, d_f) or (n,)
+    np.ndarray or pd.DataFrames or pd.Series of dimension (n, d_f) or (n,)
         Projection of args onto the subspace spanned by Z. Same number of
-        outputs as args. Same dimension as args
+        outputs as args. Same dimension as args. If args were pandas objects,
+        the output will also be pandas objects with the same index and columns.
     """
     if Z is None:
-        return (*(np.zeros_like(f) for f in args),)
+        return (*(_copy_attributes(f, np.zeros_like(f)) for f in args),)
 
     for f in args:
         if len(f.shape) > 2:
@@ -39,26 +57,32 @@ def proj(Z, *args):
     if len(args) == 1:
         # The gelsy driver raises in this case - we handle it separately
         if len(args[0].shape) == 2 and args[0].shape[1] == 0:
-            return np.zeros_like(args[0])
+            return _copy_attributes(args[0], np.zeros_like(args[0]))
 
         # return np.dot(Z, scipy.linalg.pinv(Z.T @ Z) @ Z.T @ args[0])
-        return np.dot(
-            Z, scipy.linalg.lstsq(Z, args[0], cond=None, lapack_driver="gelsy")[0]
+        return _copy_attributes(
+            args[0],
+            np.dot(
+                Z, scipy.linalg.lstsq(Z, args[0], cond=None, lapack_driver="gelsy")[0]
+            ),
         )
 
     csum = np.cumsum([f.shape[1] if len(f.shape) == 2 else 1 for f in args])
     csum = [0] + csum.tolist()
 
-    fs = np.hstack([f.reshape(Z.shape[0], -1) for f in args])
+    fs = np.hstack([f.reshape(Z.shape[0], -1) for f in to_numpy(*args)])
 
     if fs.shape[1] == 0:
         # The gelsy driver raises in this case - we handle it separately
-        return (*(np.zeros_like(f) for f in args),)
+        return (*(_copy_attributes(f, np.zeros_like(f)) for f in args),)
 
     # fs = np.dot(Z, scipy.linalg.pinv(Z.T @ Z) @ Z.T @ fs)
     fs = np.dot(Z, scipy.linalg.lstsq(Z, fs, cond=None, lapack_driver="gelsy")[0])
     return (
-        *(fs[:, i:j].reshape(f.shape) for i, j, f in zip(csum[:-1], csum[1:], args)),
+        *(
+            _copy_attributes(f, fs[:, i:j].reshape(f.shape))
+            for i, j, f in zip(csum[:-1], csum[1:], args)
+        ),
     )
 
 
@@ -67,16 +91,17 @@ def oproj(Z, *args):
 
     Parameters
     ----------
-    Z: np.ndarray of dimension (n, d_Z)
-        The Z matrix. If None, returns f.
-    *args: np.ndarrays of dimension (n, d_f) or (n,)
-        vector or matrices to project.
+    Z: np.ndarray or pd.DataFrame of dimension (n, d_Z)
+        The Z matrix. If None, returns np.zeros_like(f).
+    *args: np.ndarrays or pd.DataFrames or pd.Series of dimension (n, d_f) or (n,)
+        Vector or matrices to project.
 
     Returns
     -------
-    np.ndarray of dimension (n, d_f) or (n,)
-        Projection of args onto the subspace spanned by Z. Same number of
-        outputs as args. Same dimension as args
+    np.ndarray or pd.DataFrames or pd.Series of dimension (n, d_f) or (n,)
+        Projection of args onto the subspace orthogonal to Z. Same number of
+        outputs as args. Same dimension as args. If args were pandas objects,
+        the output will also be pandas objects with the same index and columns.
     """
     if Z is None:
         return (*args,)

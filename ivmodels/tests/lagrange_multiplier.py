@@ -1,6 +1,5 @@
 import numpy as np
 import scipy
-import scipy.interpolate
 import scipy.optimize
 from scipy.optimize._optimize import MemoizeJac
 

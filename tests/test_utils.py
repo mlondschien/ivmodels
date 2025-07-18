@@ -149,3 +149,43 @@ def test_characteristic_roots(dim, rank):
 def test_find_roots(f, a, b, expected, tol):
     roots = _find_roots(f, a, b, max_value=1e6, max_eval=1e4, tol=tol)
     assert np.allclose(sorted(roots), expected, atol=tol)
+
+
+@pytest.mark.parametrize("fun", [proj, oproj])
+@pytest.mark.parametrize(
+    "Z", [np.array([[1, 0], [0, 1]]), pd.DataFrame({"a": [1, 0], "b": [0, 1]}), None]
+)
+@pytest.mark.parametrize(
+    "args",
+    [
+        (np.array([[1, 2], [3, 4]]),),
+        (np.array([1, 2]),),
+        (pd.Series([1, 2], index=["a", "b"]),),
+        (pd.DataFrame({"x": [1, 2], "y": [3, 4]}, index=["a", "b"]),),
+        (pd.DataFrame(index=["a", "b"]),),
+        (
+            np.array([[1, 2], [3, 4]]),
+            np.array([1, 2]),
+            pd.Series([1, 2], index=["a", "b"]),
+            pd.DataFrame({"x": [1, 2], "y": [3, 4]}, index=["a", "b"]),
+            pd.DataFrame(index=["a", "b"]),
+        ),
+    ],
+)
+def test_proj_keeps_attributes(fun, Z, args):
+    new = fun(Z, *args)
+
+    if not isinstance(new, tuple):
+        new = (new,)
+
+    for o, n in zip(args, new):
+        if isinstance(o, np.ndarray):
+            assert o.shape == n.shape
+        elif isinstance(o, pd.DataFrame):
+            assert o.index.equals(n.index)
+            assert o.columns.equals(n.columns)
+        elif isinstance(o, pd.Series):
+            assert o.index.equals(n.index)
+            assert o.name == n.name
+        else:
+            raise ValueError(f"Invalid type: {type(o)}")
