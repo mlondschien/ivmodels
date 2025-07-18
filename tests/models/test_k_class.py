@@ -288,7 +288,7 @@ def test_kclass_X_Z_C_names():
     assert kclass.endogenous_names_ == ["X1", "X2", "X3"]
     assert kclass.instrument_names_ == ["Z1", "Z2", "Z3"]
     assert kclass.exogenous_names_ == ["C1", "C2", "C3"]
-    assert kclass.named_coefs_.index.tolist() == ["intercept"] + covariates
+    assert kclass.named_coef_.index.tolist() == ["intercept"] + covariates
 
     kclass = KClass(
         kappa=1,
@@ -300,7 +300,7 @@ def test_kclass_X_Z_C_names():
     assert kclass.endogenous_names_ == ["X1", "X2", "X3"]
     assert kclass.instrument_names_ == ["Z1", "Z2", "Z3"]
     assert kclass.exogenous_names_ == ["C1", "C2", "C3"]
-    assert kclass.named_coefs_.index.tolist() == covariates
+    assert kclass.named_coef_.index.tolist() == covariates
 
     kclass = KClass(
         kappa=1, instrument_regex="1", exogenous_regex="2", fit_intercept=True
@@ -309,7 +309,7 @@ def test_kclass_X_Z_C_names():
     assert kclass.endogenous_names_ == ["X3", "Z3", "C3"]
     assert kclass.instrument_names_ == ["X1", "Z1", "C1"]
     assert kclass.exogenous_names_ == ["X2", "Z2", "C2"]
-    assert kclass.named_coefs_.index.tolist() == [
+    assert kclass.named_coef_.index.tolist() == [
         "intercept",
         "X3",
         "Z3",
@@ -324,7 +324,7 @@ def test_kclass_X_Z_C_names():
     assert kclass.endogenous_names_ == ["X1", "X2"]
     assert kclass.instrument_names_ == ["Z1", "Z2"]
     assert kclass.exogenous_names_ == ["C1", "C2"]
-    assert kclass.named_coefs_.index.tolist() == ["intercept", "X1", "X2", "C1", "C2"]
+    assert kclass.named_coef_.index.tolist() == ["intercept", "X1", "X2", "C1", "C2"]
 
     kclass = KClass(kappa=1, fit_intercept=True)
     kclass.fit(

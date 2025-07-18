@@ -1,5 +1,6 @@
 import logging
 import re
+import warnings
 
 import numpy as np
 from glum import GeneralizedLinearRegressor
@@ -502,13 +503,13 @@ class KClassMixin:
                 self.intercept_ = 0
 
         if _PANDAS_INSTALLED and self.fit_intercept:
-            self.named_coefs_ = pd.Series(
+            self.named_coef_ = pd.Series(
                 [self.intercept_] + list(self.coef_),
                 index=["intercept"] + self.endogenous_names_ + self.exogenous_names_,
                 name="coefficients",
             )
         elif _PANDAS_INSTALLED and not self.fit_intercept:
-            self.named_coefs_ = pd.Series(
+            self.named_coef_ = pd.Series(
                 self.coef_,
                 index=self.endogenous_names_ + self.exogenous_names_,
                 name="coefficients",
@@ -567,6 +568,24 @@ class KClassMixin:
             kclass=self, test=test, alpha=alpha, feature_names=feature_names
         )
         return summary.fit(X, y, Z=Z, C=C, **kwargs)
+
+    @property
+    def named_coefs_(self):  # noqa: D
+        warnings.warn(
+            "'named_coefs_' is deprecated, use 'named_coef_' instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.named_coef_
+
+    @named_coefs_.setter
+    def named_coefs_(self, value):  # noqa: D
+        warnings.warn(
+            "'named_coefs_' is deprecated, use 'named_coef_' instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.named_coef_ = value
 
 
 class KClass(KClassMixin, GeneralizedLinearRegressor):
@@ -663,6 +682,9 @@ class KClass(KClassMixin, GeneralizedLinearRegressor):
         If ``kappa`` is one of ``{"fuller", "fuller(a)", "liml"}`` for some numeric
         value ``a``, the kappa parameter of the LIML estimator, equal to
         ``1 + ar_min_``.
+    named_coef_: array-like, shape (n_features,)
+        If ``X`` was a pandas DataFrame, the estimated coefficients for the linear
+        regression problem with the variable names as index.
 
     References
     ----------

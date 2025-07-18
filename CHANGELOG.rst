@@ -9,6 +9,12 @@ Changelog
 - The functions :func:`~ivmodels.utils.proj` and :func:`~ivmodels.utils.oproj` now
   accept pandas DataFrames and Series as arguments.
 
+**Other changes:**
+
+- The ``named_coefs_`` attribute of the :class:`~ivmodels.models.kclass.KClass` is now
+  renamed to ``named_coef_``. Accessing ``named_coefs_`` will raise a
+  ``DeprecationWarning``.
+
 0.7.0 - 2025-06-03
 ------------------
 

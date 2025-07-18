@@ -83,7 +83,7 @@ class Summary:
             specified, ``C`` must be ``None``. If ``C`` is specified,
             ``exogenous_names`` and ``exogenous_regex`` must be ``None``.
         """
-        if not hasattr(self, "named_coefs_"):
+        if not hasattr(self, "named_coef_"):
             self.kclass.fit(X, y, Z=Z, C=C)
 
         all_feature_names = self.kclass.endogenous_names_ + self.kclass.exogenous_names_
