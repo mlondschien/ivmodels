@@ -1,6 +1,14 @@
 Changelog
 =========
 
+0.8.0 - 2025-07-18
+------------------
+
+**New features:**
+
+- The functions :func:`~ivmodels.utils.proj` and :func:`~ivmodels.utils.oproj` now
+  accept pandas DataFrames and Series as arguments.
+
 0.7.0 - 2025-06-03
 ------------------
 
