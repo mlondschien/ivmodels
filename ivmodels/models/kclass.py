@@ -682,6 +682,9 @@ class KClass(KClassMixin, GeneralizedLinearRegressor):
         If ``kappa`` is one of ``{"fuller", "fuller(a)", "liml"}`` for some numeric
         value ``a``, the kappa parameter of the LIML estimator, equal to
         ``1 + ar_min_``.
+    named_coef_: array-like, shape (n_features,)
+        If ``X`` was a pandas DataFrame, the estimated coefficients for the linear
+        regression problem with the variable names as index.
 
     References
     ----------
