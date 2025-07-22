@@ -15,6 +15,10 @@ Changelog
   renamed to ``named_coef_``. Accessing ``named_coefs_`` will raise a
   ``DeprecationWarning``.
 
+- :func:`~ivmodels.quadric.Quadric.__format__` now prints the same as
+  :func:`~ivmodels.confidence_set.ConfidenceSet.from_quadric.__format__` if the quadric
+  is one-dimensional.
+
 0.7.0 - 2025-06-03
 ------------------
 
