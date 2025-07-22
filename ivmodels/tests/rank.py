@@ -6,14 +6,13 @@ from ivmodels.utils import _characteristic_roots, _check_inputs, oproj, proj
 
 def rank_test(Z, X, C=None, fit_intercept=True):
     """
-    Perform Anderson's test for reduced rank :cite:p:`anderson1951estimating`.
+    Perform the Cragg-Donald test for reduced rank :cite:p:`cragg1997inferring`.
 
-    This is the likelihood ratio test with null hypothesis
+    This is the Wald test with the null hypothesis
 
-    .. math: H_0 := \\mathrm{rank}(\\Pi) < m_X
+    .. math: H_0 := \\mathrm{rank}(\\Pi) < m_X,
 
-    where :math:`X = Z \\Pi + V` with :math:`V` consisting i.i.d. copies of a centered
-    Gaussian, uncorrelated with :math:`Z`. The test statistic is
+    where :math:`X = Z \\Pi + V`. The test statistic is
 
     .. math: \\lambda := (n-k) \\lambda_\\mathrm{min}((X^T M_Z X)^{-1} X^T P_Z X)
 
@@ -21,6 +20,10 @@ def rank_test(Z, X, C=None, fit_intercept=True):
     column space of :math:`Z`, :math:`M_Z = I - P_Z` is the orthogonal projection onto
     the orthogonal complement of the column space of :math:`Z`, and
     :math:`\\lambda_\\mathrm{min}` is the smallest eigenvalue.
+
+    The Cragg-Donald test is asymptotically equivalent to
+    :cite:t:`anderson1951asymptotic`'s likelihood ratio test for reduced rank of
+    :math:`\\Pi`.
 
     Parameters
     ----------
@@ -36,11 +39,12 @@ def rank_test(Z, X, C=None, fit_intercept=True):
     Returns
     -------
     statistic: float
-        The test statistic :math:`\\lambda`.
+        The test statistic :math:`\\mathrm{CD}`.
     p_value: float
-        The p-value of the test. Equal to :math:`1 - F_{\\chi^2(k - m_X + 1)}(\\lambda)`,
-        where :math:`F_{\\chi^2(k - m_X + 1)}` is the cumulative distribution function
-        of the :math:`\\chi^2(k - m_X + 1)` distribution.
+        The p-value of the test. Equal to
+        :math:`1 - F_{\\chi^2(k - m_X + 1)}(\\mathrm{CD})`, where
+        :math:`F_{\\chi^2(k - m_X + 1)}` is the cumulative distribution function of the
+        :math:`\\chi^2(k - m_X + 1)` distribution.
 
     """
     Z, X, _, _, C, _, _ = _check_inputs(Z, X, y=None, C=C)
