@@ -2,6 +2,8 @@
 import numpy as np
 import scipy
 
+from ivmodels.confidence_set import ConfidenceSet
+
 
 class Quadric:
     """
@@ -101,6 +103,9 @@ class Quadric:
         return out
 
     def __format__(self, format_spec: str) -> str:  # noqa D
+        if self.A.shape == (1, 1):
+            return ConfidenceSet.from_quadric(self).__format__(format_spec)
+
         return "A:\n{A}\nb:\n{b}\nc: {c}".format(
             A=np.array2string(
                 self.A, formatter={"float_kind": lambda x: x.__format__(format_spec)}
