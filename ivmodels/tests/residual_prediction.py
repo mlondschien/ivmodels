@@ -52,6 +52,25 @@ def residual_prediction_test(
     See also the test's `R implementation <https://github.com/cyrillsch/RPIV>`_ by
     Cyrill Scheidegger.
 
+    To avoid the :math:`p`-value lottery due to the random train / test split used in
+    the residual prediction test, :cite:t:`scheidegger2025residual` suggest aggregating
+    the :math:`p`-values from multiple random splits by taking 2 times the median. This
+    results in a conservative :math:`p`-value :cite:t:`meinshausen2009p`.
+
+    Example
+    -------
+    >>> import numpy as np
+    >>> from ivmodels.tests import residual_prediction_test
+    >>> from ivmodels.simulate import simulate_gaussian_iv
+    >>>
+    >>> Z, X, y = ...
+    >>>
+    >>> ps = np.empty(50)
+    >>> for i in range(50):
+    ...     _, ps[i] = residual_prediction_test(Z, X, y, seed=i)
+    >>>
+    >>> print(f"Residual prediction test p-value: {2 * np.median(ps):.3f}")
+
     Parameters
     ----------
     Z: np.ndarray of dimension (n, k)
@@ -111,6 +130,7 @@ def residual_prediction_test(
        :filter: False
 
        scheidegger2025residual
+       meinshausen2009p
     """
     Z, X, y, _, C, _, _ = _check_inputs(Z, X, y, C=C)
 
@@ -127,7 +147,7 @@ def residual_prediction_test(
         raise ValueError("train_fraction must be in (0, 1).")
 
     if nonlinear_model is None:
-        nonlinear_model = RandomForestRegressor(n_estimators=20, random_state=seed)
+        nonlinear_model = RandomForestRegressor()
     elif not hasattr(nonlinear_model, "fit") or not hasattr(nonlinear_model, "predict"):
         raise ValueError(
             "nonlinear_model must have a `fit` and `predict` method. If you want to "

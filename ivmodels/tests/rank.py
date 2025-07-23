@@ -8,21 +8,24 @@ def rank_test(Z, X, C=None, fit_intercept=True):
     """
     Perform the Cragg-Donald test for reduced rank :cite:p:`cragg1997inferring`.
 
-    This is the Wald test with the null hypothesis
+    Let :math:`X = Z \\Pi + V` with :math:`\\Pi \\in \\mathbb{R}^{k \\times m_X}`. The
+    Cragg-Donald test is the Wald test with the null hypothesis
 
-    .. math: H_0 := \\mathrm{rank}(\\Pi) < m_X,
+    .. math:: H_0 := \\mathrm{rank}(\\Pi) < m_X,
 
-    where :math:`X = Z \\Pi + V`. The test statistic is
+    The test statistic is
 
-    .. math: \\lambda := (n-k) \\lambda_\\mathrm{min}((X^T M_Z X)^{-1} X^T P_Z X)
+    .. math:: \\mathrm{CD} := \\lambda := (n-k) \\lambda_\\mathrm{min}((X^T M_Z X)^{-1} X^T P_Z X)
 
     where :math:`P_Z = Z (Z^T Z)^{-1} Z^T` is the orthogonal projection onto the
     column space of :math:`Z`, :math:`M_Z = I - P_Z` is the orthogonal projection onto
     the orthogonal complement of the column space of :math:`Z`, and
-    :math:`\\lambda_\\mathrm{min}` is the smallest eigenvalue.
+    :math:`\\lambda_\\mathrm{min}` is the smallest eigenvalue. Under the null
+    hypothesis, :math:`\\mathrm{CD}` is asymptotically distributed as
+    :math:`\\chi^2(k - m_X + 1)`.
 
     The Cragg-Donald test is asymptotically equivalent to
-    :cite:t:`anderson1951asymptotic`'s likelihood ratio test for reduced rank of
+    :cite:t:`anderson1951estimating`'s likelihood ratio test for reduced rank of
     :math:`\\Pi`.
 
     Parameters
@@ -46,6 +49,13 @@ def rank_test(Z, X, C=None, fit_intercept=True):
         :math:`F_{\\chi^2(k - m_X + 1)}` is the cumulative distribution function of the
         :math:`\\chi^2(k - m_X + 1)` distribution.
 
+    References
+    ----------
+    .. bibliography::
+       :filter: False
+
+       cragg1997inferring
+       anderson1951estimating
     """
     Z, X, _, _, C, _, _ = _check_inputs(Z, X, y=None, C=C)
 
