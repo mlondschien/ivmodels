@@ -52,10 +52,10 @@ def residual_prediction_test(
     See also the test's `R implementation <https://github.com/cyrillsch/RPIV>`_ by
     Cyrill Scheidegger.
 
-    To avoid the $p$-value lottery due to the random train / test split used in the
-    residual prediction test, :cite:t:`scheidegger2025residual` suggest aggregating the
-    p-values from multiple random splits by taking 2 times the median. This results in a
-    conservative p-value :cite:t:`meinshausen2009p`.
+    To avoid the :math:`p`-value lottery due to the random train / test split used in
+    the residual prediction test, :cite:t:`scheidegger2025residual` suggest aggregating
+    the :math:`p`-values from multiple random splits by taking 2 times the median. This
+    results in a conservative :math:`p`-value :cite:t:`meinshausen2009p`.
 
     Example
     -------
@@ -63,7 +63,7 @@ def residual_prediction_test(
     >>> from ivmodels.tests import residual_prediction_test
     >>> from ivmodels.simulate import simulate_gaussian_iv
     >>>
-    >>> Z, X, y, _, _, _ = simulate_gaussian_iv(n=1000, mx=2, k=5)
+    >>> Z, X, y = ...
     >>>
     >>> ps = np.empty(50)
     >>> for i in range(50):

@@ -22,7 +22,7 @@ def rank_test(Z, X, C=None, fit_intercept=True):
     :math:`\\lambda_\\mathrm{min}` is the smallest eigenvalue.
 
     The Cragg-Donald test is asymptotically equivalent to
-    :cite:t:`anderson1951asymptotic`'s likelihood ratio test for reduced rank of
+    :cite:t:`anderson1951estimating`'s likelihood ratio test for reduced rank of
     :math:`\\Pi`.
 
     Parameters
@@ -52,7 +52,7 @@ def rank_test(Z, X, C=None, fit_intercept=True):
        :filter: False
 
        cragg1997inferring
-       anderson1951asymptotic
+       anderson1951estimating
     """
     Z, X, _, _, C, _, _ = _check_inputs(Z, X, y=None, C=C)
 
