@@ -10,11 +10,11 @@ def rank_test(Z, X, C=None, fit_intercept=True):
 
     This is the Wald test with the null hypothesis
 
-    .. math: H_0 := \\mathrm{rank}(\\Pi) < m_X,
+    .. math:: H_0 := \\mathrm{rank}(\\Pi) < m_X,
 
     where :math:`X = Z \\Pi + V`. The test statistic is
 
-    .. math: \\lambda := (n-k) \\lambda_\\mathrm{min}((X^T M_Z X)^{-1} X^T P_Z X)
+    .. math:: \\lambda := (n-k) \\lambda_\\mathrm{min}((X^T M_Z X)^{-1} X^T P_Z X)
 
     where :math:`P_Z = Z (Z^T Z)^{-1} Z^T` is the orthogonal projection onto the
     column space of :math:`Z`, :math:`M_Z = I - P_Z` is the orthogonal projection onto
