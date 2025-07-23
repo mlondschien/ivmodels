@@ -46,6 +46,13 @@ def rank_test(Z, X, C=None, fit_intercept=True):
         :math:`F_{\\chi^2(k - m_X + 1)}` is the cumulative distribution function of the
         :math:`\\chi^2(k - m_X + 1)` distribution.
 
+    References
+    ----------
+    .. bibliography::
+       :filter: False
+
+       cragg1997inferring
+       anderson1951asymptotic
     """
     Z, X, _, _, C, _, _ = _check_inputs(Z, X, y=None, C=C)
 
