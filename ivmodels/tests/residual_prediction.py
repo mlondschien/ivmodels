@@ -147,7 +147,7 @@ def residual_prediction_test(
         raise ValueError("train_fraction must be in (0, 1).")
 
     if nonlinear_model is None:
-        nonlinear_model = RandomForestRegressor()
+        nonlinear_model = RandomForestRegressor(random_state=0)
     elif not hasattr(nonlinear_model, "fit") or not hasattr(nonlinear_model, "predict"):
         raise ValueError(
             "nonlinear_model must have a `fit` and `predict` method. If you want to "
