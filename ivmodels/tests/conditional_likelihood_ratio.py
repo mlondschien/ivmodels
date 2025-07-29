@@ -331,7 +331,18 @@ def conditional_likelihood_ratio_test(
     mx, mw, mc, md = X.shape[1], W.shape[1], C.shape[1], D.shape[1]
 
     if md > 0:
-        return (np.nan, 1)
+        return conditional_likelihood_ratio_test(
+            Z=np.hstack([Z, D]),
+            X=np.hstack([X, D]),
+            y=y,
+            beta=beta,
+            W=W,
+            C=C,
+            D=None,
+            fit_intercept=fit_intercept,
+            method=method,
+            tol=tol,
+        )
 
     if fit_intercept:
         C = np.hstack([np.ones((n, 1)), C])
@@ -458,6 +469,19 @@ def inverse_conditional_likelihood_ratio_test(
     mx, mw, mc, md = X.shape[1], W.shape[1], C.shape[1], D.shape[1]
 
     if md > 0:
+        return inverse_conditional_likelihood_ratio_test(
+            Z=np.hstack([Z, D]),
+            X=np.hstack([X, D]),
+            y=y,
+            alpha=alpha,
+            W=W,
+            C=C,
+            D=None,
+            fit_intercept=fit_intercept,
+            tol=tol,
+            max_value=max_value,
+            max_eval=max_eval,
+        )
         return ConfidenceSet(boundaries=[(-np.inf, np.inf)])
 
     if k == mx + mw:
