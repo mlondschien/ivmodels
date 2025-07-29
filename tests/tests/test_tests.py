@@ -311,21 +311,21 @@ def test_test_round_trip(test, inverse_test, data, p_value):
 
         if test == lagrange_multiplier_test and mx > 1:
             pytest.skip("LM test inverse not implemented for mx > 1")
-        if test == conditional_likelihood_ratio_test and mx > 1:
-            pytest.skip("CLR test inverse not implemented for mx > 1")
+        if test == conditional_likelihood_ratio_test and mx + md > 1:
+            pytest.skip("CLR test inverse not implemented for mx + md > 1")
 
         Z, X, y, C, _, D = simulate_gaussian_iv(
             n=n, mx=mx, k=k, mc=mc, md=md, seed=0, include_intercept=fit_intercept
         )
-
-    if D.shape[1] > 0 and test in [pulse_test, conditional_likelihood_ratio_test]:
-        pytest.skip("Pulse and CLR tests do not support incl. exog. variables.")
 
     if D.shape[1] + X.shape[1] > 1 and test in [
         conditional_likelihood_ratio_test,
         lagrange_multiplier_test,
     ]:
         pytest.skip("inverse CLR and LM tests do not multidim conf. sets")
+
+    if D.shape[1] > 0 and test in [pulse_test]:
+        pytest.skip("Pulse test does not support incl. exog. variables.")
 
     quadric = inverse_test(
         Z, X, y, C=C, D=D, alpha=p_value, fit_intercept=fit_intercept
@@ -380,6 +380,7 @@ def test_subvector_round_trip(test, inverse_test, data, p_value):
     if isinstance(data, str) and data.startswith("guggenberger12"):
         md = 1 if "md=1" in data else 0
         h12 = 4 if "h12=4" in data else 1
+        mx = 1
 
         if test == lagrange_multiplier_test and md > 0:
             pytest.skip("LM test inverse not implemented for md + mx > 1")
@@ -392,15 +393,16 @@ def test_subvector_round_trip(test, inverse_test, data, p_value):
     else:
         n, mx, k, mw, mc, md, fit_intercept = data
 
-        if test == lagrange_multiplier_test and mx + md > 1:
-            pytest.skip("LM test inverse not implemented for mx + md > 1")
-        if test == conditional_likelihood_ratio_test and mx + md > 1:
-            pytest.skip("CLR test inverse not implemented for mx + md > 1")
-        if test == gkm_anderson_rubin_test and (mx != 1 or md != 0):
-            pytest.skip("GKM AR test inverse not implemented for mx != 1 or md != 0")
         Z, X, y, C, W, D = simulate_gaussian_iv(
             n=n, mx=mx, k=k, mw=mw, mc=mc, md=md, seed=0
         )
+
+    if test == lagrange_multiplier_test and mx + md > 1:
+        pytest.skip("LM test inverse not implemented for mx + md > 1")
+    if test == conditional_likelihood_ratio_test and mx + md > 1:
+        pytest.skip("CLR test inverse not implemented for mx + md > 1")
+    if test == gkm_anderson_rubin_test and (mx != 1 or md != 0):
+        pytest.skip("GKM AR test inverse not implemented for mx != 1 or md != 0")
 
     kwargs = {
         "Z": Z,

@@ -482,7 +482,6 @@ def inverse_conditional_likelihood_ratio_test(
             max_value=max_value,
             max_eval=max_eval,
         )
-        return ConfidenceSet(boundaries=[(-np.inf, np.inf)])
 
     if k == mx + mw:
         return inverse_anderson_rubin_test(
