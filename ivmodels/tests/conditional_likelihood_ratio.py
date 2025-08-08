@@ -182,7 +182,7 @@ def conditional_likelihood_ratio_test(
     D=None,
     fit_intercept=True,
     method="numerical_integration",
-    tol=1e-4,
+    tol=1e-6,
 ):
     """
     Perform the conditional likelihood ratio test for ``beta``.
@@ -225,8 +225,8 @@ def conditional_likelihood_ratio_test(
     limiting distribution.
     If identification is weak, that is :math:`s_\\mathrm{min}(\\beta_0) \\to 0`, the
     conditional likelihood ratio test is equivalent to the Anderson-Rubin test
-    (see :py:func:`~ivmodels.tests.anderson_rubin_test`) with :math:`\\chi^2(k)` limiting
-    distribution.
+    (see :py:func:`~ivmodels.tests.anderson_rubin_test`) with :math:`\\chi^2(k)`
+    limiting distribution.
     See :cite:p:`moreira2003conditional` for details.
 
     If ``W`` is not ``None``, the test statistic is defined as
@@ -260,17 +260,17 @@ def conditional_likelihood_ratio_test(
     and
     :math:`\\lambda_1(\\Sigma_{W, y - X \\beta}) = \\min_\\gamma \\frac{ \\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{ \\| M_Z (y - X \\beta - W \\gamma) \\|_2^2}`.
 
-    :cite:t:`kleibergen2021efficient` conjectures and motivates that, conditionally on :math:`s_\\mathrm{min}(\\beta_0)`, the statistic
-    :math:`\\mathrm{CLR(\\beta_0)}` is asymptotically bounded from above by a random
-    variable that is distributed as
+    :cite:t:`kleibergen2021efficient` conjectures and motivates that, conditionally on
+    :math:`s_\\mathrm{min}(\\beta_0)`, the statistic :math:`\\mathrm{CLR(\\beta_0)}` is
+    asymptotically bounded from above by a random variable that is distributed as
 
     .. math:: \\frac{1}{2} \\left( Q_{m_X} + Q_{k - m_X - m_W} - s_\\mathrm{min}(\\beta_0) + \\sqrt{ (Q_{m_X} + Q_{k - m_X - m_W}  - s_\\mathrm{min}(\\beta_0))^2 + 4 Q_{m_X} s_\\textrm{min} } \\right),
 
     where :math:`Q_{m_X} \\sim \\chi^2(m_X)` and
-    :math:`Q_{k - m_X - m_W} \\sim \\chi^2(k - m_X - m_W)` are independent chi-squared random
-    variables. This is robust to weak instruments. If identification is strong, that is
-    :math:`s_\\mathrm{min}(\\beta_0) \\to \\infty`, the conditional likelihood ratio
-    test is equivalent to the likelihood ratio test
+    :math:`Q_{k - m_X - m_W} \\sim \\chi^2(k - m_X - m_W)` are independent chi-squared
+    random variables. This is robust to weak instruments. If identification is strong,
+    that is :math:`s_\\mathrm{min}(\\beta_0) \\to \\infty`, the conditional likelihood
+    ratio test is equivalent to the likelihood ratio test
     (see :py:func:`~ivmodels.tests.likelihood_ratio_test`), with :math:`\\chi^2(m_X)`
     limiting distribution.
     If identification is weak, that is :math:`s_\\mathrm{min}(\\beta_0) \\to 0`, the
@@ -293,8 +293,9 @@ def conditional_likelihood_ratio_test(
         Endogenous regressors not of interest.
     C: np.ndarray of dimension (n, mc) or None, optional, default = None
         Exogenous regressors not of interest.
-    D: np.ndarray of dimension (n, 0) or None, optional, default = None
-        Exogenous regressors of interest. Not supported for this test.
+    D: np.ndarray of dimension (n, md) or None, optional, default = None
+        Exogenous regressors of interest. Will be included into both ``X`` and ``Z`` if
+        supplied.
     fit_intercept: bool, optional, default: True
         Whether to include an intercept. This is equivalent to centering the inputs.
     method: str, optional, default: "numerical_integration"
@@ -331,24 +332,14 @@ def conditional_likelihood_ratio_test(
     mx, mw, mc, md = X.shape[1], W.shape[1], C.shape[1], D.shape[1]
 
     if md > 0:
-        return conditional_likelihood_ratio_test(
-            Z=np.hstack([Z, D]),
-            X=np.hstack([X, D]),
-            y=y,
-            beta=beta,
-            W=W,
-            C=C,
-            D=None,
-            fit_intercept=fit_intercept,
-            method=method,
-            tol=tol,
-        )
+        X = np.hstack([X, D])
+        Z = np.hstack([Z, D])
 
     if fit_intercept:
         C = np.hstack([np.ones((n, 1)), C])
 
     if C.shape[1] > 0:
-        X, y, Z, W, D = oproj(C, X, y, Z, W, D)
+        X, y, Z, W = oproj(C, X, y, Z, W)
 
     X_proj, y_proj, W_proj = proj(Z, X, y, W)
 
@@ -363,46 +354,38 @@ def conditional_likelihood_ratio_test(
         Xt_proj = X_proj - np.outer(residuals_proj, Sigma)
         Xt_orth = Xt - Xt_proj
 
-        s_min = np.real(
-            _characteristic_roots(
-                a=Xt_proj.T @ Xt_proj, b=Xt_orth.T @ Xt_orth, subset_by_index=[0, 0]
-            )[0]
-        ) * (n - k - mc - md - fit_intercept)
-
         Xy = np.concatenate([X, y.reshape(-1, 1)], axis=1)
         Xy_proj = np.hstack([X_proj, y_proj.reshape(-1, 1)])
 
+        s_min = np.real(
+            _characteristic_roots(a=Xt_proj.T @ Xt_proj, b=Xt_orth.T @ Xt_orth)
+        )[0] * (n - k - mc - md - fit_intercept)
+
+        Xy_orth = Xy - Xy_proj
+
         ar_min = (
             _characteristic_roots(
-                a=Xy.T @ Xy,
-                b=(Xy - Xy_proj).T @ Xy,
-                subset_by_index=[0, 0],
-            )[0]
-            - 1
-        )
-
+                a=Xy_proj.T @ Xy_proj, b=Xy_orth.T @ Xy_orth, subset_by_index=[0, 0]
+            )
+        )[0]
         ar = residuals_proj.T @ residuals_proj / (residuals_orth.T @ residuals_orth)
-
         statistic = (n - k - mc - md - fit_intercept) * (ar - ar_min)
 
     elif mw > 0:
         XWy = np.concatenate([X, W, y.reshape(-1, 1)], axis=1)
         XWy_proj = np.concatenate([X_proj, W_proj, y_proj.reshape(-1, 1)], axis=1)
 
-        XWy_eigenvals = (
-            np.sort(
-                np.real(
-                    _characteristic_roots(
-                        a=XWy.T @ XWy,
-                        b=(XWy - XWy_proj).T @ XWy,
-                        subset_by_index=[0, 1],
-                    )
+        XWy_eigenvals = np.sort(
+            np.real(
+                _characteristic_roots(
+                    a=XWy_proj.T @ XWy_proj,
+                    b=(XWy - XWy_proj).T @ (XWy - XWy_proj),
+                    subset_by_index=[0, 1],
                 )
             )
-            - 1
         )
 
-        kclass = KClass(kappa="liml").fit(X=W, y=residuals, Z=Z)
+        kclass = KClass(kappa="liml")
         ar = kclass.ar_min(X=W, y=residuals, X_proj=W_proj, y_proj=residuals_proj)
 
         dof = n - k - mc - fit_intercept - md
@@ -425,7 +408,7 @@ def inverse_conditional_likelihood_ratio_test(
     C=None,
     D=None,
     fit_intercept=True,
-    tol=1e-4,
+    tol=1e-6,
     max_value=1e6,
     max_eval=1000,
 ):
@@ -468,25 +451,29 @@ def inverse_conditional_likelihood_ratio_test(
     n, k = Z.shape
     mx, mw, mc, md = X.shape[1], W.shape[1], C.shape[1], D.shape[1]
 
-    if md > 0:
-        return inverse_conditional_likelihood_ratio_test(
-            Z=np.hstack([Z, D]),
-            X=np.hstack([X, D]),
-            y=y,
-            alpha=alpha,
-            W=W,
-            C=C,
-            D=None,
-            fit_intercept=fit_intercept,
-            tol=tol,
-            max_value=max_value,
-            max_eval=max_eval,
-        )
-
-    if k == mx + mw:
+    if k == mx + mw + md:
         return inverse_anderson_rubin_test(
             Z=Z, X=X, W=W, y=y, C=C, D=D, fit_intercept=fit_intercept, alpha=alpha
         )
+
+    if md > 0:
+        X = np.hstack([X, D])
+        Z = np.hstack([Z, D])
+
+    # if md > 0:
+    #     return inverse_conditional_likelihood_ratio_test(
+    #         Z=np.hstack([Z, D]),
+    #         X=np.hstack([X, D]),
+    #         y=y,
+    #         alpha=alpha,
+    #         W=W,
+    #         C=C,
+    #         D=None,
+    #         fit_intercept=fit_intercept,
+    #         tol=tol,
+    #         max_value=max_value,
+    #         max_eval=max_eval,
+    #     )
 
     if fit_intercept:
         C = np.hstack([np.ones((n, 1)), C])
@@ -494,19 +481,19 @@ def inverse_conditional_likelihood_ratio_test(
     if C.shape[1] > 0:
         X, y, Z, W = oproj(C, X, y, Z, W)
 
-    S = np.concatenate([X, W], axis=1)
+    XW = np.concatenate([X, W], axis=1)
 
-    S_proj, y_proj = proj(Z, S, y)
-    S_orth = S - S_proj
+    XW_proj, y_proj = proj(Z, XW, y)
+    XW_orth = XW - XW_proj
     y_orth = y - y_proj
 
-    Sy_proj = np.concatenate([S_proj, y_proj.reshape(-1, 1)], axis=1)
-    Sy_orth = np.concatenate([S_orth, y_orth.reshape(-1, 1)], axis=1)
+    XWy_proj = np.concatenate([XW_proj, y_proj.reshape(-1, 1)], axis=1)
+    XWy_orth = np.concatenate([XW_orth, y_orth.reshape(-1, 1)], axis=1)
 
-    Sy_eigvals = np.sort(
+    XWy_eigvals = np.sort(
         np.real(
             _characteristic_roots(
-                a=Sy_proj.T @ Sy_proj, b=Sy_orth.T @ Sy_orth, subset_by_index=[0, 1]
+                a=XWy_proj.T @ XWy_proj, b=XWy_orth.T @ XWy_orth, subset_by_index=[0, 1]
             )
         )
     )
@@ -515,46 +502,45 @@ def inverse_conditional_likelihood_ratio_test(
 
     # "lower bound" on the confidence set to be computed. That is, the confidence set
     # to be computed will contain the lower bound.
-    quantile_lower = scipy.stats.chi2.ppf(1 - alpha, df=mx + md) + dof * Sy_eigvals[0]
+    quantile_lower = scipy.stats.chi2.ppf(1 - alpha, df=mx + md) + dof * XWy_eigvals[0]
 
-    A = S.T @ (S_proj - quantile_lower / dof * S_orth)
-    b = -2 * (S_proj - quantile_lower / dof * S_orth).T @ y
+    A = XW.T @ (XW_proj - quantile_lower / dof * XW_orth)
+    b = -2 * (XW_proj - quantile_lower / dof * XW_orth).T @ y
     c = y.T @ (y_proj - quantile_lower / dof * y_orth)
-    coordinates = np.concatenate([np.arange(mx), np.arange(mx + mw, mx + mw + md)])
-    cs_lower = ConfidenceSet.from_quadric(Quadric(A, b, c).project(coordinates))
+    # coordinates = np.concatenate([np.arange(mx), np.arange(mx + mw, mx + mw + md)])
+    cs_lower = ConfidenceSet.from_quadric(Quadric(A, b, c).project(np.arange(mx + md)))
 
     # "upper bound" on the confidence set to be computed. That is, the confidence set
     # to be computed will be contained in the upper bound.
     quantile_upper = (
-        scipy.stats.chi2.ppf(1 - alpha, df=k + md - mw) + dof * Sy_eigvals[0]
+        scipy.stats.chi2.ppf(1 - alpha, df=k + md - mw) + dof * XWy_eigvals[0]
     )
 
-    A = S.T @ (dof * S_proj - quantile_upper * S_orth)
-    b = -2 * (dof * S_proj - quantile_upper * S_orth).T @ y
+    A = XW.T @ (dof * XW_proj - quantile_upper * XW_orth)
+    b = -2 * (dof * XW_proj - quantile_upper * XW_orth).T @ y
     c = y.T @ (dof * y_proj - quantile_upper * y_orth)
-    cs_upper = ConfidenceSet.from_quadric(Quadric(A, b, c).project(coordinates))
+    cs_upper = ConfidenceSet.from_quadric(Quadric(A, b, c).project(np.arange(mx + md)))
 
-    Wy_proj = Sy_proj[:, mx:]
-    Wy_orth = Sy_orth[:, mx:]
+    Wy_proj = XWy_proj[:, (mx + md) :]
+    Wy_orth = XWy_orth[:, (mx + md) :]
 
     def f(x):
         Wy_proj_ = np.copy(Wy_proj)
-        Wy_proj_[:, -1:] -= S_proj[:, :mx] * x
+        Wy_proj_[:, -1:] -= XW_proj[:, : (mx + md)] * x
         Wy_orth_ = np.copy(Wy_orth)
-        Wy_orth_[:, -1:] -= S_orth[:, :mx] * x
+        Wy_orth_[:, -1:] -= XW_orth[:, : (mx + md)] * x
 
-        eigval = np.real(
-            _characteristic_roots(
-                a=Wy_proj_.T @ Wy_proj_, b=Wy_orth_.T @ Wy_orth_, subset_by_index=[0, 0]
-            )
-        )
+        ar_min = _characteristic_roots(
+            a=Wy_proj_.T @ Wy_proj_, b=Wy_orth_.T @ Wy_orth_, subset_by_index=[0, 0]
+        )[0]
 
-        s_min = dof * (Sy_eigvals[0] + Sy_eigvals[1] - eigval[0])
-        statistic = dof * (eigval[0] - Sy_eigvals[0])
+        s_min = dof * (XWy_eigvals[0] + XWy_eigvals[1] - ar_min)
+        statistic = dof * (ar_min - XWy_eigvals[0])
+
         return alpha - (
             conditional_likelihood_ratio_critical_value_function(
-                mx,
-                k - mw,
+                mx + md,
+                k + md - mw,
                 s_min,
                 statistic,
                 method="numerical_integration",
@@ -563,6 +549,7 @@ def inverse_conditional_likelihood_ratio_test(
         )
 
     roots = []
+
     for left_upper, right_upper in cs_upper.boundaries:
         left_lower_, right_lower_ = None, None
         for left_lower, right_lower in cs_lower.boundaries:
@@ -595,9 +582,13 @@ def inverse_conditional_likelihood_ratio_test(
             tol=tol,
             max_value=max_value,
             max_eval=max_eval,
+            max_depth=5,
         )
 
     roots = sorted(roots)
+
+    # if md == 1 and mw > 0:
+    #     breakpoint()
 
     assert len(roots) % 2 == 0
     boundaries = [(left, right) for left, right in zip(roots[::2], roots[1::2])]

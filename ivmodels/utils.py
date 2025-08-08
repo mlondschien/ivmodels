@@ -329,7 +329,7 @@ def _characteristic_roots(a, b, subset_by_index=None):
     np.ndarray of dimension (n,)
         The characteristic roots of the generalized eigenvalue problem.
     """
-    eps = np.sqrt(np.finfo(b.dtype).eps)
+    eps = np.finfo(b.dtype).eps * 1e2
     if a.shape == (1, 1) and np.abs(b.item() / a.item()) < eps:
         return np.array([np.inf])
 
@@ -341,7 +341,7 @@ def _characteristic_roots(a, b, subset_by_index=None):
     else:
         # If b is singular, eigvalsh will raise an error.
         eigvals = np.clip(np.real(scipy.linalg.eigvals(a=a, b=b)), 0, None)
-        eigvals = np.sort(eigvals[np.isfinite(eigvals)])
+        eigvals = np.sort(eigvals[np.isfinite(eigvals) & (np.abs(eigvals) < 1 / eps)])
 
         if subset_by_index is not None:
             left = min(subset_by_index[0], eigvals.shape[0] - 1)

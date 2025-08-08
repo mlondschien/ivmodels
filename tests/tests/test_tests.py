@@ -297,13 +297,17 @@ def test_test_size_weak_ivs(test, n, mx, k, u, mc):
         (100, 1, 2, 3, 1, False),
         (100, 1, 5, 0, 0, False),
         (100, 0, 2, 1, 2, False),
-        "guggenberger12",
+        "guggenberger12(md=0)",
+        "guggenberger12(md=1)",
     ],
 )
 @pytest.mark.parametrize("p_value", [0.1, 0.01])
 def test_test_round_trip(test, inverse_test, data, p_value):
     """A test's p-value at the confidence set's boundary equals the nominal level."""
-    if data == "guggenberger12":
+    if data == "guggenberger12(md=0)":
+        Z, X, y, C, _, D = simulate_guggenberger12(n=1000, k=10, seed=0, md=0)
+        fit_intercept = False
+    elif data == "guggenberger12(md=1)":
         Z, X, y, C, _, D = simulate_guggenberger12(n=1000, k=10, seed=0, md=1)
         fit_intercept = False
     else:
@@ -368,6 +372,7 @@ def test_test_round_trip(test, inverse_test, data, p_value):
         "guggenberger12 (md=1)",
         "guggenberger12 (md=0)",
         "guggenberger12 (md=0, h12=4)",
+        # "guggenberger12 (md=1, h12=4, mx=0)",  # TODO!
     ],
 )
 @pytest.mark.parametrize("p_value", [0.05, 0.1, 0.5])
@@ -380,16 +385,19 @@ def test_subvector_round_trip(test, inverse_test, data, p_value):
     if isinstance(data, str) and data.startswith("guggenberger12"):
         md = 1 if "md=1" in data else 0
         h12 = 4 if "h12=4" in data else 1
-        mx = 1
+        mx = 0 if "mx=0" in data else 1
 
         if test == lagrange_multiplier_test and md > 0:
             pytest.skip("LM test inverse not implemented for md + mx > 1")
-        if test == gkm_anderson_rubin_test and md > 0:
-            pytest.skip("GKM AR test inverse not implemented for md > 0")
+
         # h12=4 leads to a "reasonably identified" setting with possibly infinite
         # confidence sets, which do not span the entire space.
         Z, X, y, C, W, D = simulate_guggenberger12(n=1000, k=5, seed=0, md=md, h12=h12)
         fit_intercept = False
+
+        if mx == 0:
+            W = np.hstack([X, W])
+            X = X[:, :0]
     else:
         n, mx, k, mw, mc, md, fit_intercept = data
 
@@ -401,8 +409,8 @@ def test_subvector_round_trip(test, inverse_test, data, p_value):
         pytest.skip("LM test inverse not implemented for mx + md > 1")
     if test == conditional_likelihood_ratio_test and mx + md > 1:
         pytest.skip("CLR test inverse not implemented for mx + md > 1")
-    if test == gkm_anderson_rubin_test and (mx != 1 or md != 0):
-        pytest.skip("GKM AR test inverse not implemented for mx != 1 or md != 0")
+    if test == gkm_anderson_rubin_test and (mx + md != 1):
+        pytest.skip("GKM AR test inverse not implemented for mx + md != 1")
 
     kwargs = {
         "Z": Z,
