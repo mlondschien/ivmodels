@@ -460,21 +460,6 @@ def inverse_conditional_likelihood_ratio_test(
         X = np.hstack([X, D])
         Z = np.hstack([Z, D])
 
-    # if md > 0:
-    #     return inverse_conditional_likelihood_ratio_test(
-    #         Z=np.hstack([Z, D]),
-    #         X=np.hstack([X, D]),
-    #         y=y,
-    #         alpha=alpha,
-    #         W=W,
-    #         C=C,
-    #         D=None,
-    #         fit_intercept=fit_intercept,
-    #         tol=tol,
-    #         max_value=max_value,
-    #         max_eval=max_eval,
-    #     )
-
     if fit_intercept:
         C = np.hstack([np.ones((n, 1)), C])
 
