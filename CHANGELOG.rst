@@ -8,6 +8,11 @@ Changelog
 
 - The functions :func:`~ivmodels.utils.proj` and :func:`~ivmodels.utils.oproj` now
   accept pandas DataFrames and Series as arguments.
+- The
+  :func:`~ivmodels.tests.conditional_likelihood_ratio.conditional_likelihood_ratio_test`
+  now supports testing hypotheses for included exogenous covariates.
+- The more powerful critical values of Guggenberger et al. (2019) (``"gkm"``) are now
+  supported when testing hypotheses for included exogenous covariates.
 
 **Other changes:**
 
@@ -19,6 +24,8 @@ Changelog
   prints the same as :class:`~ivmodels.confidence_set.ConfidenceSet`'s
   :func:`~ivmodels.confidence_set.ConfidenceSet.__format__` if the quadric
   is one-dimensional.
+
+- Made :func:`~ivmodels.utils._characteristic_roots` more robust when using singular
 
 0.7.0 - 2025-06-03
 ------------------
