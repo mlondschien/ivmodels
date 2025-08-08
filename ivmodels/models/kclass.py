@@ -291,9 +291,11 @@ class KClassMixin:
 
         Xy = np.concatenate([X, y.reshape(-1, 1)], axis=1)
         Xy_proj = np.concatenate([X_proj, y_proj.reshape(-1, 1)], axis=1)
-
+        Xy_orth = Xy - Xy_proj
         return _characteristic_roots(
-            a=Xy.T @ Xy_proj, b=(Xy - Xy_proj).T @ Xy, subset_by_index=subset_by_index
+            a=Xy_proj.T @ Xy_proj,
+            b=Xy_orth.T @ Xy_orth,
+            subset_by_index=subset_by_index,
         )
 
     @staticmethod

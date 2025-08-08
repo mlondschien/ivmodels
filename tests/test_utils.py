@@ -117,7 +117,7 @@ def test_to_numpy():
 
 
 @pytest.mark.parametrize("dim, rank", [(10, 5), (10, 10), (10, 1)])
-def test_characteristic_roots(dim, rank):
+def test_characteristic_roots_random(dim, rank):
     rng = np.random.RandomState(0)
     A = rng.normal(0, 1, (dim, dim))
     A = A.T @ A
@@ -125,13 +125,34 @@ def test_characteristic_roots(dim, rank):
     B = B @ B.T
 
     roots = _characteristic_roots(A, B)
-    finite_roots = sorted(roots, key=lambda x: np.abs(x))[:rank]
-    for root in finite_roots:
+    assert len(roots) == rank
+
+    for root in roots:
         assert np.allclose(np.min(np.abs(scipy.linalg.eigvalsh(A - root * B))), 0)
 
     assert np.allclose(
-        _characteristic_roots(A, B, subset_by_index=[0, 0]), np.min(finite_roots)
+        _characteristic_roots(A, B, subset_by_index=[0, 0]), np.min(roots)
     )
+
+
+@pytest.mark.parametrize(
+    "A, B, roots",
+    [
+        (np.diag([1.0, 1.0]), np.diag([1.0, 0.0]), [1.0]),  # [1.0, 0.0] is a root
+        # This is an important test case. If we just drop the second row & column of A, B,
+        # corresponding to the zero eigenvalue of B, we get the root 1.0 > 0.5. This holds
+        # even though A is symmetric positive definite.
+        (
+            np.array([[1.0, -0.5], [-0.5, 0.5]]),
+            np.diag([1.0, 0.0]),
+            [0.5],
+        ),  # [1.0, 1.0]
+        (np.array([[1.0, 1.0], [1.0, -1.0]]), np.diag([1.0, 0.0]), [2.0]),  # [1.0, 1.0]
+    ],
+)
+def test_characteristic_roots_fixed(A, B, roots):
+    roots_found = _characteristic_roots(A, B)
+    assert np.allclose(roots_found, roots)
 
 
 @pytest.mark.parametrize(

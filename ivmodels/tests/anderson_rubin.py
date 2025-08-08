@@ -206,17 +206,12 @@ def anderson_rubin_test(
         if mw == 0:
             # For mw == 0, the GKM critical values are just the chi2 critical values.
             p_value = 1 - scipy.stats.chi2.cdf(statistic * dfn, df=dfn)
-        elif md > 0:
-            raise ValueError(
-                "The critical value function proposed by Guggenberger et al. (2019) is "
-                "not valid if D is not None"
-            )
         else:
-            kappa_max = (n - k - mc - md) * KClass._spectrum(
-                X=W, y=y - X @ beta, Z=Z, subset_by_index=[mw, mw]
-            )[-1]
+            kappa_max = (n - k - mc - md) * KClass._spectrum(X=W, y=y - X @ beta, Z=Z)[
+                -1
+            ]
             p_value = more_powerful_subvector_anderson_rubin_critical_value_function(
-                statistic * dfn, kappa_max, k=k, mw=mw
+                statistic * dfn, kappa_max, k=k + md, mw=mw
             )
     else:
         raise ValueError(
@@ -312,7 +307,7 @@ def inverse_anderson_rubin_test(
         # For mw == 0, the GKM critical values are just the chi2 critical values.
         if mw == 0:
             critical_values = "chi2"
-        elif mx != 1 or md != 0:
+        elif mx + md != 1:
             raise ValueError(
                 "Test inversion for the Anderson-Rubin test with GKM critical values "
                 "is only implemented for mx = X.shape[1] == 1 and md = D.shape[1] == 0."
@@ -327,19 +322,16 @@ def inverse_anderson_rubin_test(
     if C.shape[1] > 0:
         X, y, Z, W, D = oproj(C, X, y, Z, W, D)
 
-    S = np.concatenate([X, W], axis=1)
-
     dfn = k + md - mw
     dfd = n - k - mc - md - fit_intercept
 
     if md > 0:
         Z = np.hstack([Z, D])
+        X = np.hstack([X, D])
+
+    S = np.concatenate([X, W], axis=1)
 
     S_proj, y_proj = proj(Z, S, y)
-
-    if md > 0:
-        S = np.hstack([S, D])
-        S_proj = np.hstack([S_proj, D])
 
     S_orth = S - S_proj
     y_orth = y - y_proj
@@ -358,31 +350,29 @@ def inverse_anderson_rubin_test(
     b = -2 * (S_proj - quantile * S_orth).T @ y
     c = y.T @ (y_proj - quantile * y_orth)
 
-    coordinates = np.concatenate([np.arange(mx), np.arange(mx + mw, mx + mw + md)])
-
     if critical_values in ["chi2", "f"]:
-        return Quadric(A, b, c).project(coordinates)
+        return Quadric(A, b, c).project(np.arange(mx + md))
 
     # For GKM's critical values, the "standard" inverse AR test CS with chi2 critical
     # values acts as an upper bound on the confidence set to be computed. That is, the
     # "standard" inverse AR test CS will contain the confidence set to be computed. This
     # holds as the GKM critical values are (strictly) more powerful than the chi2
     # critical values.
-    upper_bound = Quadric(A, b, c).project(coordinates)
+    upper_bound = Quadric(A, b, c).project(np.arange(mx + md))
 
     def f(x):
         x = np.array([x]).flatten()
         spectrum = KClass._spectrum(
-            X=S[:, mx:],
-            X_proj=S_proj[:, mx:],
-            y=y - S[:, :mx] @ x,
-            y_proj=y_proj - S_proj[:, :mx] @ x,
+            X=S[:, (mx + md) :],
+            X_proj=S_proj[:, (mx + md) :],
+            y=y - S[:, : (mx + md)] @ x,
+            y_proj=y_proj - S_proj[:, : (mx + md)] @ x,
             subset_by_index=[0, mw],
         )
 
         return (
             more_powerful_subvector_anderson_rubin_critical_value_function(
-                spectrum[0] * dfd, spectrum[-1] * dfd, k=k, mw=mw
+                spectrum[0] * dfd, spectrum[-1] * dfd, k=k + md, mw=mw
             )
             - alpha
         )

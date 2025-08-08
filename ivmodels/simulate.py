@@ -58,8 +58,8 @@ def simulate_guggenberger12(
     if k < 2:
         raise ValueError("k must be at least 2")
 
-    beta = np.array([[1]])
-    gamma = np.array([[1]])
+    beta = np.array([[1.0]])
+    gamma = np.array([[1.0]])
 
     rng = np.random.RandomState(seed)
 
@@ -98,7 +98,7 @@ def simulate_guggenberger12(
 
     Pi_ZD = rng.normal(0, 1, (k, md))
     D = rng.normal(0, 1, (n, md)) + Z @ Pi_ZD
-    delta = rng.normal(0, 0.1, (md, 1))
+    delta = np.zeros((md, 1))
 
     X = Z @ Pi_X + noise[:, 1:2]
     W = Z @ Pi_W + noise[:, 2:]
