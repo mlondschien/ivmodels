@@ -158,7 +158,7 @@ def test_characteristic_roots_fixed(A, B, roots):
 @pytest.mark.parametrize(
     "f, a, b, expected",
     [
-        (np.sin, -1, 8, [0, np.pi, 2 * np.pi]),
+        (np.sin, -1, 8, [0.0, np.pi, 2 * np.pi]),
         (lambda x: -np.sin(x), 8, -1, [0, np.pi, 2 * np.pi]),
         (lambda x: x**2 - 1, 0, 2, [1]),
         (lambda x: x**2 - 1, 0, -np.inf, [-1]),
