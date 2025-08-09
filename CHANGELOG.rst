@@ -26,6 +26,7 @@ Changelog
   is one-dimensional.
 
 - Made :func:`~ivmodels.utils._characteristic_roots` more robust when using singular
+  ``b``.
 
 0.7.0 - 2025-06-03
 ------------------
