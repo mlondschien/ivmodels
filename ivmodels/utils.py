@@ -240,7 +240,7 @@ def _check_inputs(Z, X, y, W=None, C=None, D=None, beta=None):
     return Z, X, y, W, C, D, beta
 
 
-def _find_roots(f, a, b, tol, max_value, max_eval, n_points=50, max_depth=5):
+def _find_roots(f, a, b, tol, max_value, max_eval, n_points=100, max_depth=5):
     """
     Find roots of function ``f`` between ``a`` and ``b``.
 
@@ -261,7 +261,6 @@ def _find_roots(f, a, b, tol, max_value, max_eval, n_points=50, max_depth=5):
         return [a]
 
     roots = []
-
     sgn = np.sign(b - a)
     if np.isinf(b):
         grid = np.ones(n_points) * a
@@ -278,11 +277,12 @@ def _find_roots(f, a, b, tol, max_value, max_eval, n_points=50, max_depth=5):
     for i, x in enumerate(grid[1:]):
         y[i + 1] = f(x)
 
-    if y[-1] <= 0:
+    if y[-1] < 0:
         roots = [b]
 
     y[y == 0] = np.finfo(y.dtype).eps
     where = np.where(np.sign(y[:-1]) != np.sign(y[1:]))[0]
+    # breakpoint()
 
     # Conservative. Focus on change closest to b.
     if max_depth == 0:

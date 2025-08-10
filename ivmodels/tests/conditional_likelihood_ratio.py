@@ -460,21 +460,6 @@ def inverse_conditional_likelihood_ratio_test(
         X = np.hstack([X, D])
         Z = np.hstack([Z, D])
 
-    # if md > 0:
-    #     return inverse_conditional_likelihood_ratio_test(
-    #         Z=np.hstack([Z, D]),
-    #         X=np.hstack([X, D]),
-    #         y=y,
-    #         alpha=alpha,
-    #         W=W,
-    #         C=C,
-    #         D=None,
-    #         fit_intercept=fit_intercept,
-    #         tol=tol,
-    #         max_value=max_value,
-    #         max_eval=max_eval,
-    #     )
-
     if fit_intercept:
         C = np.hstack([np.ones((n, 1)), C])
 
@@ -507,7 +492,6 @@ def inverse_conditional_likelihood_ratio_test(
     A = XW.T @ (XW_proj - quantile_lower / dof * XW_orth)
     b = -2 * (XW_proj - quantile_lower / dof * XW_orth).T @ y
     c = y.T @ (y_proj - quantile_lower / dof * y_orth)
-    # coordinates = np.concatenate([np.arange(mx), np.arange(mx + mw, mx + mw + md)])
     cs_lower = ConfidenceSet.from_quadric(Quadric(A, b, c).project(np.arange(mx + md)))
 
     # "upper bound" on the confidence set to be computed. That is, the confidence set
@@ -586,9 +570,6 @@ def inverse_conditional_likelihood_ratio_test(
         )
 
     roots = sorted(roots)
-
-    # if md == 1 and mw > 0:
-    #     breakpoint()
 
     assert len(roots) % 2 == 0
     boundaries = [(left, right) for left, right in zip(roots[::2], roots[1::2])]
