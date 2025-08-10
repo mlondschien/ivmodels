@@ -430,7 +430,7 @@ def inverse_lagrange_multiplier_test(
     C=None,
     D=None,
     fit_intercept=True,
-    tol=1e-4,
+    tol=1e-5,
     max_value=1e6,
     max_eval=1000,
 ):

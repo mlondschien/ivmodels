@@ -345,7 +345,7 @@ def test_test_round_trip(test, inverse_test, data, p_value):
             1
         ]
 
-    assert np.allclose(p_values, p_value, atol=2e-4)
+    assert np.allclose(p_values, p_value, atol=1e-4)
 
 
 @pytest.mark.parametrize(
