@@ -27,6 +27,7 @@ Changelog
 
 - Made :func:`~ivmodels.utils._characteristic_roots` more robust when using singular
   ``b``.
+- :func:`~ivmodels.utils._find_roots` now uses ``scipy.optimize.brentq``.
 
 0.7.0 - 2025-06-03
 ------------------
