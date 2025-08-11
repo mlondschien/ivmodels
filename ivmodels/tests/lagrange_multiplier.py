@@ -387,9 +387,11 @@ def lagrange_multiplier_test(
     mx, mw, mc, md = X.shape[1], W.shape[1], C.shape[1], D.shape[1]
 
     if k == mx + mw:
-        return anderson_rubin_test(
+        statistic, p_value = anderson_rubin_test(
             Z=Z, X=X, W=W, y=y, C=C, D=D, fit_intercept=fit_intercept, beta=beta
         )
+        return statistic * (k + md - mw), p_value
+
     if fit_intercept:
         C = np.hstack([np.ones((n, 1)), C])
 
