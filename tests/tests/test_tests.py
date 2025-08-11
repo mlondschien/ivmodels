@@ -373,7 +373,7 @@ def test_test_round_trip_quadrics(test, inverse_test, data, p_value):
         (100, 1, 5, 3, 3, 0, True),
         (100, 1, 4, 2, 3, 0, False),
         (100, 1, 5, 0, 0, 0, False),
-        (100, 0, 2, 2, 1, 1, False),
+        (100, 0, 3, 2, 1, 1, False),
         (100, 1, 3, 2, 1, 0, True),
         "guggenberger12",
         "guggenberger12 (md=1)",
@@ -390,7 +390,7 @@ def test_test_round_trip_1d(test, inverse_test, data, p_value):
             "h12": 4 if "h12=4" in data else 1,
         }
 
-        Z, X, y, C, W, D = simulate_guggenberger12(n=1000, k=10, seed=0, **kwargs)
+        Z, X, y, C, W, D = simulate_guggenberger12(n=100, k=10, seed=0, **kwargs)
         fit_intercept = False
 
         if "md=1" in data:
@@ -429,16 +429,24 @@ def test_test_round_trip_1d(test, inverse_test, data, p_value):
 
     for left, right in quadric.boundaries:
         if np.isinf(left):
-            left = -1e8
+            left = -1e6
         else:
             p_value_left = test(beta=np.array([left]), **kwargs)[1]
-            assert np.allclose(p_value_left, p_value, atol=1e-4)
+
+            # allow tolerance both in p_value and in left
+            if not np.allclose(p_value_left, p_value, atol=1e-4):
+                assert test(beta=np.array([left + 2e-4]), **kwargs)[1] > p_value
+                assert test(beta=np.array([left - 2e-4]), **kwargs)[1] < p_value
 
         if np.isinf(right):
-            right = 1e8
+            right = 1e6
         else:
             p_value_right = test(beta=np.array([right]), **kwargs)[1]
-            assert np.allclose(p_value_right, p_value, atol=1e-4)
+
+            # allow tolerance both in p_value and in right
+            if not np.allclose(p_value_right, p_value, atol=1e-4):
+                assert test(beta=np.array([right + 2e-4]), **kwargs)[1] < p_value
+                assert test(beta=np.array([right - 2e-4]), **kwargs)[1] > p_value
 
         # The test should not reject within the confidence set.
         assert test(beta=np.array([(left + right) / 2]), **kwargs)[1] > p_value

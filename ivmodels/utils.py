@@ -276,9 +276,7 @@ def _find_roots(f, a, b, tol, max_value, max_eval, n_points=100, max_depth=5):
     roots = np.empty(len(where), dtype=float)
 
     for i, x in enumerate(where):
-        roots[i] = scipy.optimize.brentq(
-            f, grid[x], grid[x + 1], xtol=tol
-        )  # , maxiter=max_eval)
+        roots[i] = scipy.optimize.brentq(f, grid[x], grid[x + 1], xtol=tol)
 
     roots = np.unique(np.round(roots, decimals=12)).tolist()
 
