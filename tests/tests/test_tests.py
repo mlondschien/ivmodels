@@ -3,6 +3,7 @@ from functools import partial
 import numpy as np
 import pytest
 
+from ivmodels.confidence_set import ConfidenceSet
 from ivmodels.models.kclass import KClass
 from ivmodels.quadric import Quadric
 from ivmodels.simulate import simulate_gaussian_iv, simulate_guggenberger12
@@ -36,17 +37,6 @@ gkm_anderson_rubin_test = partial(anderson_rubin_test, critical_values="gkm")
 gkm_inverse_anderson_rubin_test = partial(
     inverse_anderson_rubin_test, critical_values="gkm"
 )
-
-
-TEST_PAIRS = [
-    (conditional_likelihood_ratio_test, inverse_conditional_likelihood_ratio_test),
-    (pulse_test, inverse_pulse_test),
-    (lagrange_multiplier_test, inverse_lagrange_multiplier_test),
-    (anderson_rubin_test, inverse_anderson_rubin_test),
-    (f_anderson_rubin_test, inverse_f_anderson_rubin_test),
-    (wald_test, inverse_wald_test),
-    (likelihood_ratio_test, inverse_likelihood_ratio_test),
-]
 
 
 # The Pulse doesn't have a subvector version.
@@ -279,7 +269,92 @@ def test_test_size_weak_ivs(test, n, mx, k, u, mc):
 @pytest.mark.parametrize(
     "test, inverse_test",
     [
-        (pulse_test, inverse_pulse_test),
+        # All tests that have an analytic solution for the inverse.
+        # (pulse_test, inverse_pulse_test),
+        (anderson_rubin_test, inverse_anderson_rubin_test),
+        (f_anderson_rubin_test, inverse_f_anderson_rubin_test),
+        # (gkm_anderson_rubin_test, gkm_inverse_anderson_rubin_test),
+        (wald_test, inverse_wald_test),
+        # (lagrange_multiplier_test, inverse_lagrange_multiplier_test),
+        (liml_wald_test, liml_inverse_wald_test),
+        (likelihood_ratio_test, inverse_likelihood_ratio_test),
+        # (conditional_likelihood_ratio_test, inverse_conditional_likelihood_ratio_test),
+    ],
+)
+@pytest.mark.parametrize(
+    "data",
+    [
+        (100, 1, 2, 0, 3, 0, True),
+        (100, 1, 2, 0, 3, 1, False),
+        (100, 1, 5, 0, 0, 0, False),
+        (100, 1, 2, 0, 1, 1, False),
+        (100, 2, 5, 3, 3, 0, True),
+        (100, 1, 4, 2, 3, 1, False),
+        (100, 2, 5, 0, 0, 0, False),
+        (100, 1, 3, 2, 1, 1, False),
+        "guggenberger12(md=0)",
+        "guggenberger12(md=1)",
+    ],
+)
+@pytest.mark.parametrize("p_value", [0.1, 0.01])
+def test_test_round_trip_quadrics(test, inverse_test, data, p_value):
+    """A test's p-value at the confidence set's boundary equals the nominal level."""
+    if data == "guggenberger12(md=0)":
+        Z, X, y, C, W, D = simulate_guggenberger12(n=1000, k=10, seed=0, md=0)
+        fit_intercept = False
+    elif data == "guggenberger12(md=1)":
+        Z, X, y, C, W, D = simulate_guggenberger12(n=1000, k=10, seed=0, md=1)
+        fit_intercept = False
+    else:
+        n, mx, k, mw, mc, md, fit_intercept = data
+
+        if test == lagrange_multiplier_test and mx > 1:
+            pytest.skip("LM test inverse not implemented for mx > 1")
+        if test == conditional_likelihood_ratio_test and mx + md > 1:
+            pytest.skip("CLR test inverse not implemented for mx + md > 1")
+
+        Z, X, y, C, W, D = simulate_gaussian_iv(
+            n=n,
+            mx=mx,
+            k=k,
+            mw=mw,
+            mc=mc,
+            md=md,
+            seed=0,
+            include_intercept=fit_intercept,
+        )
+
+    if D.shape[1] > 0 and test in [pulse_test]:
+        pytest.skip("Pulse test does not support incl. exog. variables.")
+
+    kwargs = {
+        "Z": Z,
+        "X": X,
+        "W": W,
+        "y": y,
+        "C": C,
+        "D": D,
+        "fit_intercept": fit_intercept,
+    }
+    quadric = inverse_test(**kwargs, alpha=p_value)
+
+    if not isinstance(quadric, Quadric):
+        raise TypeError
+
+    boundary = quadric._boundary()
+    assert np.allclose(quadric(boundary), 0, atol=1e-7)
+
+    p_values = np.zeros(boundary.shape[0])
+    for idx, row in enumerate(boundary):
+        p_values[idx] = test(beta=row, **kwargs)[1]
+
+    assert np.allclose(p_values, p_value, atol=1e-4)
+
+
+@pytest.mark.parametrize(
+    "test, inverse_test",
+    [
+        # (pulse_test, inverse_pulse_test),
         (anderson_rubin_test, inverse_anderson_rubin_test),
         (f_anderson_rubin_test, inverse_f_anderson_rubin_test),
         (gkm_anderson_rubin_test, gkm_inverse_anderson_rubin_test),
@@ -293,149 +368,80 @@ def test_test_size_weak_ivs(test, n, mx, k, u, mc):
 @pytest.mark.parametrize(
     "data",
     [
-        (100, 1, 2, 3, 0, True),
-        (100, 1, 2, 3, 1, False),
-        (100, 1, 5, 0, 0, False),
-        (100, 0, 2, 1, 2, False),
-        "guggenberger12(md=0)",
-        "guggenberger12(md=1)",
-    ],
-)
-@pytest.mark.parametrize("p_value", [0.1, 0.01])
-def test_test_round_trip(test, inverse_test, data, p_value):
-    """A test's p-value at the confidence set's boundary equals the nominal level."""
-    if data == "guggenberger12(md=0)":
-        Z, X, y, C, _, D = simulate_guggenberger12(n=1000, k=10, seed=0, md=0)
-        fit_intercept = False
-    elif data == "guggenberger12(md=1)":
-        Z, X, y, C, _, D = simulate_guggenberger12(n=1000, k=10, seed=0, md=1)
-        fit_intercept = False
-    else:
-        n, mx, k, mc, md, fit_intercept = data
-
-        if test == lagrange_multiplier_test and mx > 1:
-            pytest.skip("LM test inverse not implemented for mx > 1")
-        if test == conditional_likelihood_ratio_test and mx + md > 1:
-            pytest.skip("CLR test inverse not implemented for mx + md > 1")
-
-        Z, X, y, C, _, D = simulate_gaussian_iv(
-            n=n, mx=mx, k=k, mc=mc, md=md, seed=0, include_intercept=fit_intercept
-        )
-
-    if D.shape[1] + X.shape[1] > 1 and test in [
-        conditional_likelihood_ratio_test,
-        lagrange_multiplier_test,
-    ]:
-        pytest.skip("inverse CLR and LM tests do not multidim conf. sets")
-
-    if D.shape[1] > 0 and test in [pulse_test]:
-        pytest.skip("Pulse test does not support incl. exog. variables.")
-
-    quadric = inverse_test(
-        Z, X, y, C=C, D=D, alpha=p_value, fit_intercept=fit_intercept
-    )
-    boundary = quadric._boundary()
-
-    if isinstance(quadric, Quadric):
-        assert np.allclose(quadric(boundary), 0, atol=1e-7)
-
-    p_values = np.zeros(boundary.shape[0])
-    for idx, row in enumerate(boundary):
-        p_values[idx] = test(Z, X, y, C=C, D=D, beta=row, fit_intercept=fit_intercept)[
-            1
-        ]
-
-    assert np.allclose(p_values, p_value, atol=1e-4)
-
-
-@pytest.mark.parametrize(
-    "test, inverse_test",
-    [
-        (wald_test, inverse_wald_test),
-        (liml_wald_test, liml_inverse_wald_test),
-        (anderson_rubin_test, inverse_anderson_rubin_test),
-        # (lagrange_multiplier_test, inverse_lagrange_multiplier_test),
-        (f_anderson_rubin_test, inverse_f_anderson_rubin_test),
-        (gkm_anderson_rubin_test, gkm_inverse_anderson_rubin_test),
-        (likelihood_ratio_test, inverse_likelihood_ratio_test),
-        (conditional_likelihood_ratio_test, inverse_conditional_likelihood_ratio_test),
-    ],
-)
-@pytest.mark.parametrize(
-    "data",
-    [
-        (1000, 1, 5, 3, 3, 0, True),
-        (100, 1, 4, 2, 3, 1, False),
-        (100, 2, 5, 0, 0, 0, False),
-        (1000, 0, 2, 2, 1, 1, False),
-        (100, 1, 3, 2, 1, 1, False),
+        # n, mx, k, mw, mc, md, fit_intercept
+        (100, 1, 5, 0, 0, 0, False),
+        (100, 1, 5, 3, 3, 0, True),
+        (100, 1, 4, 2, 3, 0, False),
+        (100, 1, 5, 0, 0, 0, False),
+        (100, 0, 2, 2, 1, 1, False),
+        (100, 1, 3, 2, 1, 0, True),
+        "guggenberger12",
         "guggenberger12 (md=1)",
-        "guggenberger12 (md=0)",
         "guggenberger12 (md=0, h12=4)",
-        # "guggenberger12 (md=1, h12=4, mx=0)",  # TODO!
+        "guggenberger12(md=1, h12=4)",
     ],
 )
-@pytest.mark.parametrize("p_value", [0.05, 0.1, 0.5])
-def test_subvector_round_trip(test, inverse_test, data, p_value):
-    """
-    A test's p-value at the confidence set's boundary equals the nominal level.
+@pytest.mark.parametrize("p_value", [0.1, 0.02])
+def test_test_round_trip_1d(test, inverse_test, data, p_value):
+    """A test's p-value at the confidence set's boundary equals the nominal level."""
+    if "guggenberger12" in data:
+        kwargs = {
+            "md": 1 if "md=1" in data else 0,
+            "h12": 4 if "h12=4" in data else 1,
+        }
 
-    This time for subvector tests.
-    """
-    if isinstance(data, str) and data.startswith("guggenberger12"):
-        md = 1 if "md=1" in data else 0
-        h12 = 4 if "h12=4" in data else 1
-        mx = 0 if "mx=0" in data else 1
-
-        if test == lagrange_multiplier_test and md > 0:
-            pytest.skip("LM test inverse not implemented for md + mx > 1")
-
-        # h12=4 leads to a "reasonably identified" setting with possibly infinite
-        # confidence sets, which do not span the entire space.
-        Z, X, y, C, W, D = simulate_guggenberger12(n=1000, k=5, seed=0, md=md, h12=h12)
+        Z, X, y, C, W, D = simulate_guggenberger12(n=1000, k=10, seed=0, **kwargs)
         fit_intercept = False
 
-        if mx == 0:
+        if "md=1" in data:
             W = np.hstack([X, W])
             X = X[:, :0]
+
     else:
         n, mx, k, mw, mc, md, fit_intercept = data
 
         Z, X, y, C, W, D = simulate_gaussian_iv(
-            n=n, mx=mx, k=k, mw=mw, mc=mc, md=md, seed=0
+            n=n,
+            mx=mx,
+            mw=mw,
+            k=k,
+            mc=mc,
+            md=md,
+            seed=0,
+            include_intercept=fit_intercept,
         )
-
-    if test == lagrange_multiplier_test and mx + md > 1:
-        pytest.skip("LM test inverse not implemented for mx + md > 1")
-    if test == conditional_likelihood_ratio_test and mx + md > 1:
-        pytest.skip("CLR test inverse not implemented for mx + md > 1")
-    if test == gkm_anderson_rubin_test and (mx + md != 1):
-        pytest.skip("GKM AR test inverse not implemented for mx + md != 1")
 
     kwargs = {
         "Z": Z,
         "X": X,
-        "y": y,
         "W": W,
+        "y": y,
         "C": C,
         "D": D,
         "fit_intercept": fit_intercept,
     }
-
-    quadric = inverse_test(alpha=p_value, **kwargs)
-    boundary = quadric._boundary()
+    quadric = inverse_test(**kwargs, alpha=p_value)
 
     if isinstance(quadric, Quadric):
+        boundary = quadric._boundary()
         assert np.allclose(quadric(boundary), 0, atol=1e-7)
+        quadric = ConfidenceSet.from_quadric(quadric)
 
-    p_values = np.zeros(boundary.shape[0])
-    for idx, row in enumerate(boundary):
-        p_values[idx] = test(beta=row, **kwargs)[1]
+    for left, right in quadric.boundaries:
+        if np.isinf(left):
+            left = -1e8
+        else:
+            p_value_left = test(beta=np.array([left]), **kwargs)[1]
+            assert np.allclose(p_value_left, p_value, atol=1e-4)
 
-    if test == conditional_likelihood_ratio_test:
-        assert np.allclose(p_values, p_value, atol=1e-3)
-    else:
-        assert np.allclose(p_values, p_value, atol=1e-4)
+        if np.isinf(right):
+            right = 1e8
+        else:
+            p_value_right = test(beta=np.array([right]), **kwargs)[1]
+            assert np.allclose(p_value_right, p_value, atol=1e-4)
+
+        # The test should not reject within the confidence set.
+        assert test(beta=np.array([(left + right) / 2]), **kwargs)[1] > p_value
 
 
 @pytest.mark.parametrize(
