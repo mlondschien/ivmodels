@@ -451,7 +451,7 @@ def inverse_conditional_likelihood_ratio_test(
     n, k = Z.shape
     mx, mw, mc, md = X.shape[1], W.shape[1], C.shape[1], D.shape[1]
 
-    if k == mx + mw + md:
+    if k == mx + mw:
         return inverse_anderson_rubin_test(
             Z=Z, X=X, W=W, y=y, C=C, D=D, fit_intercept=fit_intercept, alpha=alpha
         )

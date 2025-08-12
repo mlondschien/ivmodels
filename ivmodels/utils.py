@@ -254,56 +254,37 @@ def _find_roots(f, a, b, tol, max_value, max_eval, n_points=100, max_depth=5):
     There is no scipy root finding algorithm that ensures that the root found is the
     closest to ``b``. Note that this is also not strictly ensured by this function.
     """
-    if np.abs(b - a) < tol or max_eval < 0:
-        return [b]  # conservative, resulting in a larger interval
-
     if np.isinf(a):
         return [a]
 
-    roots = []
-    sgn = np.sign(b - a)
+    if f(a) >= 0:
+        raise ValueError("f(a) must be negative")
+
+    if np.isfinite(b) and f(b) <= 0:
+        raise ValueError("f(b) must be positive")
+
     if np.isinf(b):
+        sgn = np.sign(b - a)
         grid = np.ones(n_points) * a
         grid[1:] += sgn * np.logspace(np.log10(tol), np.log10(max_value), n_points - 1)
     else:
         grid = np.linspace(a, b, n_points)
 
-    y = np.zeros(n_points)
+    y = np.array([f(x) for x in grid])
 
-    y[0] = f(grid[0])
-    if y[0] >= 0:
-        raise ValueError("f(a) must be negative.")
+    where = np.where(y[1:] * y[:-1] <= 0)[0]
+    roots = np.empty(len(where), dtype=float)
 
-    for i, x in enumerate(grid[1:]):
-        y[i + 1] = f(x)
+    for i, x in enumerate(where):
+        roots[i] = scipy.optimize.brentq(f, grid[x], grid[x + 1], xtol=tol)
 
-    if y[-1] < 0:
-        roots = [b]
+    roots = np.unique(np.round(roots, decimals=12)).tolist()
 
-    y[y == 0] = np.finfo(y.dtype).eps
-    where = np.where(np.sign(y[:-1]) != np.sign(y[1:]))[0]
-    # breakpoint()
-
-    # Conservative. Focus on change closest to b.
-    if max_depth == 0:
-        where = where[-1:]
-
-    for idx, w in enumerate(where):
-        if idx % 2 == 0:
-            a, b = grid[w], grid[w + 1]
+    if np.isinf(b) and y[-1] < 0:
+        if sgn == 1:
+            roots.append(b)
         else:
-            a, b = grid[w + 1], grid[w]
-
-        roots += _find_roots(
-            f,
-            a,
-            b,
-            tol=tol,
-            n_points=n_points,
-            max_value=max_value,
-            max_eval=max_eval - n_points,
-            max_depth=max_depth - len(where) > 1,
-        )
+            roots.insert(0, b)
 
     return roots
 

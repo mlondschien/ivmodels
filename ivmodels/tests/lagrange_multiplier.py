@@ -5,7 +5,10 @@ from scipy.optimize._optimize import MemoizeJac
 
 from ivmodels.confidence_set import ConfidenceSet
 from ivmodels.models.kclass import KClass
-from ivmodels.tests.anderson_rubin import inverse_anderson_rubin_test
+from ivmodels.tests.anderson_rubin import (
+    anderson_rubin_test,
+    inverse_anderson_rubin_test,
+)
 from ivmodels.utils import (
     _characteristic_roots,
     _check_inputs,
@@ -383,6 +386,12 @@ def lagrange_multiplier_test(
     n, k = Z.shape
     mx, mw, mc, md = X.shape[1], W.shape[1], C.shape[1], D.shape[1]
 
+    if k == mx + mw:
+        statistic, p_value = anderson_rubin_test(
+            Z=Z, X=X, W=W, y=y, C=C, D=D, fit_intercept=fit_intercept, beta=beta
+        )
+        return statistic * (k + md - mw), p_value
+
     if fit_intercept:
         C = np.hstack([np.ones((n, 1)), C])
 
@@ -430,7 +439,7 @@ def inverse_lagrange_multiplier_test(
     C=None,
     D=None,
     fit_intercept=True,
-    tol=1e-5,
+    tol=1e-6,
     max_value=1e6,
     max_eval=1000,
 ):
