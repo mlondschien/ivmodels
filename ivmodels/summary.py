@@ -131,7 +131,10 @@ class Summary:
         }
 
         if not str(self.test).lower() in _TESTS:
-            raise ValueError(f"Test {self.test} not recognized.")
+            raise ValueError(
+                f"Test {self.test} not recognized. Available tests are: "
+                f"{list(_TESTS.keys())}."
+            )
 
         n = X.shape[0]
 
@@ -169,7 +172,7 @@ class Summary:
                 y=y,
                 C=C[:, ~mask[mx:]],
                 D=C[:, mask[mx:]] if name != "intercept" else np.ones((n, 1)),
-                beta=np.array([0]),
+                beta=np.array([0.0]),
                 fit_intercept=fit_intercept and name != "intercept",
                 **kwargs,
             )

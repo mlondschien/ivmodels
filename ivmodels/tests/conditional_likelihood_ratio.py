@@ -466,21 +466,15 @@ def inverse_conditional_likelihood_ratio_test(
     if C.shape[1] > 0:
         X, y, Z, W = oproj(C, X, y, Z, W)
 
-    XW = np.concatenate([X, W], axis=1)
+    XWy = np.concatenate([X, W, y.reshape(-1, 1)], axis=1)
+    XWy_proj = proj(Z, XWy)
+    XWy_orth = XWy - XWy_proj
 
-    XW_proj, y_proj = proj(Z, XW, y)
-    XW_orth = XW - XW_proj
-    y_orth = y - y_proj
-
-    XWy_proj = np.concatenate([XW_proj, y_proj.reshape(-1, 1)], axis=1)
-    XWy_orth = np.concatenate([XW_orth, y_orth.reshape(-1, 1)], axis=1)
+    XWy_p_XWy = XWy_proj.T @ XWy_proj
+    XWy_o_XWy = XWy_orth.T @ XWy_orth
 
     XWy_eigvals = np.sort(
-        np.real(
-            _characteristic_roots(
-                a=XWy_proj.T @ XWy_proj, b=XWy_orth.T @ XWy_orth, subset_by_index=[0, 1]
-            )
-        )
+        np.real(_characteristic_roots(a=XWy_p_XWy, b=XWy_o_XWy, subset_by_index=[0, 1]))
     )
 
     dof = n - k - mc - md - fit_intercept
@@ -489,9 +483,10 @@ def inverse_conditional_likelihood_ratio_test(
     # to be computed will contain the lower bound.
     quantile_lower = scipy.stats.chi2.ppf(1 - alpha, df=mx + md) + dof * XWy_eigvals[0]
 
-    A = XW.T @ (XW_proj - quantile_lower / dof * XW_orth)
-    b = -2 * (XW_proj - quantile_lower / dof * XW_orth).T @ y
-    c = y.T @ (y_proj - quantile_lower / dof * y_orth)
+    R = XWy_p_XWy - quantile_lower / dof * XWy_o_XWy
+    A = R[: (mx + md + mw), : (mx + md + mw)]
+    b = -2 * R[: (mx + md + mw), (mx + md + mw)]
+    c = R[(mx + md + mw), (mx + md + mw)]
     cs_lower = ConfidenceSet.from_quadric(Quadric(A, b, c).project(np.arange(mx + md)))
 
     # "upper bound" on the confidence set to be computed. That is, the confidence set
@@ -500,22 +495,25 @@ def inverse_conditional_likelihood_ratio_test(
         scipy.stats.chi2.ppf(1 - alpha, df=k + md - mw) + dof * XWy_eigvals[0]
     )
 
-    A = XW.T @ (dof * XW_proj - quantile_upper * XW_orth)
-    b = -2 * (dof * XW_proj - quantile_upper * XW_orth).T @ y
-    c = y.T @ (dof * y_proj - quantile_upper * y_orth)
+    R = XWy_p_XWy - quantile_upper / dof * XWy_o_XWy
+    A = R[: (mx + md + mw), : (mx + md + mw)]
+    b = -2 * R[: (mx + md + mw), (mx + md + mw)]
+    c = R[(mx + md + mw), (mx + md + mw)]
     cs_upper = ConfidenceSet.from_quadric(Quadric(A, b, c).project(np.arange(mx + md)))
 
-    Wy_proj = XWy_proj[:, (mx + md) :]
-    Wy_orth = XWy_orth[:, (mx + md) :]
-
     def f(x):
-        Wy_proj_ = np.copy(Wy_proj)
-        Wy_proj_[:, -1:] -= XW_proj[:, : (mx + md)] * x
-        Wy_orth_ = np.copy(Wy_orth)
-        Wy_orth_[:, -1:] -= XW_orth[:, : (mx + md)] * x
+        a = XWy_p_XWy.copy()
+        a[:, -1:] -= a[:, : (mx + md)] * x
+        a[-1:, :] -= a[: (mx + md), :] * x
+
+        b = XWy_o_XWy.copy()
+        b[:, -1:] -= b[:, : (mx + md)] * x
+        b[-1:, :] -= b[: (mx + md), :] * x
 
         ar_min = _characteristic_roots(
-            a=Wy_proj_.T @ Wy_proj_, b=Wy_orth_.T @ Wy_orth_, subset_by_index=[0, 0]
+            a=a[(mx + md) :, (mx + md) :],
+            b=b[(mx + md) :, (mx + md) :],
+            subset_by_index=[0, 0],
         )[0]
 
         s_min = dof * (XWy_eigvals[0] + XWy_eigvals[1] - ar_min)
