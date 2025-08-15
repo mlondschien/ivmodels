@@ -186,25 +186,25 @@ def inverse_likelihood_ratio_test(
     if C.shape[1] > 0:
         X, y, Z, W, D = oproj(C, X, y, Z, W, D)
 
-    XW = np.concatenate([X, W], axis=1)
-
     if md > 0:
         Z = np.concatenate([Z, D], axis=1)
+        X = np.hstack([X, D])
 
-    XW_proj, y_proj = proj(Z, XW, y)
-    XW_orth = XW - XW_proj
-    y_orth = y - y_proj
+    XWy = np.concatenate([X, W, y.reshape(-1, 1)], axis=1)
 
-    XWy_proj = np.concatenate([XW_proj, y_proj.reshape(-1, 1)], axis=1)
-    XWy = np.concatenate([XW, y.reshape(-1, 1)], axis=1)
+    XWy_proj = proj(Z, XWy)
+    XWy_orth = XWy - XWy_proj
+
+    a = XWy_proj.T @ XWy_proj
+    b = XWy_orth.T @ XWy_orth
 
     if k == mx + mw:
         kappa_liml = 0
     else:
         kappa_liml = np.real(
             _characteristic_roots(
-                a=oproj(D, XWy).T @ XWy_proj,
-                b=XWy.T @ (XWy - XWy_proj),
+                a=a,
+                b=b,
                 subset_by_index=[0, 0],
             )[0]
         )
@@ -212,14 +212,10 @@ def inverse_likelihood_ratio_test(
     dfd = n - k - mc - md - fit_intercept
     quantile = scipy.stats.chi2.ppf(1 - alpha, df=mx + md) + dfd * kappa_liml
 
-    if md > 0:
-        XW = np.concatenate([XW, D], axis=1)
-        XW_proj = np.concatenate([XW_proj, D], axis=1)
-        XW_orth = np.concatenate([XW_orth, np.zeros_like(D)], axis=1)
+    R = a - 1 / dfd * quantile * b
 
-    A = XW.T @ (XW_proj - 1 / dfd * quantile * XW_orth)
-    b = -2 * (XW_proj - 1 / dfd * quantile * XW_orth).T @ y
-    c = y.T @ (y_proj - 1 / dfd * quantile * y_orth)
+    A = R[: (mx + md + mw), : (mx + md + mw)]
+    b = -2 * R[: (mx + md + mw), (mx + md + mw)]
+    c = R[(mx + md + mw), (mx + md + mw)]
 
-    coordinates = np.concatenate([np.arange(mx), np.arange(mx + mw, mx + mw + md)])
-    return Quadric(A, b, c).project(coordinates)
+    return Quadric(A, b, c).project(np.arange(mx + md))

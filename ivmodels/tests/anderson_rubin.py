@@ -210,6 +210,7 @@ def anderson_rubin_test(
             kappa_max = (n - k - mc - md) * KClass._spectrum(X=W, y=y - X @ beta, Z=Z)[
                 -1
             ]
+
             p_value = more_powerful_subvector_anderson_rubin_critical_value_function(
                 statistic * dfn, kappa_max, k=k + md, mw=mw
             )
@@ -346,9 +347,11 @@ def inverse_anderson_rubin_test(
             f"Got {critical_values}."
         )
 
-    A = S.T @ (S_proj - quantile * S_orth)
-    b = -2 * (S_proj - quantile * S_orth).T @ y
-    c = y.T @ (y_proj - quantile * y_orth)
+    # equal to S @ (S_proj - quantile * S_orth), but latter might result in A.T != A
+    # due to numerical errors
+    A = S_proj.T @ S_proj - quantile * S_orth.T @ S_orth
+    b = -2 * (S_proj.T @ y_proj - quantile * S_orth.T @ y_orth)
+    c = y_proj.T @ y_proj - quantile * y_orth.T @ y_orth
 
     if critical_values in ["chi2", "f"]:
         return Quadric(A, b, c).project(np.arange(mx + md))
