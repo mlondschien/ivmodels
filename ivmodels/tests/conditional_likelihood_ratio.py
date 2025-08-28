@@ -490,7 +490,7 @@ def conditional_likelihood_ratio_test(
             return (
                 statistic,
                 conditional_likelihood_ratio_critical_value_function_monte_carlo(
-                    mx, md, k, d=lambdas, z=statistic
+                    mx, md, k, lambdas, z=statistic
                 ),
             )
 

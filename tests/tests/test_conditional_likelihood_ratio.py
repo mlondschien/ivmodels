@@ -105,10 +105,16 @@ def test_conditional_likelihood_ratio_critical_value_function_same_by_method(
         p, q + p, s_min, z, "power_series", tol=tol
     )
     p3 = conditional_likelihood_ratio_critical_value_function_monte_carlo(
-        mx=p, md=0, k=q + p, d=np.array([s_min] * p), z=z, atol=tol, num_samples=100_000
+        mx=p,
+        md=0,
+        k=q + p,
+        lambdas=np.array([s_min] * p),
+        z=z,
+        atol=tol,
+        num_samples=100_000,
     )
     np.testing.assert_allclose(p1, p2, atol=tol)
-    np.testing.assert_allclose(p1, p3, atol=np.sqrt(p1 * (1 - p1) / 100_000) * 3 + tol)
+    np.testing.assert_allclose(p1, p3, atol=np.sqrt(p3 * (1 - p3) / 100_000) * 3 + tol)
 
 
 @pytest.mark.parametrize(
