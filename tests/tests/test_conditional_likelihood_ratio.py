@@ -5,9 +5,25 @@ import scipy
 from ivmodels.models.kclass import KClass
 from ivmodels.simulate import simulate_gaussian_iv
 from ivmodels.tests.conditional_likelihood_ratio import (
+    _newton_minimal_root,
     conditional_likelihood_ratio_critical_value_function,
+    conditional_likelihood_ratio_critical_value_function_monte_carlo,
     conditional_likelihood_ratio_test,
 )
+
+
+@pytest.mark.parametrize(
+    "q, lambdas", [([1.0, 1.0], [1.0]), ([5.0, 1.0, 2.0], [10.0, 100.0])]
+)
+def test__newton_minimal_root(q, lambdas):
+    # make sure it actually finds a root.
+    q_sum = np.sum(q)
+    q = np.array(q)[1:]
+    root = _newton_minimal_root(q_sum, q, np.array(lambdas), atol=1e-8, num_iter=100)
+    g = (root - q_sum) - np.sum(
+        [lambdas[i] * q[i] / (root - lambdas[i]) for i in range(len(lambdas))]
+    )
+    np.testing.assert_allclose(g, 0, atol=1e-8)
 
 
 @pytest.mark.parametrize("p", [1, 5, 20])
@@ -79,18 +95,20 @@ def test_conditional_likelihood_ratio_critical_value_function__(p, q, s_min, z, 
 @pytest.mark.parametrize("s_min", [0.01, 1, 1e3])
 @pytest.mark.parametrize("z", [0.1, 10])
 @pytest.mark.parametrize("tol", [1e-2, 1e-6])
-def test_conditional_likelihood_ratio_critical_value_function_some_by_method(
+def test_conditional_likelihood_ratio_critical_value_function_same_by_method(
     p, q, s_min, z, tol
 ):
-    assert np.isclose(
-        conditional_likelihood_ratio_critical_value_function(
-            p, q + p, s_min, z, "numerical_integration"
-        ),
-        conditional_likelihood_ratio_critical_value_function(
-            p, q + p, s_min, z, "power_series"
-        ),
-        atol=2 * tol,
+    p1 = conditional_likelihood_ratio_critical_value_function(
+        p, q + p, s_min, z, "numerical_integration", tol=tol
     )
+    p2 = conditional_likelihood_ratio_critical_value_function(
+        p, q + p, s_min, z, "power_series", tol=tol
+    )
+    p3 = conditional_likelihood_ratio_critical_value_function_monte_carlo(
+        mx=p, md=0, k=q + p, d=np.array([s_min] * p), z=z, atol=tol, num_samples=100_000
+    )
+    np.testing.assert_allclose(p1, p2, atol=tol)
+    np.testing.assert_allclose(p1, p3, atol=np.sqrt(p1 * (1 - p1) / 100_000) * 3 + tol)
 
 
 @pytest.mark.parametrize(

@@ -1,5 +1,6 @@
 import numpy as np
 import scipy
+from numba import njit, prange
 
 from ivmodels.confidence_set import ConfidenceSet
 from ivmodels.models.kclass import KClass
@@ -170,6 +171,116 @@ def conditional_likelihood_ratio_critical_value_function(
             "method argument should be 'numerical_integration' or 'power_series'. "
             f"Got {method}."
         )
+
+
+@njit
+def _newton_minimal_root(q_sum, q, lambdas, atol, num_iter):
+    """
+    Find the minimal root of the polynomial using Newton's method.
+
+    Instead of computing the polynomials minimal root, we compute that of the secular
+    equation
+
+    f(mu) = (mu - q_sum) - sum(d_i * u_i / (d_i - μ))
+
+    with derivative
+
+    f'(mu) = 1 + sum(d_i * u_i / (d_i - μ)^2).
+
+    Parameters
+    ----------
+    q_sum: float
+        The sum of the chi^2(1) and chi^2(k - m) distributions.
+    q: array of floats
+        The values taken by the individual chi^2(1) distributions.
+    lambdas: array of floats
+        Conditioning statistic.
+    atol: float
+        Absolute tolerance for convergence.
+    num_iter: int
+        Maximum number of iterations.
+    """
+    m = len(lambdas)
+
+    mu = lambdas[0] / 2  # initial guess
+
+    for _ in range(num_iter):
+        f = mu - q_sum
+        df = 1
+        for i in range(m):
+            diff = mu - lambdas[i]
+            term = q[i] * lambdas[i] / diff
+            f -= term
+            df += term / diff
+
+        mu_new = mu - f / df
+
+        if mu_new < 0:
+            mu_new = mu / 2
+
+        if mu_new > lambdas[0]:
+            mu_new = (mu + lambdas[0]) / 2
+
+        if np.abs(mu - mu_new) < atol:
+            break
+
+        mu = mu_new
+
+    return mu
+
+
+@njit
+def conditional_likelihood_ratio_critical_value_function_monte_carlo(
+    mx: int,
+    md: int,
+    k: int,
+    lambdas: np.ndarray,
+    z: float,
+    atol=1e-8,
+    num_iter=100,
+    num_samples=10_000,
+):
+    """
+    Compute the CLR's exact critical value function using Monte Carlo simulation.
+
+    If ``mx == 1`` or all entries of ``d`` are equal, this is the same as the numerical
+    integration method in
+    ``conditional_likelihood_ratio_critical_value_function``.
+
+    Parameters
+    ----------
+    mx: int
+        The number of endogenous variables.
+    md: int
+        The number of included exogenous variables.
+    k: int
+        The number of instruments.
+    lambdas: np.ndarray
+        The conditioning statistic.
+    z: float
+        The test statistic.
+    atol: float
+        The absolute tolerance for convergence.
+    num_iter: int
+        The maximum number of iterations.
+    num_samples: int
+        The number of Monte Carlo samples.
+
+    """
+    count = 0
+
+    for i in prange(num_samples):
+        np.random.seed(i)
+        qx = np.random.standard_normal(mx) ** 2
+        qd = np.sum(np.random.standard_normal(md) ** 2)
+        q0 = np.sum(np.random.standard_normal(k - mx) ** 2)
+        q_sum = np.sum(qx) + q0
+
+        mu_min = _newton_minimal_root(q_sum, qx, lambdas, atol=atol, num_iter=num_iter)
+        if qd + q_sum - mu_min > z:
+            count += 1
+
+    return count / num_samples
 
 
 def conditional_likelihood_ratio_test(
@@ -357,9 +468,9 @@ def conditional_likelihood_ratio_test(
         Xy = np.concatenate([X, y.reshape(-1, 1)], axis=1)
         Xy_proj = np.hstack([X_proj, y_proj.reshape(-1, 1)])
 
-        s_min = np.real(
-            _characteristic_roots(a=Xt_proj.T @ Xt_proj, b=Xt_orth.T @ Xt_orth)
-        )[0] * (n - k - mc - md - fit_intercept)
+        lambdas = np.sort(
+            np.real(_characteristic_roots(a=Xt_proj.T @ Xt_proj, b=Xt_orth.T @ Xt_orth))
+        ) * (n - k - mc - md - fit_intercept)
 
         Xy_orth = Xy - Xy_proj
 
@@ -370,6 +481,18 @@ def conditional_likelihood_ratio_test(
         )[0]
         ar = residuals_proj.T @ residuals_proj / (residuals_orth.T @ residuals_orth)
         statistic = (n - k - mc - md - fit_intercept) * (ar - ar_min)
+
+        if mx + md == 1:
+            return statistic, conditional_likelihood_ratio_critical_value_function(
+                1, k + 1, lambdas[0], z=statistic
+            )
+        else:
+            return (
+                statistic,
+                conditional_likelihood_ratio_critical_value_function_monte_carlo(
+                    mx, md, k, d=lambdas, z=statistic
+                ),
+            )
 
     elif mw > 0:
         XWy = np.concatenate([X, W, y.reshape(-1, 1)], axis=1)
