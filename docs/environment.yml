@@ -1,0 +1,20 @@
+name: ivmodels
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python>=3.7
+  - numpy
+  - scipy
+  - scikit-learn!=1.7  # 1.7 breaks docs
+  - glum
+  - numba
+  - pandas  # optional
+  - sphinx  # docs
+  - sphinxcontrib-apidoc  # docs
+  - ipython  # docs
+  - sphinx_rtd_theme  # docs
+  - sphinxcontrib-bibtex  # docs
+  - pip  # docs
+  - nbclassic  # docs
+  - nbsphinx  # docs

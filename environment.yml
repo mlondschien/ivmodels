@@ -9,15 +9,7 @@ dependencies:
   - pytest  # tests only
   - pytest-cov  # tests only
   - linearmodels  # tests only
-  - scikit-learn!=1.7
+  - scikit-learn
   - glum
   - numba
   - pandas  # optional
-  - sphinx  # docs
-  - sphinxcontrib-apidoc  # docs
-  - ipython  # docs
-  - sphinx_rtd_theme  # docs
-  - sphinxcontrib-bibtex  # docs
-  - pip  # docs
-  - nbclassic  # docs
-  - nbsphinx  # docs
