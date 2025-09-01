@@ -16,60 +16,84 @@ from ivmodels.utils import (
 
 
 def conditional_likelihood_ratio_critical_value_function(
-    p, q, s_min, z, method="numerical_integration", tol=1e-6
+    k,
+    mx,
+    md,
+    lambdas,
+    z,
+    critical_values="londschien2025exact",
+    tol=1e-6,
+    num_samples=10_000,
 ):
     """
     Approximate the critical value function of the conditional likelihood ratio test.
 
-    Let
+    If ``critical_values`` is ``"londschien2025exact"``, computes the exact distribution
+    from Theorem 1 of :cite:p:`londschien2025exact` using Monte Carlo simulation:
 
-    .. math: \\Gamma(q-p, p, s_\\mathrm{min}) := 1/2 \\left( Q_{q-p} + Q_p - s_\\mathrm{min} + \\sqrt{ (Q_{q-p} + Q_p - s_\\mathrm{min})^2 + 4 Q_{p} s_\\mathrm{min} } \\right),
+    .. math::
 
-    where :math:`Q_p \\sim \\chi^2(p)` and :math:`Q_{q-p} \\sim \\chi^2(q - p)` are
-    independent chi-squared random variables. This function approximates
+        \\mathrm{CLR}(\\beta_0) \\overset{d}{\\to} \\sum_{i=0}^m q_i - \\mu_\\mathrm{min},
 
-    .. math: Q_{q, p}(z) := \\mathbb{P}[ \\Gamma(q-p, p, s_\\mathrm{min}) > z ]
+    where :math:`q_0 \\sim \\chi^2(k-m)`, :math:`q_1, \\ldots, q_m \\sim \\chi^2(1)` are
+    independent, and :math:`\\mu_\\mathrm{min}` is the smallest root of the polynomial
 
-    up to tolerance ``tol``.
+    .. math::
 
-    If ``method`` is ``"numerical_integration"``, numerically integrates the formulation
+        p(\\mu) := \\left(\\mu - \\sum_{i=0}^m q_i\\right) \\prod_{i=1}^m (\\mu - \\lambda_i) - \\sum_{i=1}^m \\lambda_i q_i \\prod_{j \\geq 1, j \\neq i} (\\mu - \\lambda_j).
 
-    .. math: Q_{q, p}(z) = \\mathbb{E}_{B \\sim \\mathrm{Beta}((k - m)/2, m/2)}[ F_{\\chi^2(k)}(z / (1 - a B)) ],
+    This is computed by Monte Carlo simulation, generating samples of the :math:`q_i` and
+    solving for :math:`\\mu_\\mathrm{min}` using Newton's method.
 
-    where :math:`F_{\\chi^2(k)}` is the cumulative distribution function of a
-    :math:`\\chi^2(k)` distribution, and :math:`a = s_{\\min} / (z + s_{\\min})`. This
-    is Equation (27) of :cite:p:`hillier2009conditional` or Equation (40) of
-    :cite:p:`hillier2009exact`.
+    If ``critical_values`` is ``"kleibergen2007generalizing"`` or ``"moreira2003conditional"``,
+    uses the upper bound from Corollary 2 of :cite:p:`londschien2025exact`:
 
-    If ``method`` is ``"power_series"``, truncates the formulation
+    .. math::
 
-    .. math: Q_{k, p} = (1 - a)^{p / 2} \\sum_{j = 0}^\\infty a^j \\frac{(p / 2)_j}{j!} \\F_{\\chi^2(k + 2 j)}(z + s_{\\min}),
+        \\mathrm{CLR}(\\beta_0) \\leq \\Gamma(k-m, m, \\lambda_1),
 
-    where :math:`(x)_j` is the Pochhammer symbol, defined as
-    :math:`(x)_j = x (x + 1) ... (x + j - 1)`, :math:`\\F_k` is the cumulative
-    distribution function of the :math:`\\chi^2(k)` distribution, and
-    :math:`a = s_{\\min} / (z + s_{\\min})`. This is Equation (28) of
-    :cite:p:`hillier2009conditional` or Equation (41) of :cite:p:`hillier2009exact`.
-    The truncation is done such that the error is bounded by a tolerance ``tol``.
+    where
 
-    Uses numerical integration by default.
+    .. math::
+
+        \\Gamma(k-m, m, \\lambda_1) := \\frac{1}{2} \\left( Q_{k-m} + Q_m - \\lambda_1 + \\sqrt{ (Q_{k-m} + Q_m + \\lambda_1)^2 - 4 Q_{k-m} \\lambda_1 } \\right),
+
+    with :math:`Q_{k-m} \\sim \\chi^2(k-m)`, :math:`Q_m \\sim \\chi^2(m)` independent, and
+    :math:`\\lambda_1` the smallest eigenvalue. This is computed by numerical integration
+    using the formulation
+
+    .. math::
+
+        \\mathbb{P}[\\Gamma(k-m, m, \\lambda_1) > z] = \\mathbb{E}_{B \\sim \\mathrm{Beta}((k-m)/2, m/2)}[F_{\\chi^2(k)}(z/(1-aB))],
+
+    where :math:`F_{\\chi^2(k)}` is the CDF of :math:`\\chi^2(k)` and :math:`a = \\lambda_1/(z + \\lambda_1)`.
 
     Parameters
     ----------
-    p: int
-        Degrees of freedom of the first chi-squared random variable.
-    q: int
-        Total degrees of freedom.
-    s_min: float
-        Identification measure.
+    k: int
+        Number of instruments.
+    mx: int
+        Number of endogenous variables.
+    md: int
+        Number of included exogenous variables.
+    lambdas: array_like
+        Eigenvalues of the concentration matrix.
     z: float
         Test statistic.
-    method: str, optional, default: "numerical_integration"
-        Method to approximate the critical value function. Must be
-        ``"numerical_integration"`` or ``"power_series"``.
-    tol: float, optional, default: 1e-6
-        Tolerance for the approximation of the cdf of the critical value function and
-        thus the p-value.
+    critical_values: {"londschien2025exact", "kleibergen2007generalizing", "moreira2003conditional"}, default="londschien2025exact"
+        Which critical values to use. If ``"londschien2025exact"``, uses the exact
+        distribution conditional on all eigenvalues via Monte Carlo simulation.
+        If ``"kleibergen2007generalizing"`` or ``"moreira2003conditional"``, uses
+        the upper bound conditional on the smallest eigenvalue via numerical integration.
+    tol: float, default=1e-6
+        Tolerance for the approximation of the CDF and thus the p-value.
+    num_samples: int, default=10000
+        Number of Monte Carlo samples when using ``"londschien2025exact"``.
+
+    Returns
+    -------
+    float
+        The p-value :math:`\\mathbb{P}[\\mathrm{CLR} > z]`.
 
     References
     ----------
@@ -78,22 +102,34 @@ def conditional_likelihood_ratio_critical_value_function(
 
        hillier2009conditional
        hillier2009exact
+       londschien2025exact
     """
     if z <= 0:
         return 1
 
-    if s_min <= 0:
-        return 1 - scipy.stats.chi2(q).cdf(z)
+    if k < mx:
+        raise ValueError("k must be greater than or equal to mx.")
+    if k == mx:
+        return 1 - scipy.stats.chi2(k + md).cdf(z)
 
-    if q < p:
-        raise ValueError("q must be greater than or equal to p.")
-    if p == q:
-        return 1 - scipy.stats.chi2(q).cdf(z)
+    lambdas = np.sort(lambdas)
 
-    if method in ["numerical_integration"]:
+    if critical_values == "londschien2025exact" and lambdas[-1] <= 0:
+        return 1 - scipy.stats.chi2(k + md).cdf(z)
+    elif critical_values != "londschien2025exact" and lambdas[0] <= 0:
+        return 1 - scipy.stats.chi2(k + md).cdf(z)
+
+    if critical_values == "londschien2025exact":
+        return _clr_critical_value_function_monte_carlo(
+            mx=mx, md=md, k=k, lambdas=lambdas, z=z, tol=tol, num_samples=num_samples
+        )
+
+    else:
+        p = mx + md
+        q = k + md
         alpha = (q - p) / 2.0
         beta = p / 2.0
-        a = s_min / (z + s_min)
+        a = lambdas[0] / (z + lambdas[0])
 
         # We wish to integrate
         # beta = beta(alpha, beta); chi2 = chi2(q)
@@ -124,57 +160,9 @@ def conditional_likelihood_ratio_critical_value_function(
         )
         return 1 - res[0]
 
-    elif method == "power_series":
-        a = s_min / (z + s_min)
-
-        p_value = 0
-
-        # Equal to (1 - a)^{p / 2} * a^j * (m/2)_j / j!, where (x)_j is the Pochhammer
-        # symbol, defined as (x)_j = x (x + 1) ... (x + j - 1). See end of Section 1.0 of
-        # Hillier's "Exact properties of the conditional likelihood ratio test in an IV
-        # regression model"
-        factor = 1
-        j = 0
-
-        # In the Appendix of Hillier's paper, they show that the error when truncating the
-        # infinite sum at j = J is bounded by a^J * (m/2)_J / J!, which is equal to
-        # `factor` here. However, their claim
-        # "F_1(r+1, 1 - m/2, r+2, a) is less than 1 for 0 <= a <= 1"
-        # is incorrect for m = 1, where F_1(r+1, 1 - m/2, r+2, a) <= 1 / (1 - a) via the
-        # geometric series. Thus, the error is bounded by a^J * (m/2)_J / J! / (1 - a).
-        # As G_k(z + l), the c.d.f of a chi^2(k), is decreasing in k, one can
-        # keep the term G_{k + 2J}(z + l) from the first sum. Thus, we can stop when
-        # `delta / (1 - a) = factor * G_{k + 2J}(z + l) / (1 - a)` is smaller than the
-        # desired tolerance.
-        delta = scipy.stats.chi2(q).cdf(z + s_min)
-        p_value += delta
-
-        sqrt_minus_log_a = np.sqrt(-np.log(a))
-        tol = tol / (1 + (1 - scipy.special.erf(sqrt_minus_log_a)) / sqrt_minus_log_a)
-
-        while delta >= tol:
-            factor *= (p / 2 + j) / (j + 1) * a
-            delta = scipy.stats.chi2(q + 2 * j + 2).cdf(z + s_min) * factor
-
-            p_value += delta
-
-            j += 1
-            if j > 10000:
-                raise RuntimeError("Failed to converge.")
-
-        p_value *= (1 - a) ** (p / 2)
-
-        return 1 - p_value
-
-    else:
-        raise ValueError(
-            "method argument should be 'numerical_integration' or 'power_series'. "
-            f"Got {method}."
-        )
-
 
 @njit
-def _newton_minimal_root(q_sum, q, lambdas, atol, num_iter):
+def _newton_minimal_root(q_sum, q, lambdas, tol, num_iter):
     """
     Find the minimal root of the polynomial using Newton's method.
 
@@ -186,6 +174,9 @@ def _newton_minimal_root(q_sum, q, lambdas, atol, num_iter):
     with derivative
 
     f'(mu) = 1 + sum(d_i * u_i / (d_i - μ)^2).
+
+    This has exactly one root in the interval (0, lambdas[0]), which we approximate
+    using Newton's method.
 
     Parameters
     ----------
@@ -202,7 +193,10 @@ def _newton_minimal_root(q_sum, q, lambdas, atol, num_iter):
     """
     m = len(lambdas)
 
-    mu = lambdas[0] / 2  # initial guess
+    # Initial guess. Exact if lambdas are all equal.
+    mu = lambdas[0] - q_sum
+    mu = mu - np.sqrt(mu**2 + 4 * lambdas[0] * np.sum(q))
+    mu /= 2
 
     for _ in range(num_iter):
         f = mu - q_sum
@@ -221,7 +215,7 @@ def _newton_minimal_root(q_sum, q, lambdas, atol, num_iter):
         if mu_new > lambdas[0]:
             mu_new = (mu + lambdas[0]) / 2
 
-        if np.abs(mu - mu_new) < atol:
+        if np.abs(mu - mu_new) < tol:
             break
 
         mu = mu_new
@@ -230,13 +224,13 @@ def _newton_minimal_root(q_sum, q, lambdas, atol, num_iter):
 
 
 @njit
-def conditional_likelihood_ratio_critical_value_function_monte_carlo(
+def _clr_critical_value_function_monte_carlo(
     mx: int,
     md: int,
     k: int,
     lambdas: np.ndarray,
     z: float,
-    atol=1e-8,
+    tol=1e-6,
     num_iter=100,
     num_samples=10_000,
 ):
@@ -276,7 +270,7 @@ def conditional_likelihood_ratio_critical_value_function_monte_carlo(
         q0 = np.sum(np.random.standard_normal(k - mx) ** 2)
         q_sum = np.sum(qx) + q0
 
-        mu_min = _newton_minimal_root(q_sum, qx, lambdas, atol=atol, num_iter=num_iter)
+        mu_min = _newton_minimal_root(q_sum, qx, lambdas, tol=tol, num_iter=num_iter)
         if qd + q_sum - mu_min > z:
             count += 1
 
@@ -292,8 +286,9 @@ def conditional_likelihood_ratio_test(
     C=None,
     D=None,
     fit_intercept=True,
-    method="numerical_integration",
+    critical_values="londschien2025exact",
     tol=1e-6,
+    num_samples=10_000,
 ):
     """
     Perform the conditional likelihood ratio test for ``beta``.
@@ -303,7 +298,7 @@ def conditional_likelihood_ratio_test(
     .. math::
 
        \\mathrm{CLR}(\\beta) &:= (n - k) \\frac{ \\| P_Z (y - X \\beta) \\|_2^2}{ \\| M_Z (y - X \\beta) \\|_2^2} - (n - k) \\frac{ \\| P_Z (y - X \\hat\\beta_\\mathrm{LIML}) \\|_2^2 }{ \\| M_Z (y - X \\hat\\beta_\\mathrm{LIML}) \\|_2^2 } \\\\
-       &= k \\ \\mathrm{AR}(\\beta) - k \\ \\min_\\beta \\mathrm{AR}(\\beta),
+       &= k \\cdot \\mathrm{AR}(\\beta) - k \\cdot \\min_\\beta \\mathrm{AR}(\\beta),
 
     where :math:`P_Z` is the projection matrix onto the column space of :math:`Z`,
     :math:`M_Z = \\mathrm{Id} - P_Z`, and :math:`\\hat\\beta_\\mathrm{LIML}` is the LIML
@@ -311,111 +306,95 @@ def conditional_likelihood_ratio_test(
     Anderson-Rubin test statistic :math:`\\mathrm{AR}(\\beta)`
     (see :py:func:`~ivmodels.tests.anderson_rubin_test`) at
 
-    .. math:: \\mathrm{AR}(\\hat\\beta_\\mathrm{LIML}) = \\frac{n - k}{k} \\lambda_\\mathrm{min}( (X \\ y)^T M_Z (X \\ y))^{-1} (X \\ y)^T P_Z (X \\ y) ).
+    .. math::
+
+        \\mathrm{AR}(\\hat\\beta_\\mathrm{LIML}) = \\frac{n - k}{k} \\lambda_\\mathrm{min}\\left( \\left(\\begin{pmatrix} X & y \\end{pmatrix}^T M_Z \\begin{pmatrix} X & y \\end{pmatrix}\\right)^{-1} \\begin{pmatrix} X & y \\end{pmatrix}^T P_Z \\begin{pmatrix} X & y \\end{pmatrix} \\right).
 
     Let
 
-    .. math:: \\tilde X(\\beta) := X - (y - X \\beta) \\cdot \\frac{(y - X \\beta)^T M_Z X}{(y - X \\beta)^T M_Z (y - X \\beta)}
+    .. math::
 
-    and
+        \\tilde X(\\beta) := X - (y - X \\beta) \\cdot \\frac{(y - X \\beta)^T M_Z X}{(y - X \\beta)^T M_Z (y - X \\beta)}
 
-    .. math:: s_\\mathrm{min}(\\beta) := (n - k) \\cdot \\lambda_\\mathrm{min}((\\tilde X(\\beta)^T M_Z \\tilde X(\\beta))^{-1} \\tilde X(\\beta)^T P_Z \\tilde X(\\beta)).
+    and let :math:`\\lambda_1, \\ldots, \\lambda_m` be the eigenvalues of
 
-    Then, conditionally on :math:`s_\\mathrm{min}(\\beta_0)`, the statistic
-    :math:`\\mathrm{CLR(\\beta_0)}` is asymptotically bounded from above by a random
-    variable that is distributed as
+    .. math::
 
-    .. math:: \\frac{1}{2} \\left( Q_{m_X} + Q_{k - m_X} - s_\\mathrm{min} + \\sqrt{ (Q_{m_X} + Q_{k - m_X}  - s_\\mathrm{min})^2 + 4 Q_{m_X} s_\\textrm{min} } \\right),
+        (n - k) \\cdot \\left[\\tilde X(\\beta)^T M_Z \\tilde X(\\beta)\\right]^{-1} \\tilde X(\\beta)^T P_Z \\tilde X(\\beta).
 
-    where :math:`Q_{m_X} \\sim \\chi^2(m_X)` and
-    :math:`Q_{k - m_X} \\sim \\chi^2(k - m_X)` are independent chi-squared random
-    variables. This is robust to weak instruments. If identification is strong, that is
-    :math:`s_\\mathrm{min}(\\beta_0) \\to \\infty`, the conditional likelihood ratio
-    test is equivalent to the likelihood ratio test
-    (see :py:func:`~ivmodels.tests.likelihood_ratio_test`), with :math:`\\chi^2(m_X)`
-    limiting distribution.
-    If identification is weak, that is :math:`s_\\mathrm{min}(\\beta_0) \\to 0`, the
-    conditional likelihood ratio test is equivalent to the Anderson-Rubin test
-    (see :py:func:`~ivmodels.tests.anderson_rubin_test`) with :math:`\\chi^2(k)`
-    limiting distribution.
-    See :cite:p:`moreira2003conditional` for details.
+    If ``critical_values="londschien2025exact"``, the exact asymptotic distribution from
+    Theorem 1 of :cite:p:`londschien2025exact` is used:
+
+    .. math::
+
+        \\mathrm{CLR}(\\beta_0) \\overset{d}{\\to} \\sum_{i=0}^m q_i - \\mu_\\mathrm{min},
+
+    where :math:`q_0 \\sim \\chi^2(k-m)`, :math:`q_1, \\ldots, q_m \\sim \\chi^2(1)`, and
+    :math:`\\mu_\\mathrm{min}` is the smallest root of the polynomial
+
+    .. math::
+
+        p(\\mu) := \\left(\\mu - \\sum_{i=0}^m q_i\\right) \\prod_{i=1}^m (\\mu - \\lambda_i) - \\sum_{i=1}^m \\lambda_i q_i \\prod_{j \\geq 1, j \\neq i} (\\mu - \\lambda_j).
+
+    This distribution is conditional on all eigenvalues :math:`\\lambda_1, \\ldots, \\lambda_m`
+    and provides substantially more power when eigenvalues differ.
+
+    If ``critical_values`` is ``"kleibergen2007generalizing"`` or ``"moreira2003conditional"``,
+    uses the upper bound conditional on only the smallest eigenvalue :math:`\\lambda_1`:
+
+    .. math::
+
+        \\mathrm{CLR}(\\beta_0) \\leq \\frac{1}{2} \\left( Q_{m_X} + Q_{k - m_X} - \\lambda_1 + \\sqrt{ (Q_{m_X} + Q_{k - m_X}  + \\lambda_1)^2 - 4 Q_{k - m_X} \\lambda_1 } \\right),
+
+    where :math:`Q_{m_X} \\sim \\chi^2(m_X)` and :math:`Q_{k - m_X} \\sim \\chi^2(k - m_X)`
+    are independent. This bound is sharp when all eigenvalues are equal.
+
+    This test is robust to weak instruments. If identification is strong
+    (:math:`\\lambda_i \\to \\infty`), the test is equivalent to the likelihood ratio test
+    with :math:`\\chi^2(m_X)` distribution. If identification is weak
+    (:math:`\\lambda_i \\to 0`), the test is equivalent to the Anderson-Rubin test
+    with :math:`\\chi^2(k)` distribution.
 
     If ``W`` is not ``None``, the test statistic is defined as
 
     .. math::
-       \\mathrm{CLR(\\beta)} &:= (n - k) \\min_\\gamma \\frac{ \\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{ \\| M_Z (y - X \\beta - W \\gamma) \\|_2^2} - (n - k) \\min_{\\beta, \\gamma} \\frac{ \\| P_Z (y - X \\beta - W \\gamma) \\|_2^2 }{ \\| M_Z (y - X \\beta - W \\gamma) \\|_2^2 } \\\\
-       &= (n - k) \\frac{ \\| P_Z (y - X \\beta - W \\hat\\gamma_\\textrm{liml}) \\|_2^2}{ \\| M_Z (y - X \\beta - W \\hat\\gamma_\\textrm{liml}) \\|_2^2} - (n - k) \\frac{ \\| P_Z (y - (X \\ W) \\hat\\delta_\\mathrm{liml}) \\|_2^2 }{ \\| M_Z (y - (X \\ W) \\hat\\delta_\\mathrm{liml}) \\|_2^2 },
 
-    where :math:`\\hat\\gamma_\\mathrm{LIML}` is the LIML estimator of :math:`\\gamma`
-    (see :py:class:`~ivmodels.KClass`) using instruments :math:`Z`, endogenous
-    covariates :math:`W`, and outcomes :math:`y - X \\beta` and
-    :math:`\\hat\\delta_\\mathrm{LIML}` is the LIML estimator of
-    :math:`(\\beta, \\gamma)` using instruments :math:`Z`, endogenous covariates
-    :math:`(X \\ W)`, and outcomes :math:`y`.
-    Let
+       \\mathrm{CLR}(\\beta) &:= (n - k) \\min_\\gamma \\frac{ \\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{ \\| M_Z (y - X \\beta - W \\gamma) \\|_2^2} - (n - k) \\min_{\\beta, \\gamma} \\frac{ \\| P_Z (y - X \\beta - W \\gamma) \\|_2^2 }{ \\| M_Z (y - X \\beta - W \\gamma) \\|_2^2 } \\\\
+       &= (n - k) \\frac{ \\| P_Z (y - X \\beta - W \\hat\\gamma_\\mathrm{LIML}) \\|_2^2}{ \\| M_Z (y - X \\beta - W \\hat\\gamma_\\mathrm{LIML}) \\|_2^2} - (n - k) \\frac{ \\| P_Z (y - \\begin{pmatrix} X & W \\end{pmatrix} \\hat\\delta_\\mathrm{LIML}) \\|_2^2 }{ \\| M_Z (y - \\begin{pmatrix} X & W \\end{pmatrix} \\hat\\delta_\\mathrm{LIML}) \\|_2^2 },
 
-    .. math:: \\Sigma_{X, W, y} := ((X \\ \\ W \\ \\ y)^T M_Z (X \\ \\ W \\ \\ y))^{-1} (X \\ \\ W \\ \\ y)^T P_Z (X \\ \\ W \\ \\ y)
-
-    and
-
-    .. math:: \\Sigma_{W, y - X \\beta} := ((W \\ \\ y - X \\beta)^T M_Z (W \\ \\ y - X \\beta))^{-1} (W \\ \\ y - X \\beta)^T P_Z (W \\ \\ y - X \\beta)
-
-    and
-
-    .. math:: s_\\mathrm{min}(\\beta) := \\lambda_1(\\Sigma_{X, W, y}) + \\lambda_2(\\Sigma_{X, W, y}) - \\lambda_1(\\Sigma_{W, y - X \\beta}),
-
-    where :math:`\\lambda_1` and :math:`\\lambda_2` are the smallest and second smallest
-    eigenvalues, respectively.
-    Note that
-    :math:`\\lambda_1(\\Sigma_{X, W, y}) = \\min_{\\beta, \\gamma} \\frac{ \\| P_Z (y - X \\beta - W \\gamma) \\|_2^2 }{ \\| M_Z (y - X \\beta - W \\gamma) \\|_2^2 }`
-    and
-    :math:`\\lambda_1(\\Sigma_{W, y - X \\beta}) = \\min_\\gamma \\frac{ \\| P_Z (y - X \\beta - W \\gamma) \\|_2^2}{ \\| M_Z (y - X \\beta - W \\gamma) \\|_2^2}`.
-
-    :cite:t:`kleibergen2021efficient` conjectures and motivates that, conditionally on
-    :math:`s_\\mathrm{min}(\\beta_0)`, the statistic :math:`\\mathrm{CLR(\\beta_0)}` is
-    asymptotically bounded from above by a random variable that is distributed as
-
-    .. math:: \\frac{1}{2} \\left( Q_{m_X} + Q_{k - m_X - m_W} - s_\\mathrm{min}(\\beta_0) + \\sqrt{ (Q_{m_X} + Q_{k - m_X - m_W}  - s_\\mathrm{min}(\\beta_0))^2 + 4 Q_{m_X} s_\\textrm{min} } \\right),
-
-    where :math:`Q_{m_X} \\sim \\chi^2(m_X)` and
-    :math:`Q_{k - m_X - m_W} \\sim \\chi^2(k - m_X - m_W)` are independent chi-squared
-    random variables. This is robust to weak instruments. If identification is strong,
-    that is :math:`s_\\mathrm{min}(\\beta_0) \\to \\infty`, the conditional likelihood
-    ratio test is equivalent to the likelihood ratio test
-    (see :py:func:`~ivmodels.tests.likelihood_ratio_test`), with :math:`\\chi^2(m_X)`
-    limiting distribution.
-    If identification is weak, that is :math:`s_\\mathrm{min}(\\beta_0) \\to 0`, the
-    conditional likelihood ratio test is equivalent to the Anderson-Rubin test
-    (see :py:func:`~ivmodels.tests.anderson_rubin_test`) with :math:`\\chi^2(k - m_W)`
-    limiting distribution.
-    See :cite:p:`kleibergen2021efficient` for details.
+    where :math:`\\hat\\gamma_\\mathrm{LIML}` and :math:`\\hat\\delta_\\mathrm{LIML}` are
+    LIML estimators. In this case, only the upper bound method is available
+    (``critical_values`` must be ``"kleibergen2007generalizing"`` or ``"moreira2003conditional"``).
 
     Parameters
     ----------
-    Z: np.ndarray of dimension (n, k)
+    Z: array_like of shape (n, k)
         Instruments.
-    X: np.ndarray of dimension (n, mx)
-        Regressors.
-    y: np.ndarray of dimension (n,)
+    X: array_like of shape (n, mx)
+        Endogenous regressors of interest.
+    y: array_like of shape (n,)
         Outcomes.
-    beta: np.ndarray of dimension (mx + md,)
+    beta: array_like of shape (mx + md,)
         Coefficients to test.
-    W: np.ndarray of dimension (n, mw) or None, optional, default = None
+    W: array_like of shape (n, mw) or None, default=None
         Endogenous regressors not of interest.
-    C: np.ndarray of dimension (n, mc) or None, optional, default = None
+    C: array_like of shape (n, mc) or None, default=None
         Exogenous regressors not of interest.
-    D: np.ndarray of dimension (n, md) or None, optional, default = None
+    D: array_like of shape (n, md) or None, default=None
         Exogenous regressors of interest. Will be included into both ``X`` and ``Z`` if
         supplied.
-    fit_intercept: bool, optional, default: True
+    fit_intercept: bool, default=True
         Whether to include an intercept. This is equivalent to centering the inputs.
-    method: str, optional, default: "numerical_integration"
-        Method to approximate the critical value function. Must be
-        ``"numerical_integration"`` or ``"power_series"``. See
-        :py:func:`~conditional_likelihood_ratio_critical_value_function`.
-    tol: float, optional, default: 1e-6
-        Tolerance for the approximation of the cdf of the critical value function and
-        thus the p-value.
+    critical_values: {"londschien2025exact", "kleibergen2007generalizing", "moreira2003conditional"}, default="londschien2025exact"
+        Which critical values to use. If ``"londschien2025exact"``, uses the exact
+        distribution conditional on all eigenvalues via Monte Carlo simulation of the
+        polynomial root :math:`\\mu_\\mathrm{min}`. Only available when ``W`` is ``None``.
+        If ``"kleibergen2007generalizing"`` or ``"moreira2003conditional"``, uses
+        the upper bound conditional on the smallest eigenvalue via numerical integration.
+    tol: float, default=1e-6
+        Tolerance for the approximation of the CDF and thus the p-value.
+    num_samples: int, default=10000
+        Number of Monte Carlo samples when using ``"londschien2025exact"``.
 
     Returns
     -------
@@ -436,6 +415,8 @@ def conditional_likelihood_ratio_test(
 
        moreira2003conditional
        kleibergen2021efficient
+       kleibergen2007generalizing
+       londschien2025exact
     """
     Z, X, y, W, C, D, beta = _check_inputs(Z, X, y, W=W, C=C, D=D, beta=beta)
 
@@ -482,18 +463,17 @@ def conditional_likelihood_ratio_test(
         ar = residuals_proj.T @ residuals_proj / (residuals_orth.T @ residuals_orth)
         statistic = (n - k - mc - md - fit_intercept) * (ar - ar_min)
 
-        if mx + md == 1:
-            return statistic, conditional_likelihood_ratio_critical_value_function(
-                1, k + 1, lambdas[0], z=statistic
-            )
-        else:
-            return (
-                statistic,
-                conditional_likelihood_ratio_critical_value_function_monte_carlo(
-                    mx, md, k, lambdas, z=statistic
-                ),
-            )
-
+        p_value = conditional_likelihood_ratio_critical_value_function(
+            k=k,
+            mx=mx,
+            md=md,
+            lambdas=lambdas,
+            z=statistic,
+            critical_values=critical_values,
+            tol=tol,
+            num_samples=num_samples,
+        )
+        return statistic, p_value
     elif mw > 0:
         XWy = np.concatenate([X, W, y.reshape(-1, 1)], axis=1)
         XWy_proj = np.concatenate([X_proj, W_proj, y_proj.reshape(-1, 1)], axis=1)
@@ -516,7 +496,13 @@ def conditional_likelihood_ratio_test(
         s_min = dof * (XWy_eigenvals[0] + XWy_eigenvals[1] - ar)
 
     p_value = conditional_likelihood_ratio_critical_value_function(
-        mx + md, k + md - mw, s_min, statistic, method=method, tol=tol
+        k=k - mw,
+        mx=mx,
+        md=md,
+        lambdas=np.ones(mx + md) * s_min,
+        z=statistic,
+        critical_values="moreira2003conditional",
+        tol=tol,
     )
 
     return statistic, p_value
@@ -644,11 +630,12 @@ def inverse_conditional_likelihood_ratio_test(
 
         return alpha - (
             conditional_likelihood_ratio_critical_value_function(
-                mx + md,
-                k + md - mw,
-                s_min,
-                statistic,
-                method="numerical_integration",
+                k=k - mw,
+                mx=mx,
+                md=md,
+                lambdas=np.ones(mx + md) * s_min,
+                z=statistic,
+                critical_values="moreira2003conditional",
                 tol=tol,
             )
         )
