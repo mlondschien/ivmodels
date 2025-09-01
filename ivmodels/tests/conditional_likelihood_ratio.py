@@ -119,7 +119,7 @@ def conditional_likelihood_ratio_critical_value_function(
     elif critical_values != "londschien2025exact" and lambdas[0] <= 0:
         return 1 - scipy.stats.chi2(k + md).cdf(z)
 
-    if critical_values == "londschien2025exact":
+    if critical_values == "londschien2025exact" and mx + md > 1:
         return _clr_critical_value_function_monte_carlo(
             mx=mx, md=md, k=k, lambdas=lambdas, z=z, tol=tol, num_samples=num_samples
         )
@@ -262,6 +262,8 @@ def _clr_critical_value_function_monte_carlo(
 
     """
     count = 0
+
+    np.random.seed(0)
 
     qx_samples = np.random.standard_normal((num_samples, mx)) ** 2
     qd_samples = np.sum(np.random.standard_normal((num_samples, md)) ** 2, axis=1)
