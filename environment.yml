@@ -11,12 +11,5 @@ dependencies:
   - linearmodels  # tests only
   - scikit-learn
   - glum
+  - numba
   - pandas  # optional
-  - sphinx  # docs
-  - sphinxcontrib-apidoc  # docs
-  - ipython  # docs
-  - sphinx_rtd_theme  # docs
-  - sphinxcontrib-bibtex  # docs
-  - pip  # docs
-  - nbclassic  # docs
-  - nbsphinx  # docs

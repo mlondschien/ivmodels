@@ -18,8 +18,8 @@ def simulate_guggenberger12(
             W = Z \\Pi_W + V_W
             y = X \\beta + W \\gamma + \\epsilon
 
-        where :math:`\\epsilon, V_X, V_W` are jointly Gaussian with covariance matrix `cov` and `Z` is a matrix of independent
-        centered Gaussian instruments.
+    where :math:`\\epsilon, V_X, V_W` are jointly Gaussian with covariance matrix `cov`
+    and `Z` is a matrix of independent centered Gaussian instruments.
 
     Parameters
     ----------

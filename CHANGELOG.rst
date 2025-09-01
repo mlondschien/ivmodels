@@ -1,6 +1,14 @@
 Changelog
 =========
 
+0.9.0 - 2025-09-01
+------------------
+
+**New features:**
+
+- Implemented the more powerful critical values of Londschien (2025) for the
+  :func:`~ivmodels.tests.conditional_likelihood_ratio.conditional_likelihood_ratio_test`
+
 0.8.0 - 2025-08-16
 ------------------
 
