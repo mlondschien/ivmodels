@@ -263,11 +263,14 @@ def _clr_critical_value_function_monte_carlo(
     """
     count = 0
 
+    qx_samples = np.random.standard_normal((num_samples, mx)) ** 2
+    qd_samples = np.sum(np.random.standard_normal((num_samples, md)) ** 2, axis=1)
+    q0_samples = np.sum(np.random.standard_normal((num_samples, k - mx)) ** 2, axis=1)
+
     for i in prange(num_samples):
-        np.random.seed(i)
-        qx = np.random.standard_normal(mx) ** 2
-        qd = np.sum(np.random.standard_normal(md) ** 2)
-        q0 = np.sum(np.random.standard_normal(k - mx) ** 2)
+        qx = qx_samples[i, :]
+        qd = qd_samples[i]
+        q0 = q0_samples[i]
         q_sum = np.sum(qx) + q0
 
         mu_min = _newton_minimal_root(q_sum, qx, lambdas, tol=tol, num_iter=num_iter)
