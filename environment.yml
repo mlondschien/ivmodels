@@ -9,7 +9,7 @@ dependencies:
   - pytest  # tests only
   - pytest-cov  # tests only
   - linearmodels  # tests only
-  - scikit-learn
+  - scikit-learn!=1.7
   - glum
   - numba
   - pandas  # optional
