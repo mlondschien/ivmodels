@@ -16,7 +16,7 @@ classifiers = [
     "Programming Language :: Python"
 ]
 dependencies = [
-    "numpy", "scikit-learn", "glum", "scipy"
+    "numpy", "scikit-learn", "glum", "scipy", "numba"
 ]
 
 [tool.isort]
