@@ -23,7 +23,7 @@ def conditional_likelihood_ratio_critical_value_function(
     z,
     critical_values="londschien2025exact",
     tol=1e-6,
-    num_samples=10_000,
+    num_samples=100_000,
 ):
     """
     Approximate the critical value function of the conditional likelihood ratio test.
@@ -87,7 +87,7 @@ def conditional_likelihood_ratio_critical_value_function(
         the upper bound conditional on the smallest eigenvalue via numerical integration.
     tol: float, default=1e-6
         Tolerance for the approximation of the CDF and thus the p-value.
-    num_samples: int, default=10000
+    num_samples: int, default=100_000
         Number of Monte Carlo samples when using ``"londschien2025exact"``.
 
     Returns
