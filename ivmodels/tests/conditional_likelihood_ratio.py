@@ -23,7 +23,7 @@ def conditional_likelihood_ratio_critical_value_function(
     z,
     critical_values="londschien2025exact",
     tol=1e-6,
-    num_samples=10_000,
+    num_samples=100_000,
 ):
     """
     Approximate the critical value function of the conditional likelihood ratio test.
@@ -87,7 +87,7 @@ def conditional_likelihood_ratio_critical_value_function(
         the upper bound conditional on the smallest eigenvalue via numerical integration.
     tol: float, default=1e-6
         Tolerance for the approximation of the CDF and thus the p-value.
-    num_samples: int, default=10000
+    num_samples: int, default=100_000
         Number of Monte Carlo samples when using ``"londschien2025exact"``.
 
     Returns
@@ -479,7 +479,7 @@ def conditional_likelihood_ratio_test(
             num_samples=num_samples,
         )
         return statistic, p_value
-    elif mw > 0:
+    else:
         XWy = np.concatenate([X, W, y.reshape(-1, 1)], axis=1)
         XWy_proj = np.concatenate([X_proj, W_proj, y_proj.reshape(-1, 1)], axis=1)
 
@@ -500,17 +500,17 @@ def conditional_likelihood_ratio_test(
         statistic = dof * (ar - XWy_eigenvals[0])
         s_min = dof * (XWy_eigenvals[0] + XWy_eigenvals[1] - ar)
 
-    p_value = conditional_likelihood_ratio_critical_value_function(
-        k=k - mw,
-        mx=mx,
-        md=md,
-        lambdas=np.ones(mx + md) * s_min,
-        z=statistic,
-        critical_values="moreira2003conditional",
-        tol=tol,
-    )
+        p_value = conditional_likelihood_ratio_critical_value_function(
+            k=k - mw,
+            mx=mx,
+            md=md,
+            lambdas=np.ones(mx + md) * s_min,
+            z=statistic,
+            critical_values="moreira2003conditional",
+            tol=tol,
+        )
 
-    return statistic, p_value
+        return statistic, p_value
 
 
 def inverse_conditional_likelihood_ratio_test(

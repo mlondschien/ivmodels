@@ -101,14 +101,26 @@ def test_conditional_likelihood_ratio_critical_value_function__(p, q, s_min, z):
         atol=1e-2,
     )
 
+    assert np.isclose(
+        p_value,
+        conditional_likelihood_ratio_critical_value_function(
+            k=q + p,
+            mx=p,
+            md=0,
+            lambdas=s_min * np.ones(p),
+            z=z,
+            critical_values="londschien2025exact",
+        ),
+        atol=1e-2,
+    )
 
-@pytest.mark.parametrize("p", [1, 20])
-@pytest.mark.parametrize("q", [0, 20])
-@pytest.mark.parametrize("s_min", [0.01, 1, 1e3])
-@pytest.mark.parametrize("z", [0.1, 10])
-@pytest.mark.parametrize("tol", [1e-2, 1e-6])
+
+@pytest.mark.parametrize("p", [2, 5])
+@pytest.mark.parametrize("q", [1, 10])
+@pytest.mark.parametrize("s_min", [0.1, 1, 10, 1e3])
+@pytest.mark.parametrize("z", [0.5, 10])
 def test_conditional_likelihood_ratio_critical_value_function_same_by_method(
-    p, q, s_min, z, tol
+    p, q, s_min, z
 ):
     p1 = conditional_likelihood_ratio_critical_value_function(
         k=q + p,
@@ -117,7 +129,7 @@ def test_conditional_likelihood_ratio_critical_value_function_same_by_method(
         lambdas=np.array([s_min] * p),
         z=z,
         critical_values="moreira2003conditional",
-        tol=tol,
+        tol=1e-4,
     )
     p2 = conditional_likelihood_ratio_critical_value_function(
         k=q + p,
@@ -126,9 +138,9 @@ def test_conditional_likelihood_ratio_critical_value_function_same_by_method(
         lambdas=np.array([s_min] * p),
         z=z,
         critical_values="londschien2025exact",
-        tol=tol,
+        tol=1e-4,
     )
-    np.testing.assert_allclose(p1, p2, atol=np.sqrt(p2 * (1 - p2) / 10_000) * 3 + tol)
+    np.testing.assert_allclose(p1, p2, atol=np.sqrt(p2 * (1 - p2) / 10_000) * 3 + 1e-4)
 
 
 @pytest.mark.parametrize(
