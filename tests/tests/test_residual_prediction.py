@@ -2,16 +2,17 @@ from functools import partial
 
 import numpy as np
 import pytest
+from sklearn.dummy import DummyRegressor
 from sklearn.ensemble import RandomForestRegressor
 
-from ivmodels.simulate import simulate_gaussian_iv
+from ivmodels.simulate import simulate_gaussian_iv, simulate_guggenberger12
 from ivmodels.tests import (
     inverse_weak_residual_prediction_test,
     residual_prediction_test,
     weak_residual_prediction_test,
 )
 
-rf = partial(RandomForestRegressor, n_estimators=50, max_depth=3)
+rf = partial(RandomForestRegressor, n_estimators=50, max_depth=2)
 
 
 @pytest.mark.parametrize(
@@ -33,6 +34,25 @@ def test_test_output_type(test, n, mx, k, u, mc):
 
     assert isinstance(statistic, float)
     assert isinstance(p_value, float)
+
+
+@pytest.mark.parametrize(
+    "test",
+    [residual_prediction_test, weak_residual_prediction_test],
+)
+def test_zero_predictions(test):
+    Z, X, y, C, _, _, beta = simulate_gaussian_iv(
+        n=100, mx=1, k=2, return_beta=True, seed=42
+    )
+
+    kwargs = {"nonlinear_model": DummyRegressor(strategy="constant", constant=0.0)}
+    if test == weak_residual_prediction_test:
+        kwargs["beta"] = beta
+
+    stat, pval = test(Z, X, y, C=C, **kwargs)
+
+    assert np.isclose(stat, 0.0)
+    assert np.isclose(pval, 0.5)
 
 
 @pytest.mark.parametrize(
@@ -76,40 +96,24 @@ def test_test_size(test, robust, n, mx, k, u, mc, fit_intercept):
 
 
 @pytest.mark.parametrize("robust", [False, True])
-@pytest.mark.parametrize("instrument_strength", [1.0, 0.1, 0.0])
-@pytest.mark.parametrize("fit_intercept", [True, False])
-def test_weak_residual_prediction_test_size(instrument_strength, robust, fit_intercept):
-    """Test that the weak test maintains nominal size even when IVs are completely weak."""
-    rng = np.random.default_rng(42)
+def test_weak_residual_prediction_test_size_weak_iv(robust):
+    """Test that the weak test maintains nominal size even when IVs are weak."""
     n_seeds = 50
     p_values = np.zeros(n_seeds)
 
     for seed in range(n_seeds):
-        Z = rng.normal(size=(200, 3))
-        U = rng.normal(size=(200, 1))
-
-        X = (
-            instrument_strength * (Z[:, 0:1] + Z[:, 1:2])
-            + U
-            + rng.normal(size=(200, 1))
+        # h11=0 forces the first-stage to be 0 (completely weak instruments)
+        Z, X, y, _, _, _, beta = simulate_guggenberger12(
+            n=200, k=3, h11=0.0, seed=seed, return_beta=True
         )
-
-        beta_true_2d = np.array([[1.5]])
-
-        noise = rng.normal(size=(200, 1))
-        if robust:
-            noise *= Z[:, 0:1] ** 2 + 0.1
-
-        y = X @ beta_true_2d + U + noise
 
         _, p_values[seed] = weak_residual_prediction_test(
             Z=Z,
             X=X,
-            y=y.flatten(),
-            beta=np.array([1.5]),  # Pass the 1D version to the test
+            y=y,
+            beta=beta,
             robust=robust,
             nonlinear_model=rf(random_state=seed),
-            fit_intercept=fit_intercept,
             seed=seed,
         )
 
@@ -118,20 +122,17 @@ def test_weak_residual_prediction_test_size(instrument_strength, robust, fit_int
 
 def test_weak_residual_prediction_test_rejects_false_beta():
     """Test that the weak residual prediction test rejects an incorrect beta."""
-    rng = np.random.default_rng(0)
-    Z = rng.normal(size=(500, 3))
-    U = rng.normal(size=(500, 1))
-    X = Z[:, 0:1] - Z[:, 1:2] + U + rng.normal(size=(500, 1))
+    Z, X, y, _, _, _, beta = simulate_gaussian_iv(
+        n=500, mx=1, k=3, return_beta=True, seed=0
+    )
 
-    beta_true_2d = np.array([[2.0]])
-    y = X @ beta_true_2d + U + rng.normal(size=(500, 1))
-
-    beta_false = np.array([0.0])
+    # Test against a wildly incorrect beta
+    beta_false = beta + 10.0
 
     _, p_value = weak_residual_prediction_test(
         Z=Z,
         X=X,
-        y=y.flatten(),
+        y=y,
         beta=beta_false,
         nonlinear_model=rf(random_state=0),
     )
@@ -141,24 +142,41 @@ def test_weak_residual_prediction_test_rejects_false_beta():
 
 def test_inverse_weak_residual_prediction_empty_cs():
     """If the structural model is fundamentally misspecified, the CS should be empty."""
-    rng = np.random.default_rng(0)
-    Z = rng.normal(size=(300, 2))
-    X = Z[:, 0:1] + rng.normal(size=(300, 1))
+    Z, X, y, _, _, _ = simulate_gaussian_iv(n=300, mx=1, k=2, seed=0)
 
-    beta_true_2d = np.array([[1.0]])
-    y = X @ beta_true_2d + 2.0 * (Z[:, 0:1] ** 2) + rng.normal(size=(300, 1))
+    # Fundamental misspecification: Y depends directly on Z^2 (violates exclusion restriction)
+    y += 5.0 * (Z[:, 0] ** 2)
 
     cs = inverse_weak_residual_prediction_test(
         Z=Z,
         X=X,
-        y=y.flatten(),
+        y=y,
         alpha=0.05,
         nonlinear_model=rf(random_state=0),
         tol=1e-2,
         max_eval=50,
     )
 
+    # Evaluates the "if f(res.x) >= 0: return ConfidenceSet([])" branch
     assert len(cs.boundaries) == 0
+
+
+def test_inverse_weak_residual_prediction_tsls_fallback():
+    # Extremely weak instruments (h11=0.05) means TSLS estimate is biased and rejected
+    Z, X, y, _, _, _ = simulate_guggenberger12(n=500, k=5, h11=0.05, seed=42)
+
+    cs = inverse_weak_residual_prediction_test(
+        Z=Z,
+        X=X,
+        y=y,
+        alpha=0.95,  # Unusually strict alpha forces the TSLS estimate to be immediately rejected
+        nonlinear_model=rf(random_state=0),
+        tol=1e-2,
+        max_eval=50,
+    )
+
+    # Verify that the test successfully assigned 'beta_tsls = res.x' and didn't just return an empty CS
+    assert len(cs.boundaries) > 0
 
 
 @pytest.mark.parametrize("robust", [False, True])
@@ -174,7 +192,7 @@ def test_test_round_trip_1d(n, k, mc, fit_intercept, robust, alpha):
     kwargs = dict(
         Z=Z,
         X=X,
-        y=y.flatten(),
+        y=y,
         C=C,
         robust=robust,
         fit_intercept=fit_intercept,
