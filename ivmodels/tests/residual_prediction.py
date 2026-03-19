@@ -396,7 +396,7 @@ def inverse_weak_residual_prediction_test(
     seed=0,
     tol=1e-6,
     max_value=1e6,
-    max_eval=1000,
+    max_eval=100,
 ):
     """
     Compute confidence set for the weak-IV residual prediction test :cite:p:`scheidegger2025residual`.

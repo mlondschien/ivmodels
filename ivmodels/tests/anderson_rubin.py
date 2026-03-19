@@ -233,7 +233,7 @@ def inverse_anderson_rubin_test(
     critical_values="chi2",
     fit_intercept=True,
     tol=1e-6,
-    max_eval=1000,
+    max_eval=100,
 ):
     """
     Return the quadric for to the inverse Anderson-Rubin test's acceptance region.

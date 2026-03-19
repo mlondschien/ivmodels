@@ -168,7 +168,7 @@ def test_characteristic_roots_fixed(A, B, roots):
 )
 @pytest.mark.parametrize("tol", [1e-3, 1e-6])
 def test_find_roots(f, a, b, expected, tol):
-    roots = _find_roots(f, a, b, max_value=1e6, max_eval=1e4, tol=tol)
+    roots = _find_roots(f, a, b, max_value=1e6, max_eval=100, tol=tol)
     assert np.allclose(sorted(roots), expected, atol=tol)
 
 

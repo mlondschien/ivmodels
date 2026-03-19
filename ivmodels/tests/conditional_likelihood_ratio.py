@@ -116,10 +116,10 @@ def conditional_likelihood_ratio_critical_value_function(
 
     if critical_values == "londschien2025exact" and lambdas[-1] <= 0:
         return 1 - scipy.stats.chi2(k + md).cdf(z)
-    elif critical_values != "londschien2025exact" and lambdas[0] <= 0:
-        return 1 - scipy.stats.chi2(k + md).cdf(z)
 
     if critical_values == "londschien2025exact" and mx + md > 1:
+        if not len(lambdas) == mx + md:
+            raise ValueError("lambdas must be of length mx + md.")
         return _clr_critical_value_function_monte_carlo(
             mx=mx, md=md, k=k, lambdas=lambdas, z=z, tol=tol, num_samples=num_samples
         )
@@ -158,7 +158,7 @@ def conditional_likelihood_ratio_critical_value_function(
             wvar=(beta - 1, alpha - 1),
             epsabs=tol,
         )
-        return 1 - res[0]
+        return np.max([np.finfo(np.float64).eps, 1 - res[0]])
 
 
 @njit
@@ -524,7 +524,7 @@ def inverse_conditional_likelihood_ratio_test(
     fit_intercept=True,
     tol=1e-6,
     max_value=1e6,
-    max_eval=1000,
+    max_eval=100,
 ):
     """
     Return an approximation of the confidence set by inversion of the CLR test.
