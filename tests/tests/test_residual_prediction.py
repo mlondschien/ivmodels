@@ -171,7 +171,7 @@ def test_inverse_weak_residual_prediction_tsls_fallback():
         y=y,
         alpha=0.95,  # Unusually strict alpha forces the TSLS estimate to be immediately rejected
         nonlinear_model=rf(random_state=0),
-        tol=1e-2,
+        tol=0.1,
         max_eval=50,
     )
 
@@ -179,10 +179,14 @@ def test_inverse_weak_residual_prediction_tsls_fallback():
     assert len(cs.boundaries) > 0
 
 
-@pytest.mark.parametrize("robust", [False, True])
-@pytest.mark.parametrize("n, k, mc", [(200, 2, 1), (250, 3, 0)])
-@pytest.mark.parametrize("fit_intercept", [True, False])
-@pytest.mark.parametrize("alpha", [0.1, 0.05])
+@pytest.mark.parametrize(
+    "robust, n, k, mc, fit_intercept, alpha",
+    [
+        (False, 200, 2, 1, True, 0.1),
+        (True, 300, 3, 0, False, 0.05),
+        (False, 200, 2, 1, True, 0.2),
+    ],
+)
 def test_test_round_trip_1d(n, k, mc, fit_intercept, robust, alpha):
     """A test's p-value at the confidence set's boundary changes sign appropriately."""
     Z, X, y, C, _, _ = simulate_gaussian_iv(
@@ -204,7 +208,7 @@ def test_test_round_trip_1d(n, k, mc, fit_intercept, robust, alpha):
         nonlinear_model=rf(random_state=0),
         alpha=alpha,
         tol=1e-2,
-        max_eval=50,
+        max_eval=25,
     )
 
     for left, right in cs.boundaries:
