@@ -116,6 +116,8 @@ def conditional_likelihood_ratio_critical_value_function(
 
     if critical_values == "londschien2025exact" and lambdas[-1] <= 0:
         return 1 - scipy.stats.chi2(k + md).cdf(z)
+    elif critical_values != "londschien2025exact" and lambdas[0] <= 0:
+        return 1 - scipy.stats.chi2(k + md).cdf(z)
 
     if critical_values == "londschien2025exact" and mx + md > 1:
         if not len(lambdas) == mx + md:
