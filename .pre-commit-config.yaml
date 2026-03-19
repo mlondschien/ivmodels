@@ -33,7 +33,7 @@ repos:
   hooks:
   - id: mypy-conda
 - repo: https://github.com/Quantco/pre-commit-mirrors-pyupgrade
-  rev: 3.15.2
+  rev: 3.19.1
   hooks:
   - id: pyupgrade-conda
     args:
