@@ -18,7 +18,7 @@ def residual_prediction_test(
     fit_intercept=True,
     train_fraction=None,
     upper_clipping_quantile=0.9,
-    lower_clipping_value=0.1,
+    gamma=0.05,
     seed=0,
 ):
     """
@@ -101,12 +101,9 @@ def residual_prediction_test(
         a certail threshold in absolute value. The threshold is the
         ``upper_clipping_quantile`` of predictions on the "train" data. Must be between 0
         and 1.
-        : float, optional, default = 0.1
-        Asymptotic normality requires that the test statistics variance is not too
-        small. We do a pre-test for this. Clipping the predictions of the nonlinear
-        model to ``lower_clipping_value`` in absolute value, after rescaling, let's us
-        choose a reasonable threshold. Must be between 0 and 1. Set this to 0.0 to
-        disable the pre-test.
+    gamma: float, optional, default = 0.05
+        A non-negative scalar. Limits the minimum variance of the test statistic to
+        gamma times the noise level.
     seed: int, optional, default = 0
         Seed used to generate the random train / test split.
 
@@ -181,9 +178,17 @@ def residual_prediction_test(
     predictions_a = nonlinear_model.predict(X=ZCa).flatten()
     upper_clipping_value = np.quantile(np.abs(predictions_a), upper_clipping_quantile)
     wb = nonlinear_model.predict(X=ZCb).flatten()
-    wb = np.sign(wb) * np.clip(np.abs(wb), lower_clipping_value, upper_clipping_value)
 
-    gamma = 0.1 * np.mean(residuals_b**2) * lower_clipping_value**2
+    if upper_clipping_value == 0:
+        wb = np.sign(wb)
+    else:
+        wb = (
+            np.sign(wb)
+            * np.minimum(np.abs(wb), upper_clipping_value)
+            / upper_clipping_value
+        )
+
+    gamma_ = gamma * np.mean(residuals_b**2)
 
     XCb_proj = np.hstack([proj(np.hstack([Zb, Cb]), Xb), Cb])
     XCb = np.hstack([Xb, Cb])
@@ -200,7 +205,7 @@ def residual_prediction_test(
         sigma_sq_hat = np.mean((wb - np.linalg.pinv(XCb_proj).T @ XCb.T @ wb) ** 2)
         sigma_sq_hat *= np.mean(residuals_b**2)
 
-    sigma_sq_hat = max(sigma_sq_hat, gamma)
+    sigma_sq_hat = max(sigma_sq_hat, gamma_)
 
     stat = wb.T @ residuals_b / np.sqrt(sigma_sq_hat) / np.sqrt(Xb.shape[0])
     p_value = 1 - scipy.stats.norm.cdf(stat)
@@ -218,7 +223,7 @@ def weak_residual_prediction_test(
     fit_intercept=True,
     train_fraction=None,
     upper_clipping_quantile=0.9,
-    lower_clipping_value=0.1,
+    gamma=0.05,
     seed=0,
 ):
     """
@@ -265,12 +270,9 @@ def weak_residual_prediction_test(
         a certain threshold in absolute value. The threshold is the
         ``upper_clipping_quantile`` of predictions on the "train" data. Must be between 0
         and 1.
-    lower_clipping_value: float, optional, default = 0.1
-        Asymptotic normality requires that the test statistics variance is not too
-        small. We do a pre-test for this. Clipping the predictions of the nonlinear
-        model to ``lower_clipping_value`` in absolute value, after rescaling, let's us
-        choose a reasonable threshold. Must be between 0 and 1. Set this to 0.0 to
-        disable the pre-test.
+    gamma: float, optional, default = 0.05
+        A non-negative scalar. Limits the minimum variance of the test statistic to
+        gamma times the noise level.
     seed: int, optional, default = 0
         Seed for the random train / test split.
 
@@ -343,7 +345,15 @@ def weak_residual_prediction_test(
     pred_train = nonlinear_model.predict(ZCa_ml)
     upper_clipping_value = np.quantile(np.abs(pred_train), upper_clipping_quantile)
     wb = nonlinear_model.predict(ZCb_ml)
-    wb = np.sign(wb) * np.clip(np.abs(wb), lower_clipping_value, upper_clipping_value)
+
+    if upper_clipping_value == 0:
+        wb = np.sign(wb)
+    else:
+        wb = (
+            np.sign(wb)
+            * np.minimum(np.abs(wb), upper_clipping_value)
+            / upper_clipping_value
+        )
 
     rb = yb - Xb @ beta
     if Cb.shape[1] > 0:
@@ -351,11 +361,11 @@ def weak_residual_prediction_test(
     else:
         rb_tilde, wb_tilde = rb, wb
 
-    gamma = 0.1 * np.mean(rb_tilde**2) * lower_clipping_value**2
+    gamma_ = gamma * np.mean(rb_tilde**2)
 
     N_val = np.sum(wb_tilde * rb_tilde) / np.sqrt(n - na)
 
-    # Differently to the residual_repdiction_test, no variance adjustment due to
+    # Differently to the residual_prediction_test, no variance adjustment due to
     # the estimation of the TSLS is needed here.
     if robust:
         sigma_sq = (
@@ -364,7 +374,7 @@ def weak_residual_prediction_test(
     else:
         sigma_sq = np.mean(wb_tilde**2) * np.mean(rb_tilde**2)
 
-    sigma_sq = max(sigma_sq, gamma)
+    sigma_sq = max(sigma_sq, gamma_)
 
     stat = N_val / np.sqrt(sigma_sq)
     p_value = 1 - scipy.stats.norm.cdf(stat)
@@ -382,7 +392,7 @@ def inverse_weak_residual_prediction_test(
     fit_intercept=True,
     train_fraction=None,
     upper_clipping_quantile=0.9,
-    lower_clipping_value=0.1,
+    gamma=0.05,
     seed=0,
     tol=1e-6,
     max_value=1e6,
@@ -440,12 +450,9 @@ def inverse_weak_residual_prediction_test(
         a certain threshold in absolute value. The threshold is the
         ``upper_clipping_quantile`` of predictions on the "train" data. Must be between 0
         and 1.
-    lower_clipping_value: float, optional, default = 0.1
-        Asymptotic normality requires that the test statistics variance is not too
-        small. We do a pre-test for this. Clipping the predictions of the nonlinear
-        model to ``lower_clipping_value`` in absolute value, after rescaling, let's us
-        choose a reasonable threshold. Must be between 0 and 1. Set this to 0.0 to
-        disable the pre-test.
+    gamma: float, optional, default = 0.05
+        A non-negative scalar. Limits the minimum variance of the test statistic to
+        gamma times the noise level.
     seed: int, optional, default = 0
         Seed for the random train / test split.
     tol: float, optional, default = 1e-6
@@ -538,9 +545,14 @@ def inverse_weak_residual_prediction_test(
         pred_train = nonlinear_model.predict(ZCa_ml)
         upper_clipping_value = np.quantile(np.abs(pred_train), upper_clipping_quantile)
         wb = nonlinear_model.predict(ZCb_ml)
-        wb = np.sign(wb) * np.clip(
-            np.abs(wb), lower_clipping_value, upper_clipping_value
-        )
+        if upper_clipping_value == 0:
+            wb = np.sign(wb)
+        else:
+            wb = (
+                np.sign(wb)
+                * np.minimum(np.abs(wb), upper_clipping_value)
+                / upper_clipping_value
+            )
 
         rb = yb - Xb @ beta
         if Cb.shape[1] > 0:
@@ -548,7 +560,7 @@ def inverse_weak_residual_prediction_test(
         else:
             rb_tilde, wb_tilde = rb, wb
 
-        gamma = 0.1 * np.mean(rb_tilde**2) * lower_clipping_value**2
+        gamma_ = gamma * np.mean(rb_tilde**2)
 
         N_val = np.sum(wb_tilde * rb_tilde) / np.sqrt(n - na)
 
@@ -559,7 +571,7 @@ def inverse_weak_residual_prediction_test(
         else:
             sigma_sq = np.mean(wb_tilde**2) * np.mean(rb_tilde**2)
 
-        sigma_sq = max(sigma_sq, gamma)
+        sigma_sq = max(sigma_sq, gamma_)
 
         stat = N_val / np.sqrt(sigma_sq)
         p_value = 1 - scipy.stats.norm.cdf(stat)
