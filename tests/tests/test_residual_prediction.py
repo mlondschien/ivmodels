@@ -46,7 +46,7 @@ def test_residual_prediction_test(n, k, mx, mc, fit_intercept, robust):
             y=y,
             C=C,
             robust=robust,
-            nonlinear_model=RandomForestRegressor(n_estimators=100, random_state=0),
+            nonlinear_model=RandomForestRegressor(n_estimators=50, random_state=0),
             fit_intercept=fit_intercept,
             train_fraction=0.4,
             seed=0,
@@ -94,9 +94,9 @@ def test_weak_residual_prediction_round_trip(n, k, mc, fit_intercept, robust, al
         if not np.isinf(left):
             assert (
                 weak_residual_prediction_test(
-                    beta=np.array([left + 0.05]),
+                    beta=np.array([left + 0.01]),
                     nonlinear_model=RandomForestRegressor(
-                        n_estimators=100, random_state=0
+                        n_estimators=50, random_state=0
                     ),
                     **kwargs,
                 )[1]
@@ -104,9 +104,9 @@ def test_weak_residual_prediction_round_trip(n, k, mc, fit_intercept, robust, al
             )
             assert (
                 weak_residual_prediction_test(
-                    beta=np.array([left - 0.05]),
+                    beta=np.array([left - 0.01]),
                     nonlinear_model=RandomForestRegressor(
-                        n_estimators=100, random_state=0
+                        n_estimators=50, random_state=0
                     ),
                     **kwargs,
                 )[1]
@@ -116,9 +116,9 @@ def test_weak_residual_prediction_round_trip(n, k, mc, fit_intercept, robust, al
         if not np.isinf(right):
             assert (
                 weak_residual_prediction_test(
-                    beta=np.array([right + 0.05]),
+                    beta=np.array([right + 0.01]),
                     nonlinear_model=RandomForestRegressor(
-                        n_estimators=100, random_state=0
+                        n_estimators=50, random_state=0
                     ),
                     **kwargs,
                 )[1]
@@ -126,9 +126,9 @@ def test_weak_residual_prediction_round_trip(n, k, mc, fit_intercept, robust, al
             )
             assert (
                 weak_residual_prediction_test(
-                    beta=np.array([right - 0.05]),
+                    beta=np.array([right - 0.01]),
                     nonlinear_model=RandomForestRegressor(
-                        n_estimators=100, random_state=0
+                        n_estimators=50, random_state=0
                     ),
                     **kwargs,
                 )[1]
@@ -141,30 +141,91 @@ def test_weak_residual_prediction_round_trip(n, k, mc, fit_intercept, robust, al
         assert (
             weak_residual_prediction_test(
                 beta=np.array([mid]),
-                nonlinear_model=RandomForestRegressor(n_estimators=100, random_state=0),
+                nonlinear_model=RandomForestRegressor(n_estimators=50, random_state=0),
                 **kwargs,
             )[1]
             > alpha
         )
 
 
-def test_residual_prediction_test_rejects():
+@pytest.mark.parametrize("robust", [False, True])
+@pytest.mark.parametrize("pi_scale", [1.0, 0.1, 0.0])
+@pytest.mark.parametrize("fit_intercept", [True, False])
+def test_weak_residual_prediction_test_size(pi_scale, robust, fit_intercept):
+    rng = np.random.default_rng(42)
+    n_seeds = 50
+    p_values = np.zeros(n_seeds)
+
+    for seed in range(n_seeds):
+        Z = rng.normal(size=(200, 3))
+        U = rng.normal(size=(200, 1))
+
+        X = pi_scale * (Z[:, 0:1] + Z[:, 1:2]) + U + rng.normal(size=(200, 1))
+
+        beta_true_2d = np.array([[1.5]])
+
+        noise = rng.normal(size=(200, 1))
+        if robust:
+            noise *= Z[:, 0:1] ** 2 + 0.1
+
+        y = X @ beta_true_2d + U + noise
+
+        _, p_values[seed] = weak_residual_prediction_test(
+            Z=Z,
+            X=X,
+            y=y.flatten(),
+            beta=np.array([1.5]),  # Pass the 1D version to the function
+            robust=robust,
+            nonlinear_model=RandomForestRegressor(
+                n_estimators=15, max_depth=3, random_state=seed
+            ),
+            fit_intercept=fit_intercept,
+            seed=seed,
+        )
+
+    assert np.mean(p_values < 0.05) <= 0.15
+
+
+def test_weak_residual_prediction_test_rejects_false_beta():
     rng = np.random.default_rng(0)
+    Z = rng.normal(size=(500, 3))
+    U = rng.normal(size=(500, 1))
+    X = Z[:, 0:1] - Z[:, 1:2] + U + rng.normal(size=(500, 1))
 
-    Pi = rng.normal(size=(5, 2))
-    beta = rng.normal(size=(2, 1))
+    beta_true_2d = np.array([[2.0]])
+    y = X @ beta_true_2d + U + rng.normal(size=(500, 1))
 
-    Z = rng.normal(size=(200, 5))
-    X = Z @ Pi + rng.normal(size=(200, 2))
-    y = X @ beta + Z[:, 0:1] ** 2 + rng.normal(size=(200, 1))
+    beta_false = np.array([0.0])
 
-    _, p_value = residual_prediction_test(
+    _, p_value = weak_residual_prediction_test(
         Z=Z,
         X=X,
-        y=y,
-        nonlinear_model=RandomForestRegressor(),
-        fit_intercept=False,
-        train_fraction=None,
-        seed=0,
+        y=y.flatten(),
+        beta=beta_false,
+        nonlinear_model=RandomForestRegressor(n_estimators=20, random_state=0),
     )
+
     assert p_value < 0.05
+
+
+def test_inverse_weak_residual_prediction_empty_cs():
+    rng = np.random.default_rng(0)
+    Z = rng.normal(size=(300, 2))
+    X = Z[:, 0:1] + rng.normal(size=(300, 1))
+
+    beta_true_2d = np.array([[1.0]])
+    y = X @ beta_true_2d + 2.0 * (Z[:, 0:1] ** 2) + rng.normal(size=(300, 1))
+
+    cs = inverse_weak_residual_prediction_test(
+        Z=Z,
+        X=X,
+        y=y.flatten(),
+        alpha=0.05,
+        nonlinear_model=RandomForestRegressor(
+            n_estimators=15, max_depth=3, random_state=0
+        ),
+        tol=1e-2,
+        max_eval=50,
+    )
+
+    assert len(cs.boundaries) == 0
