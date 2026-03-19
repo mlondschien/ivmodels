@@ -207,14 +207,11 @@ def test_test_round_trip_1d(n, k, mc, fit_intercept, robust, alpha):
         max_eval=50,
     )
 
-    # Use a large step size because RF prediction surfaces are jagged step-functions
-    step = 0.20
-
     for left, right in cs.boundaries:
         if not np.isinf(left):
             assert (
                 weak_residual_prediction_test(
-                    beta=np.array([left + step]),
+                    beta=np.array([left + 0.01]),
                     nonlinear_model=rf(random_state=0),
                     **kwargs,
                 )[1]
@@ -222,7 +219,7 @@ def test_test_round_trip_1d(n, k, mc, fit_intercept, robust, alpha):
             )
             assert (
                 weak_residual_prediction_test(
-                    beta=np.array([left - step]),
+                    beta=np.array([left - 0.01]),
                     nonlinear_model=rf(random_state=0),
                     **kwargs,
                 )[1]
@@ -232,7 +229,7 @@ def test_test_round_trip_1d(n, k, mc, fit_intercept, robust, alpha):
         if not np.isinf(right):
             assert (
                 weak_residual_prediction_test(
-                    beta=np.array([right + step]),
+                    beta=np.array([right + 0.01]),
                     nonlinear_model=rf(random_state=0),
                     **kwargs,
                 )[1]
@@ -240,7 +237,7 @@ def test_test_round_trip_1d(n, k, mc, fit_intercept, robust, alpha):
             )
             assert (
                 weak_residual_prediction_test(
-                    beta=np.array([right - step]),
+                    beta=np.array([right - 0.01]),
                     nonlinear_model=rf(random_state=0),
                     **kwargs,
                 )[1]
