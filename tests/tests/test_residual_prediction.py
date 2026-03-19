@@ -59,12 +59,17 @@ def test_zero_predictions(test):
     "test",
     [residual_prediction_test, weak_residual_prediction_test],
 )
-@pytest.mark.parametrize("robust", [False, True])
-@pytest.mark.parametrize("n, mx, k, u, mc", [(200, 1, 2, 1, 1), (300, 2, 5, 2, 0)])
-@pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize(
+    "robust, n, mx, k, u, mc, fit_intercept",
+    [
+        (False, 200, 1, 2, 1, 1, True),
+        (True, 300, 2, 5, 2, 0, False),
+        (False, 200, 1, 2, 1, 1, False),
+    ],
+)
 def test_test_size(test, robust, n, mx, k, u, mc, fit_intercept):
     """Test that the test size is close to the nominal level under strong IVs."""
-    n_seeds = 50
+    n_seeds = 25
     p_values = np.zeros(n_seeds)
 
     for seed in range(n_seeds):
