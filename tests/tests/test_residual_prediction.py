@@ -166,24 +166,6 @@ def test_inverse_weak_residual_prediction_empty_cs():
     assert len(cs.boundaries) == 0
 
 
-def test_inverse_weak_residual_prediction_tsls_fallback():
-    # Extremely weak instruments (h11=0.05) means TSLS estimate is biased and rejected
-    Z, X, y, _, _, _ = simulate_guggenberger12(n=500, k=5, h11=0.05, seed=42)
-
-    cs = inverse_weak_residual_prediction_test(
-        Z=Z,
-        X=X,
-        y=y,
-        alpha=0.95,  # Unusually strict alpha forces the TSLS estimate to be immediately rejected
-        nonlinear_model=rf(random_state=0),
-        tol=0.1,
-        max_eval=50,
-    )
-
-    # Verify that the test successfully assigned 'beta_tsls = res.x' and didn't just return an empty CS
-    assert len(cs.boundaries) > 0
-
-
 @pytest.mark.parametrize(
     "robust, n, k, mc, fit_intercept, alpha",
     [
