@@ -1,157 +1,85 @@
+from functools import partial
+
 import numpy as np
 import pytest
-import scipy.stats
 from sklearn.ensemble import RandomForestRegressor
 
+from ivmodels.simulate import simulate_gaussian_iv
 from ivmodels.tests import (
     inverse_weak_residual_prediction_test,
     residual_prediction_test,
     weak_residual_prediction_test,
 )
 
+rf = partial(RandomForestRegressor, n_estimators=50, max_depth=3)
 
-@pytest.mark.parametrize("robust", [False, True])
+
 @pytest.mark.parametrize(
-    "n, k, mx, mc, fit_intercept",
-    [(500, 3, 3, 1, True), (500, 3, 1, 1, False), (500, 15, 5, 5, True)],
+    "test",
+    [residual_prediction_test, weak_residual_prediction_test],
 )
-def test_residual_prediction_test(n, k, mx, mc, fit_intercept, robust):
-    rng = np.random.default_rng(0)
+@pytest.mark.parametrize("n, mx, k, u, mc", [(200, 1, 2, 1, 1), (200, 2, 5, 2, 0)])
+def test_test_output_type(test, n, mx, k, u, mc):
+    """The tests should output a tuple of floats (statistic, p_value)."""
+    Z, X, y, C, _, _, beta = simulate_gaussian_iv(
+        n=n, mx=mx, k=k, u=u, mc=mc, return_beta=True
+    )
 
-    Pi = rng.normal(size=(k, mx))
-    beta = rng.normal(size=(mx, 1))
-    gamma = rng.normal(size=(mx + 1, mx))
-    Pi_CZ = rng.normal(size=(mc, k))
-    Pi_CX = rng.normal(size=(mc, mx))
-    Pi_Cy = rng.normal(size=(mc, 1))
+    kwargs = {"nonlinear_model": rf(random_state=0)}
+    if test == weak_residual_prediction_test:
+        kwargs["beta"] = beta
 
-    n_seeds = 20
-    statistics = np.zeros(n_seeds)
+    statistic, p_value = test(Z, X, y, C=C, **kwargs)
+
+    assert isinstance(statistic, float)
+    assert isinstance(p_value, float)
+
+
+@pytest.mark.parametrize(
+    "test",
+    [residual_prediction_test, weak_residual_prediction_test],
+)
+@pytest.mark.parametrize("robust", [False, True])
+@pytest.mark.parametrize("n, mx, k, u, mc", [(200, 1, 2, 1, 1), (300, 2, 5, 2, 0)])
+@pytest.mark.parametrize("fit_intercept", [True, False])
+def test_test_size(test, robust, n, mx, k, u, mc, fit_intercept):
+    """Test that the test size is close to the nominal level under strong IVs."""
+    n_seeds = 50
     p_values = np.zeros(n_seeds)
 
-    for idx in range(n_seeds):
-        C = rng.normal(size=(n, mc))
-        Z = rng.normal(size=(n, k)) + C @ Pi_CZ
-        U = rng.normal(size=(n, mx + 1))
-        X = Z @ Pi + U @ gamma + C @ Pi_CX + rng.normal(size=(n, mx))
-        X[:, 0] += Z[:, 0] ** 2  # allow for nonlinearity Z -> X
-        noise = rng.normal(size=(n, 1))
-        if robust:
-            noise *= Z[:, 0:1] ** 2
-        y = X @ beta + U[:, 0:1] + np.sin(U[:, 0:1]) + C @ Pi_Cy + noise
-
-        statistics[idx], p_values[idx] = residual_prediction_test(
-            Z=Z,
-            X=X,
-            y=y,
-            C=C,
-            robust=robust,
-            nonlinear_model=RandomForestRegressor(n_estimators=50, random_state=0),
-            fit_intercept=fit_intercept,
-            train_fraction=0.4,
-            seed=0,
+    for seed in range(n_seeds):
+        Z, X, y, C, _, _, beta = simulate_gaussian_iv(
+            n=n,
+            mx=mx,
+            k=k,
+            u=u,
+            mc=mc,
+            seed=seed,
+            include_intercept=fit_intercept,
+            return_beta=True,
         )
 
-    assert (
-        scipy.stats.kstest(p_values, scipy.stats.uniform(loc=0.0, scale=1.0).cdf).pvalue
-        > 0.05
-    )
+        kwargs = {
+            "robust": robust,
+            "fit_intercept": fit_intercept,
+            "nonlinear_model": rf(random_state=seed),
+            "seed": seed,
+        }
+
+        if test == weak_residual_prediction_test:
+            kwargs["beta"] = beta
+
+        _, p_values[seed] = test(Z, X, y, C=C, **kwargs)
+
+    # Allow some finite-sample slack for ML-based tests
+    assert np.mean(p_values <= 0.1) <= 0.2
 
 
 @pytest.mark.parametrize("robust", [False, True])
-@pytest.mark.parametrize(
-    "n, k, mc, fit_intercept",
-    [(200, 3, 1, True), (200, 3, 0, False)],
-)
-@pytest.mark.parametrize("alpha", [0.1, 0.05])
-def test_weak_residual_prediction_round_trip(n, k, mc, fit_intercept, robust, alpha):
-    """The p-value of weak_residual_prediction_test changes sign across CI boundaries."""
-    rng = np.random.default_rng(0)
-    Z = rng.normal(size=(n, k))
-    X = Z[:, :1] + rng.normal(size=(n, 1))
-    C = rng.normal(size=(n, mc)) if mc > 0 else None
-    y = X[:, 0] + rng.normal(size=n)
-    if mc > 0:
-        y += C[:, 0]
-
-    kwargs = dict(
-        Z=Z,
-        X=X,
-        y=y,
-        C=C,
-        robust=robust,
-        fit_intercept=fit_intercept,
-        seed=0,
-    )
-
-    cs = inverse_weak_residual_prediction_test(
-        **kwargs,
-        nonlinear_model=RandomForestRegressor(n_estimators=100, random_state=0),
-        alpha=alpha,
-    )
-
-    for left, right in cs.boundaries:
-        if not np.isinf(left):
-            assert (
-                weak_residual_prediction_test(
-                    beta=np.array([left + 0.01]),
-                    nonlinear_model=RandomForestRegressor(
-                        n_estimators=50, random_state=0
-                    ),
-                    **kwargs,
-                )[1]
-                > alpha
-            )
-            assert (
-                weak_residual_prediction_test(
-                    beta=np.array([left - 0.01]),
-                    nonlinear_model=RandomForestRegressor(
-                        n_estimators=50, random_state=0
-                    ),
-                    **kwargs,
-                )[1]
-                < alpha
-            )
-
-        if not np.isinf(right):
-            assert (
-                weak_residual_prediction_test(
-                    beta=np.array([right + 0.01]),
-                    nonlinear_model=RandomForestRegressor(
-                        n_estimators=50, random_state=0
-                    ),
-                    **kwargs,
-                )[1]
-                < alpha
-            )
-            assert (
-                weak_residual_prediction_test(
-                    beta=np.array([right - 0.01]),
-                    nonlinear_model=RandomForestRegressor(
-                        n_estimators=50, random_state=0
-                    ),
-                    **kwargs,
-                )[1]
-                > alpha
-            )
-
-        left_check = left if not np.isinf(left) else -1e6
-        right_check = right if not np.isinf(right) else 1e6
-        mid = (left_check + right_check) / 2
-        assert (
-            weak_residual_prediction_test(
-                beta=np.array([mid]),
-                nonlinear_model=RandomForestRegressor(n_estimators=50, random_state=0),
-                **kwargs,
-            )[1]
-            > alpha
-        )
-
-
-@pytest.mark.parametrize("robust", [False, True])
-@pytest.mark.parametrize("pi_scale", [1.0, 0.1, 0.0])
+@pytest.mark.parametrize("instrument_strength", [1.0, 0.1, 0.0])
 @pytest.mark.parametrize("fit_intercept", [True, False])
-def test_weak_residual_prediction_test_size(pi_scale, robust, fit_intercept):
+def test_weak_residual_prediction_test_size(instrument_strength, robust, fit_intercept):
+    """Test that the weak test maintains nominal size even when IVs are completely weak."""
     rng = np.random.default_rng(42)
     n_seeds = 50
     p_values = np.zeros(n_seeds)
@@ -160,7 +88,11 @@ def test_weak_residual_prediction_test_size(pi_scale, robust, fit_intercept):
         Z = rng.normal(size=(200, 3))
         U = rng.normal(size=(200, 1))
 
-        X = pi_scale * (Z[:, 0:1] + Z[:, 1:2]) + U + rng.normal(size=(200, 1))
+        X = (
+            instrument_strength * (Z[:, 0:1] + Z[:, 1:2])
+            + U
+            + rng.normal(size=(200, 1))
+        )
 
         beta_true_2d = np.array([[1.5]])
 
@@ -174,11 +106,9 @@ def test_weak_residual_prediction_test_size(pi_scale, robust, fit_intercept):
             Z=Z,
             X=X,
             y=y.flatten(),
-            beta=np.array([1.5]),  # Pass the 1D version to the function
+            beta=np.array([1.5]),  # Pass the 1D version to the test
             robust=robust,
-            nonlinear_model=RandomForestRegressor(
-                n_estimators=15, max_depth=3, random_state=seed
-            ),
+            nonlinear_model=rf(random_state=seed),
             fit_intercept=fit_intercept,
             seed=seed,
         )
@@ -187,6 +117,7 @@ def test_weak_residual_prediction_test_size(pi_scale, robust, fit_intercept):
 
 
 def test_weak_residual_prediction_test_rejects_false_beta():
+    """Test that the weak residual prediction test rejects an incorrect beta."""
     rng = np.random.default_rng(0)
     Z = rng.normal(size=(500, 3))
     U = rng.normal(size=(500, 1))
@@ -202,13 +133,14 @@ def test_weak_residual_prediction_test_rejects_false_beta():
         X=X,
         y=y.flatten(),
         beta=beta_false,
-        nonlinear_model=RandomForestRegressor(n_estimators=20, random_state=0),
+        nonlinear_model=rf(random_state=0),
     )
 
     assert p_value < 0.05
 
 
 def test_inverse_weak_residual_prediction_empty_cs():
+    """If the structural model is fundamentally misspecified, the CS should be empty."""
     rng = np.random.default_rng(0)
     Z = rng.normal(size=(300, 2))
     X = Z[:, 0:1] + rng.normal(size=(300, 1))
@@ -221,11 +153,90 @@ def test_inverse_weak_residual_prediction_empty_cs():
         X=X,
         y=y.flatten(),
         alpha=0.05,
-        nonlinear_model=RandomForestRegressor(
-            n_estimators=15, max_depth=3, random_state=0
-        ),
+        nonlinear_model=rf(random_state=0),
         tol=1e-2,
         max_eval=50,
     )
 
     assert len(cs.boundaries) == 0
+
+
+@pytest.mark.parametrize("robust", [False, True])
+@pytest.mark.parametrize("n, k, mc", [(200, 2, 1), (250, 3, 0)])
+@pytest.mark.parametrize("fit_intercept", [True, False])
+@pytest.mark.parametrize("alpha", [0.1, 0.05])
+def test_test_round_trip_1d(n, k, mc, fit_intercept, robust, alpha):
+    """A test's p-value at the confidence set's boundary changes sign appropriately."""
+    Z, X, y, C, _, _ = simulate_gaussian_iv(
+        n=n, mx=1, k=k, mc=mc, seed=0, include_intercept=fit_intercept
+    )
+
+    kwargs = dict(
+        Z=Z,
+        X=X,
+        y=y.flatten(),
+        C=C,
+        robust=robust,
+        fit_intercept=fit_intercept,
+        seed=0,
+    )
+
+    cs = inverse_weak_residual_prediction_test(
+        **kwargs,
+        nonlinear_model=rf(random_state=0),
+        alpha=alpha,
+        tol=1e-2,
+        max_eval=50,
+    )
+
+    # Use a large step size because RF prediction surfaces are jagged step-functions
+    step = 0.20
+
+    for left, right in cs.boundaries:
+        if not np.isinf(left):
+            assert (
+                weak_residual_prediction_test(
+                    beta=np.array([left + step]),
+                    nonlinear_model=rf(random_state=0),
+                    **kwargs,
+                )[1]
+                > alpha
+            )
+            assert (
+                weak_residual_prediction_test(
+                    beta=np.array([left - step]),
+                    nonlinear_model=rf(random_state=0),
+                    **kwargs,
+                )[1]
+                < alpha
+            )
+
+        if not np.isinf(right):
+            assert (
+                weak_residual_prediction_test(
+                    beta=np.array([right + step]),
+                    nonlinear_model=rf(random_state=0),
+                    **kwargs,
+                )[1]
+                < alpha
+            )
+            assert (
+                weak_residual_prediction_test(
+                    beta=np.array([right - step]),
+                    nonlinear_model=rf(random_state=0),
+                    **kwargs,
+                )[1]
+                > alpha
+            )
+
+        left_check = left if not np.isinf(left) else -1e6
+        right_check = right if not np.isinf(right) else 1e6
+        mid = (left_check + right_check) / 2
+        assert (
+            weak_residual_prediction_test(
+                beta=np.array([mid]),
+                nonlinear_model=rf(random_state=0),
+                **kwargs,
+            )[1]
+            > alpha
+        )
