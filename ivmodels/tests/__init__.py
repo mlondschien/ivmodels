@@ -11,7 +11,11 @@ from .lagrange_multiplier import (
 from .likelihood_ratio import inverse_likelihood_ratio_test, likelihood_ratio_test
 from .pulse import inverse_pulse_test, pulse_test
 from .rank import rank_test
-from .residual_prediction import residual_prediction_test
+from .residual_prediction import (
+    inverse_weak_residual_prediction_test,
+    residual_prediction_test,
+    weak_residual_prediction_test,
+)
 from .wald import inverse_wald_test, wald_test
 
 __all__ = [
@@ -30,4 +34,6 @@ __all__ = [
     "inverse_wald_test",
     "rank_test",
     "residual_prediction_test",
+    "weak_residual_prediction_test",
+    "inverse_weak_residual_prediction_test",
 ]
