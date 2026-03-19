@@ -441,7 +441,7 @@ def inverse_lagrange_multiplier_test(
     fit_intercept=True,
     tol=1e-6,
     max_value=1e6,
-    max_eval=1000,
+    max_eval=100,
 ):
     """
     Return an approximation of the confidence set by inversion of the LM test.

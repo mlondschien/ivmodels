@@ -1,6 +1,19 @@
 Changelog
 =========
 
+0.10.0 - 2025-03-19
+-------------------
+
+**New features:**
+
+- Implemented the weak-instrument robust residual prediction test of Scheidegger et al.
+  (2026) and the confidence sets obtained by inversion.
+
+**Other changes:**
+
+- The :func:`~ivmodels.tests.residual_prediction_test` now uses clipping via ``gamma``
+  of weights as described in the paper.
+
 0.9.0 - 2025-09-04
 ------------------
 
