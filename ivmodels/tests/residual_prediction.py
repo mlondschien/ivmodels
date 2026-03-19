@@ -335,11 +335,8 @@ def weak_residual_prediction_test(
     else:
         MXa, Mya = Xa, ya
 
-    Ca_ml = Ca[:, 1:] if fit_intercept and Ca.shape[1] > 0 else Ca
-    ZCa_ml = np.hstack([Za, Ca_ml]) if Ca_ml.shape[1] > 0 else Za
-
-    Cb_ml = Cb[:, 1:] if fit_intercept and Cb.shape[1] > 0 else Cb
-    ZCb_ml = np.hstack([Zb, Cb_ml]) if Cb_ml.shape[1] > 0 else Zb
+    ZCa_ml = np.hstack([Za, Ca[:, fit_intercept:]])
+    ZCb_ml = np.hstack([Zb, Cb[:, fit_intercept:]])
 
     resid_a = Mya - MXa @ beta
     nonlinear_model.fit(X=ZCa_ml, y=resid_a)
@@ -489,7 +486,7 @@ def inverse_weak_residual_prediction_test(
 
     if X.shape[1] != 1:
         raise ValueError(
-            "inverse_residual_prediction_test only supports scalar X (p=1). "
+            "inverse_weak_residual_prediction_test only supports scalar X (p=1). "
             f"Got X with {X.shape[1]} columns."
         )
 
@@ -525,11 +522,8 @@ def inverse_weak_residual_prediction_test(
     else:
         MXa, Mya = Xa, ya
 
-    Ca_ml = Ca[:, 1:] if fit_intercept and Ca.shape[1] > 0 else Ca
-    ZCa_ml = np.hstack([Za, Ca_ml]) if Ca_ml.shape[1] > 0 else Za
-
-    Cb_ml = Cb[:, 1:] if fit_intercept and Cb.shape[1] > 0 else Cb
-    ZCb_ml = np.hstack([Zb, Cb_ml]) if Cb_ml.shape[1] > 0 else Zb
+    ZCa_ml = np.hstack([Za, Ca[:, fit_intercept:]])
+    ZCb_ml = np.hstack([Zb, Cb[:, fit_intercept:]])
 
     # TSLS on the full sample provides a starting point expected to be inside the
     # confidence set under the null. C already contains the intercept column if needed.
