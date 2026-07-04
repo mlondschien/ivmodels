@@ -49,26 +49,27 @@ class _LM:
     ----------
     X: np.ndarray of dimension (n, mx)
         Regressors.
-    Y: np.ndarray of dimension (n,) or (n, 1)
+    y: np.ndarray of dimension (n,) or (n, 1)
         Outcomes.
     W: np.ndarray of dimension (n, mw)
         Regressors to minimize over.
     dof: int
-        Degrees of freedom for variance computation. Equal to n - k - mc.
+        Degrees of freedom for variance computation. Equal to
+        ``n - k - mc - md - fit_intercept``.
     Z: np.ndarray of dimension (n, k), optional, default=None
-        Instruments. Either ``Z`` or ``X_proj``, ``Y_proj``, and ``W_proj`` must be
+        Instruments. Either ``Z`` or ``X_proj``, ``y_proj``, and ``W_proj`` must be
         provided.
     X_proj: np.ndarray of dimension (n, mx), optional, default=None
         Projection of ``X`` onto the column space of ``Z``.
-    Y_proj: np.ndarray of dimension (n,) or (n, 1), optional, default=None
-        Projection of ``Y`` onto the column space of ``Z``.
+    y_proj: np.ndarray of dimension (n,) or (n, 1), optional, default=None
+        Projection of ``y`` onto the column space of ``Z``.
     W_proj: np.ndarray of dimension (n, mw), optional, default=None
         Projection of ``W`` onto the column space of ``Z``.
     optimizer: str, optional, default="bfgs"
         Optimization method to use. Passed to ``scipy.optimize.minimize``.
-    gamma_0: list of str or np.ndarray of dimension (mw), optional, default=None
-        Initial value for the minimization. If ``str``, must be one of "liml" or "zero".
-        If ``None``, ``"liml"`` is used.
+    gamma_0: str or list of str, optional, default=None
+        Initial value(s) for the minimization. Entries must be one of "liml" or
+        "zero". If ``None``, ``"liml"`` is used.
     tol: float, optional, default=None
         Tolerance for the optimization algorithm.
     """
@@ -448,7 +449,7 @@ def inverse_lagrange_multiplier_test(
 
     This is only implemented if `mx + md = 1`. The confidence set is
     computed by a root finding algorithm, see the docs of
-    :func:`~ivmodels.tests.utils._find_roots` for more details.
+    :func:`~ivmodels.utils._find_roots` for more details.
 
     Parameters
     ----------
@@ -468,12 +469,12 @@ def inverse_lagrange_multiplier_test(
         Exogenous regressors of interest.
     fit_intercept: bool, optional, default=True
         Whether to fit an intercept. This is equivalent to centering the inputs.
-    tol: float, optional, default=1e-4
+    tol: float, optional, default=1e-6
         Tolerance for the root finding algorithm.
-    max_value: float, optional, default=1e8
+    max_value: float, optional, default=1e6
         Maximum value for the root finding algorithm. Returns a confidence set with
         infinite bounds if the algorithm reaches this value.
-    max_eval: int, optional, default=1000
+    max_eval: int, optional, default=100
         Maximum number of evaluations of the statistic for the root finding algorithm.
     """
     if not 0 < alpha < 1:

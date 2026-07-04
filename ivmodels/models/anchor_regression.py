@@ -37,7 +37,7 @@ class AnchorRegression(AnchorMixin, GeneralizedLinearRegressor):
     .. math:: \\hat\\beta_\\mathrm{anchor}(\\gamma) := \\arg\\min_\\beta \\
        \\| y - X \\beta \\|_2^2 + (\\gamma - 1) \\|P_Z (y - X \\beta) \\|_2^2.
 
-    If :math:`\\gamma \\geq 0`, then :math:`\\hat\\beta_\\mathrm{anchor}(\\gamma) =
+    If :math:`\\gamma > 0`, then :math:`\\hat\\beta_\\mathrm{anchor}(\\gamma) =
     \\hat\\beta_\\mathrm{k-class}((\\gamma - 1) / \\gamma)`.
 
     The optimization is based on OLS after a data transformation. First standardizes

@@ -25,11 +25,10 @@ def wald_test(
 
     .. math::
 
-       \\mathrm{Wald}(\\beta) := (\\beta - \\hat{\\beta})^T \\widehat{\\mathrm{Cov}}(\\hat\\beta)^{-1} (\\beta - \\hat{\\beta}) / \\hat{\\sigma}^2,
+       \\mathrm{Wald}(\\beta) := (\\beta - \\hat{\\beta})^T X^T (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) X (\\beta - \\hat{\\beta}) / \\hat{\\sigma}^2,
 
     where :math:`\\hat \\beta = \\hat \\beta(\\kappa)` is a k-class estimator with
     :math:`\\sqrt{n} (1 - \\kappa) \\to 0`,
-    :math:`\\widehat{\\mathrm{Cov}}(\\hat\\beta)^{-1} = \\frac{1}{n} (X^T (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) X)^{-1}`,
     :math:`\\hat \\sigma^2 = \\frac{1}{n - m_X} \\| y - X \\hat \\beta \\|^2_2` is
     an estimate of the variance of the errors, :math:`P_Z` is the projection matrix
     onto the column space of :math:`Z`, and :math:`M_Z = \\mathrm{Id} - P_Z`.
@@ -40,7 +39,7 @@ def wald_test(
 
     .. math::
 
-        \\mathrm{Wald}(\\beta) := (\\beta - B \\hat{\\beta})^T (B ( (X W)^T (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) (X W) )^{-1} B)^{-1} (\\beta - B \\hat{\\beta}) / \\hat{\\sigma}^2,
+        \\mathrm{Wald}(\\beta) := (\\beta - B \\hat{\\beta})^T (B ( (X W)^T (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) (X W) )^{-1} B^T)^{-1} (\\beta - B \\hat{\\beta}) / \\hat{\\sigma}^2,
 
     where :math:`B \\in \\mathbb{R}^{m_X \\times (m_X + m_W)}` is a diagonal matrix with
     1 on the diagonal and 0 elsewhere.
@@ -61,7 +60,7 @@ def wald_test(
         Exogenous regressors of interest.
     beta: np.ndarray of dimension (mx + md,)
         Coefficients to test.
-    estimator: str or float, optional, default = "liml"
+    estimator: str or float, optional, default = "tsls"
         Estimator to use. Passed to ``kappa`` argument of ``KClass``.
     fit_intercept: bool, optional, default = True
         Whether to include an intercept. The intercept will be included both in the
@@ -160,7 +159,7 @@ def inverse_wald_test(
 
     .. math::
 
-       (\\beta - \\hat{\\beta})^T (X^T (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) X)^{-1} (\\beta - \\hat{\\beta}) \\leq \\hat{\\sigma}^2 F_{\\chi^2(m_X)}(1 - \\alpha),
+       (\\beta - \\hat{\\beta})^T X^T (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) X (\\beta - \\hat{\\beta}) \\leq \\hat{\\sigma}^2 F_{\\chi^2(m_X)}(1 - \\alpha),
 
     where :math:`\\hat \\beta` is an estimate of the causal parameter :math:`\\beta_0`
     (controlled by the parameter ``estimator``),

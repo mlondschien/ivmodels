@@ -11,7 +11,7 @@ def more_powerful_subvector_anderson_rubin_critical_value_function(
     z, kappa_1_hat, k, mw
 ):
     """
-    Implement the critical value function proposed by :cite:t`guggenberger2019more`.
+    Implement the critical value function proposed by :cite:t:`guggenberger2019more`.
 
     This is done by numerically integrating the approximate conditional density from
     Equation (A.21) of :cite:p:`guggenberger2019more`.
@@ -121,8 +121,8 @@ def anderson_rubin_test(
     :math:`Z`, covariates :math:`W` and outcomes :math:`y - X \\beta`.
     Under the null, this test statistic is asymptotically bounded from above by a random
     variable that is distributed as
-    :math:`\\frac{1}{k - m_W} \\chi^2(k - m_W)`, where :math:`r = \\mathrm{dim}(W)`. See
-    :cite:p:`guggenberger2012asymptotic`.
+    :math:`\\frac{1}{k - m_W} \\chi^2(k - m_W)`, where :math:`m_W = \\mathrm{dim}(W)`.
+    See :cite:p:`guggenberger2012asymptotic`.
 
     Parameters
     ----------
@@ -236,7 +236,7 @@ def inverse_anderson_rubin_test(
     max_eval=100,
 ):
     """
-    Return the quadric for to the inverse Anderson-Rubin test's acceptance region.
+    Return the quadric for the inverse Anderson-Rubin test's acceptance region.
 
     The returned quadric satisfies ``quadric(x) <= 0`` if and only if
     ``anderson_rubin_test(Z, X, y, beta=x, W=W)[1] > alpha``. It is thus a confidence
@@ -286,7 +286,7 @@ def inverse_anderson_rubin_test(
         Whether to include an intercept. This is equivalent to centering the inputs.
     tol: float, optional, default = 1e-6
         Tolerance for the root finding algorithm when critical_values is ``"gkm"``.
-    max_eval: int, optional, default = 1000
+    max_eval: int, optional, default = 100
         Maximum number of evaluations for the root finding algorithm when
         critical_values is ``"gkm"``.
 

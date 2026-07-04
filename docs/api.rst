@@ -16,10 +16,6 @@ Estimators
    :members: fit
    :noindex:
 
-.. autoclass:: ivmodels.models.SpaceIV
-   :members: fit
-   :noindex:
-
 Tests
 -----
 

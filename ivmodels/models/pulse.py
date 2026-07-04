@@ -22,11 +22,11 @@ class PULSEMixin:
         self.kappa_max = kappa_max
 
     def fit(self, X, y, Z=None, C=None, *args, **kwargs):
-        """Fit a p-uncorrelated least squares estimator (PULSE) [1].
+        """Fit a p-uncorrelated least squares estimator (PULSE).
 
         If ``instrument_names`` or ``instrument_regex`` are specified, ``X`` must be a
-        pandas DataFrame containing columns ``instrument_names`` and ``a`` must be
-        ``None``. At least one one of ``a``, ``instrument_names``, and
+        pandas DataFrame containing columns ``instrument_names`` and ``Z`` must be
+        ``None``. At least one of ``Z``, ``instrument_names``, and
         ``instrument_regex`` must be specified.
 
         Parameters
@@ -130,7 +130,7 @@ class PULSE(PULSEMixin, KClass):
         binary search.
     rtol: float, optional, default = 0.01
         The relative tolerance of the binary search. The PULSE will search for a
-        :math:`\\kappa` such that the PULSE test is not significant at level ``p_min`
+        :math:`\\kappa` such that the PULSE test is not significant at level ``p_min``
         with binary search but is significant at level ``p_min * (1 + rtol)``.
     kappa_max: float, optional, default = 1
         The maximum value of ``kappa`` to consider. The PULSE will search for the

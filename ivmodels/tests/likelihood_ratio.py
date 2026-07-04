@@ -14,7 +14,7 @@ def likelihood_ratio_test(Z, X, y, beta, W=None, C=None, D=None, fit_intercept=T
     .. math::
 
        \\mathrm{LR}(\\beta) &:= (n - k) \\frac{ \\| P_Z (y - X \\beta) \\|_2^2}{ \\| M_Z (y - X \\beta) \\|_2^2} - (n - k) \\frac{ \\| P_Z (y - X \\hat\\beta_\\mathrm{LIML}) \\|_2^2 }{ \\| M_Z (y - X \\hat\\beta_\\mathrm{LIML}) \\|_2^2 } \\\\
-       &= k \\ \\mathrm{AR}(\\beta)) - k \\ \\mathrm{AR}(\\hat\\beta_\\mathrm{LIML}),
+       &= k \\ \\mathrm{AR}(\\beta) - k \\ \\mathrm{AR}(\\hat\\beta_\\mathrm{LIML}),
 
     where :math:`P_Z` is the projection matrix onto the column space of :math:`Z`,
     :math:`M_Z = \\mathrm{Id} - P_Z`, and :math:`\\hat\\beta_\\mathrm{LIML}` is the LIML
