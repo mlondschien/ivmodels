@@ -53,3 +53,8 @@ Bibliography
 ------------
 
 .. bibliography::
+
+.. toctree::
+   :hidden:
+
+   api/modules

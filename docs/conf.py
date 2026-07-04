@@ -40,6 +40,11 @@ extensions = [
 bibtex_bibfiles = ["bib.bib"]
 bibtex_reference_style = "author_year"
 
+# Each docstring contains its own `.. bibliography:: :filter: False` block and each
+# module is rendered both in api.rst and in the apidoc-generated api/ivmodels.*.rst,
+# so the same citation keys appear multiple times.
+suppress_warnings = ["bibtex.duplicate_citation", "bibtex.duplicate_local_citation"]
+
 # intersphinx configuration
 intersphinx_mapping = {
     "sklearn": ("https://scikit-learn.org/stable/", None),
