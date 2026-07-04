@@ -59,7 +59,7 @@ class KClassMixin:
         ----------
         X: array-like, shape (n_samples, n_features)
             The input data. Must be a pandas DataFrame if any of `instrument_names`,
-            `instrument_regex`, `exogenous_names` or `exogenous_names` is not None.
+            `instrument_regex`, `exogenous_names` or `exogenous_regex` is not None.
         Z: array-like, shape (n_samples, n_instruments), optional
             The instrument data.
         C: array-like, shape (n_samples, n_exogenous), optional
@@ -116,7 +116,7 @@ class KClassMixin:
             if not _PANDAS_INSTALLED:
                 raise ImportError(
                     "pandas is required to use `exogenous_names`, "
-                    "`exogenous_regex`, `instrument_names` of `instrument_regex`."
+                    "`exogenous_regex`, `instrument_names` or `instrument_regex`."
                 )
 
             if not isinstance(X, pd.DataFrame):
@@ -324,9 +324,9 @@ class KClassMixin:
         Z: np.ndarray of dimension (n, k), optional, default=None.
             Instruments.
         X_proj: np.ndarray of dimension (n, mx), optional, default=None.
-            Projection of X onto the subspace orthogonal to Z.
+            Projection of X onto the subspace spanned by Z.
         y_proj: np.ndarray of dimension (n,), optional, default=None.
-            Projection of y onto the subspace orthogonal to Z.
+            Projection of y onto the subspace spanned by Z.
 
         Returns
         -------
@@ -601,7 +601,7 @@ class KClass(KClassMixin, GeneralizedLinearRegressor):
        (1 - \\kappa) \\| y - X \\beta \\|_2^2 + \\kappa \\|P_Z (y - X \\beta) \\|_2^2
        \\\\
        &= (X^T (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) X)^{-1} X^T
-       (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) X) y,
+       (\\kappa P_Z + (1 - \\kappa) \\mathrm{Id}) y,
 
     where :math:`P_Z = Z (Z^T Z)^{-1} Z^T` is the projection matrix onto the subspace
     spanned by :math:`Z` and :math:`\\mathrm{Id}` is the identity matrix.
@@ -609,7 +609,7 @@ class KClass(KClassMixin, GeneralizedLinearRegressor):
     the two-stage least-squares (2SLS) estimator
     (:math:`\\kappa = 1`), the limited information maximum likelihood (LIML) estimator
     (:math:`\\kappa = \\hat\\kappa_\\mathrm{LIML}`), and the Fuller estimators
-    (:math:`\\kappa = \\hat\\kappa_\\mathrm{LIML} - \\alpha / (n - k)`) as special
+    (:math:`\\kappa = \\hat\\kappa_\\mathrm{LIML} - \\alpha / (n - k - m_C)`) as special
     cases.
 
     Specifying exogenous included regressors :math:`C` is equivalent to including them
@@ -633,9 +633,11 @@ class KClass(KClassMixin, GeneralizedLinearRegressor):
         :math:`\\kappa_\\mathrm{LIML}` is the smallest eigenvalue of the matrix
         :math:`((X \\ \\ y)^T M_{[Z, C]} (X \\ \\ y))^{-1} (X \\ \\ y)^T M_C (X \\ y)`.
         If ``kappa="fuller(a)"``, then
-        :math:`\\kappa = \\hat\\kappa_\\mathrm{LIML} - a / (n - k - mc)`, where
-        :math:`n` is the number of observations and :math:`q = \\mathrm{dim}(Z)` is the
-        number of instruments. The string ``"fuller"`` is interpreted as
+        :math:`\\kappa = \\hat\\kappa_\\mathrm{LIML} - a / (n - k - m_C)`, where
+        :math:`n` is the number of observations, :math:`k = \\mathrm{dim}(Z)` is the
+        number of instruments, and :math:`m_C = \\mathrm{dim}(C)` is the number of
+        exogenous included regressors (plus one if ``fit_intercept=True``).
+        The string ``"fuller"`` is interpreted as
         ``"fuller(1.0)"``, yielding an estimator that is unbiased up to
         :math:`O(1/n)` :cite:p:`fuller1977some`.
     instrument_names: str or list of str, optional
@@ -665,6 +667,8 @@ class KClass(KClassMixin, GeneralizedLinearRegressor):
         Ratio of L1 to L2 regularization for elastic net regularization. For
         ``l1_ratio=0`` the penalty is an L2 penalty. For ``l1_ratio=1`` it is an L1
         penalty. Only implemented for :math:`\\kappa \\leq 1`.
+    fit_intercept: bool, optional, default=True
+        Whether to fit an intercept.
 
     Attributes
     ----------

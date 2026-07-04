@@ -92,7 +92,7 @@ def oproj(Z, *args):
     Parameters
     ----------
     Z: np.ndarray or pd.DataFrame of dimension (n, d_Z)
-        The Z matrix. If None, returns np.zeros_like(f).
+        The Z matrix. If None, returns args unchanged.
     *args: np.ndarrays or pd.DataFrames or pd.Series of dimension (n, d_f) or (n,)
         Vector or matrices to project.
 
@@ -240,16 +240,16 @@ def _check_inputs(Z, X, y, W=None, C=None, D=None, beta=None):
     return Z, X, y, W, C, D, beta
 
 
-def _find_roots(f, a, b, tol, max_value, max_eval, n_points=100, max_depth=5):
+def _find_roots(f, a, b, tol, max_value, max_eval, n_points=100):
     """
     Find roots of function ``f`` between ``a`` and ``b``.
 
-    Assumes ``f(a) < 0`` and ``f(b) > 0``. Finds root by building a grid between ``a``
-    and ``b`` with ``n_points``, evaluating ``f`` at each point, and finding indices
-    where ``f`` switches sign. If ``b`` is infinite, uses a logarithmic grid between
-    ``a`` and ``a + sign(b - a) * max_value``. The function is then called recursively
-    on the new interval until the size of the interval is less than ``tol`` or the
-    maximum number of evaluations ``max_eval`` of ``f`` is reached.
+    Assumes ``f(a) < 0`` and ``f(b) > 0``. Builds a grid of ``n_points`` between ``a``
+    and ``b``, evaluates ``f`` at each point, and runs ``scipy.optimize.brentq`` on
+    each interval where ``f`` switches sign, up to tolerance ``tol`` and with at most
+    ``max_eval`` iterations. If ``b`` is infinite, uses a logarithmic grid between
+    ``a`` and ``a + sign(b - a) * max_value`` instead and appends ``b`` to the roots
+    if ``f`` is negative at the grid's last point.
 
     There is no scipy root finding algorithm that ensures that the root found is the
     closest to ``b``. Note that this is also not strictly ensured by this function.

@@ -37,7 +37,7 @@ class AnchorRegression(AnchorMixin, GeneralizedLinearRegressor):
     .. math:: \\hat\\beta_\\mathrm{anchor}(\\gamma) := \\arg\\min_\\beta \\
        \\| y - X \\beta \\|_2^2 + (\\gamma - 1) \\|P_Z (y - X \\beta) \\|_2^2.
 
-    If :math:`\\gamma \\geq 0`, then :math:`\\hat\\beta_\\mathrm{anchor}(\\gamma) =
+    If :math:`\\gamma > 0`, then :math:`\\hat\\beta_\\mathrm{anchor}(\\gamma) =
     \\hat\\beta_\\mathrm{k-class}((\\gamma - 1) / \\gamma)`.
 
     The optimization is based on OLS after a data transformation. First standardizes
@@ -63,6 +63,8 @@ class AnchorRegression(AnchorMixin, GeneralizedLinearRegressor):
         Ratio of L1 to L2 regularization for elastic net regularization. For
         ``l1_ratio=0`` the penalty is an L2 penalty. For ``l1_ratio=1`` it is an L1
         penalty.
+    fit_intercept: bool, optional, default=True
+        Whether to fit an intercept.
 
     Attributes
     ----------

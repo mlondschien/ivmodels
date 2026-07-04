@@ -462,7 +462,7 @@ def inverse_weak_residual_prediction_test(
         Maximum absolute value of :math:`\\beta_0` to consider. If the confidence set
         boundary lies beyond this value, the boundary is reported as
         :math:`\\pm \\infty`.
-    max_eval: int, optional, default = 1000
+    max_eval: int, optional, default = 100
         Maximum number of evaluations of the test statistic for the root-finding
         algorithm.
 

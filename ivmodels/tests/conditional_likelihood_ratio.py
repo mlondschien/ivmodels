@@ -171,11 +171,11 @@ def _newton_minimal_root(q_sum, q, lambdas, tol, num_iter):
     Instead of computing the polynomials minimal root, we compute that of the secular
     equation
 
-    f(mu) = (mu - q_sum) - sum(d_i * u_i / (d_i - μ))
+    f(mu) = (mu - q_sum) - sum_i(lambdas[i] * q[i] / (mu - lambdas[i]))
 
     with derivative
 
-    f'(mu) = 1 + sum(d_i * u_i / (d_i - μ)^2).
+    f'(mu) = 1 + sum_i(lambdas[i] * q[i] / (mu - lambdas[i])^2).
 
     This has exactly one root in the interval (0, lambdas[0]), which we approximate
     using Newton's method.
@@ -188,7 +188,7 @@ def _newton_minimal_root(q_sum, q, lambdas, tol, num_iter):
         The values taken by the individual chi^2(1) distributions.
     lambdas: array of floats
         Conditioning statistic.
-    atol: float
+    tol: float
         Absolute tolerance for convergence.
     num_iter: int
         Maximum number of iterations.
@@ -239,8 +239,8 @@ def _clr_critical_value_function_monte_carlo(
     """
     Compute the CLR's exact critical value function using Monte Carlo simulation.
 
-    If ``mx == 1`` or all entries of ``d`` are equal, this is the same as the numerical
-    integration method in
+    If ``mx == 1`` or all entries of ``lambdas`` are equal, this is the same as the
+    numerical integration method in
     ``conditional_likelihood_ratio_critical_value_function``.
 
     Parameters
@@ -255,7 +255,7 @@ def _clr_critical_value_function_monte_carlo(
         The conditioning statistic.
     z: float
         The test statistic.
-    atol: float
+    tol: float
         The absolute tolerance for convergence.
     num_iter: int
         The maximum number of iterations.
@@ -531,6 +531,10 @@ def inverse_conditional_likelihood_ratio_test(
     """
     Return an approximation of the confidence set by inversion of the CLR test.
 
+    This is only implemented if ``mx + md = 1``. The confidence set is computed by a
+    root finding algorithm, see the docs of :func:`~ivmodels.utils._find_roots` for
+    more details.
+
     Parameters
     ----------
     Z: np.ndarray of dimension (n, k)
@@ -545,17 +549,17 @@ def inverse_conditional_likelihood_ratio_test(
         Endogenous regressors not of interest.
     C: np.ndarray of dimension (n, mc) or None, optional, default = None
         Exogenous regressors not of interest.
-    D: np.ndarray of dimension (n, 0) or None, optional, default = None
-        Exogenous regressors of interest. Not supported for this test.
+    D: np.ndarray of dimension (n, md) or None, optional, default = None
+        Exogenous regressors of interest.
     fit_intercept: bool, optional, default: True
         Whether to include an intercept. This is equivalent to centering the inputs.
-    tol: float, optional, default: 1e-4
+    tol: float, optional, default: 1e-6
         The boundaries of the confidence set are computed up to this tolerance.
     max_value: float, optional, default: 1e6
         The maximum value to consider when searching for the boundaries of the
         confidence set. That is, if the true confidence set is of the form
         [0, max_value + 1], the confidence returned set will be [0, np.inf].
-    max_eval: int, optional, default: 1000
+    max_eval: int, optional, default: 100
         The maximum number of evaluations of the critical value function to find the
         boundaries of the confidence set.
     """
@@ -672,7 +676,6 @@ def inverse_conditional_likelihood_ratio_test(
             tol=tol,
             max_value=max_value,
             max_eval=max_eval,
-            max_depth=5,
         )
         roots += _find_roots(
             f,
@@ -681,7 +684,6 @@ def inverse_conditional_likelihood_ratio_test(
             tol=tol,
             max_value=max_value,
             max_eval=max_eval,
-            max_depth=5,
         )
 
     roots = sorted(roots)

@@ -39,6 +39,8 @@ def simulate_guggenberger12(
         Covariance matrix of the noise. If None, defaults to `[[1, 0, 0.95], [0, 1, 0.3], [0.95, 0.3, 1]]`.
     return_beta : bool, optional, default False
         Whether to return the true beta.
+    md : int, optional, default 0
+        Number of exogenous regressors of interest.
 
     Returns
     -------
@@ -52,8 +54,10 @@ def simulate_guggenberger12(
         Empty
     W : np.ndarray of dimension (n, 1)
         Endogenous variables not of interest.
-    beta : np.ndarray of dimension (1,)
-        True beta. Only returned if ``return_beta`` is True.
+    D : np.ndarray of dimension (n, md)
+        Exogenous regressors of interest.
+    beta : np.ndarray of dimension (1 + md,)
+        True (beta, delta). Only returned if ``return_beta`` is True.
     """
     if k < 2:
         raise ValueError("k must be at least 2")
@@ -136,11 +140,13 @@ def simulate_gaussian_iv(
     k : int
         Number of instruments.
     u : int, optional
-        Number of unobserved variables. If None, defaults to mx.
+        Number of unobserved variables. If None, defaults to mx + mw.
     mw : int, optional
         Number of endogenous variables not of interest.
     mc : int, optional
-        Number of exogenous included variables.
+        Number of exogenous included variables not of interest.
+    md : int, optional
+        Number of exogenous included variables of interest.
     seed : int, optional
         Random seed.
     include_intercept : bool, optional
@@ -159,12 +165,14 @@ def simulate_gaussian_iv(
     y : np.ndarray of dimension (n,)
         Outcomes.
     C : np.ndarray of dimension (n, mc)
-        Exogenous included variables.
+        Exogenous included variables not of interest.
     W : np.ndarray of dimension (n, mw)
         Endogenous variables not of interest.
-    beta : np.ndarray of dimension (mx,)
-        True beta. Only returned if ``return_beta`` is True.
-    gamma : np.ndarray of dimension (mw,)
+    D : np.ndarray of dimension (n, md)
+        Exogenous included variables of interest.
+    beta : np.ndarray of dimension (mx + md, 1)
+        True coefficients of (X, D). Only returned if ``return_beta`` is True.
+    gamma : np.ndarray of dimension (mw, 1)
         True gamma. Only returned if ``return_gamma`` is True.
     """
     rng = np.random.RandomState(seed)

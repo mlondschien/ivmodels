@@ -9,7 +9,7 @@ class Quadric:
     """
     A class to represent a quadric :math:`x^T A x + b^T x + c \\leq 0`.
 
-    Internally, works with a standardized form of the quadric. If :math:`V^T D V = A`
+    Internally, works with a standardized form of the quadric. If :math:`A = V D V^T`
     with :math:`D` diagonal and :math:`V` orthonormal, define
     :math:`x_\\mathrm{center} := -A^{-1} b / 2`,
     :math:`\\tilde x = V^T (x - x_\\mathrm{center})` and
@@ -34,9 +34,9 @@ class Quadric:
         :math:`c - x_\\mathrm{center}^T A x_\\mathrm{center}`.
     D: np.ndarray of dimension (n,)
         The diagonal of the matrix :math:`D` in the eigenvalue decomposition
-        :math:`V^T D V = A`.
+        :math:`A = V D V^T`.
     V: np.ndarray of dimension (n, n)
-        The matrix :math:`V` in the eigenvalue decomposition :math:`V^T D V = A`.
+        The matrix :math:`V` in the eigenvalue decomposition :math:`A = V D V^T`.
     """
 
     def __init__(self, A, b, c):
@@ -209,11 +209,11 @@ class Quadric:
         is given by
 
         .. math::
-           (Bx - Bx_\\mathrm{center})^T (B^T A^{-1} B)^{-1} (Bx - Bx_\\mathrm{center}) + c \\leq 0.
+           (Bx - Bx_\\mathrm{center})^T (B A^{-1} B^T)^{-1} (Bx - Bx_\\mathrm{center}) + c \\leq 0.
 
         Here, :math:`B` is given by ``coordinates``, with :math:`B_{i, j} = 1` if
-        ``coordinates[i-1] == j`` and :math:`B_{i, j} = 0` otherwise for
-        :math:`i = 1, \\ldots, q` and :math:`j = 1, \\ldots, p`.
+        ``coordinates[i] == j`` and :math:`B_{i, j} = 0` otherwise for 0-indexed
+        :math:`i = 0, \\ldots, q - 1` and :math:`j = 0, \\ldots, p - 1`.
 
         Parameters
         ----------
