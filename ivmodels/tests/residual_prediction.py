@@ -208,7 +208,7 @@ def residual_prediction_test(
     sigma_sq_hat = max(sigma_sq_hat, gamma_)
 
     stat = wb.T @ residuals_b / np.sqrt(sigma_sq_hat) / np.sqrt(Xb.shape[0])
-    p_value = 1 - scipy.stats.norm.cdf(stat)
+    p_value = scipy.stats.norm.sf(stat)
     return stat, p_value
 
 
@@ -377,7 +377,7 @@ def weak_residual_prediction_test(
     sigma_sq = max(sigma_sq, gamma_)
 
     stat = N_val / np.sqrt(sigma_sq)
-    p_value = 1 - scipy.stats.norm.cdf(stat)
+    p_value = scipy.stats.norm.sf(stat)
     return stat, p_value
 
 
@@ -574,7 +574,7 @@ def inverse_weak_residual_prediction_test(
         sigma_sq = max(sigma_sq, gamma_)
 
         stat = N_val / np.sqrt(sigma_sq)
-        p_value = 1 - scipy.stats.norm.cdf(stat)
+        p_value = scipy.stats.norm.sf(stat)
         return alpha - p_value  # negative means inside confidence set
 
     if f(beta_tsls) >= 0:

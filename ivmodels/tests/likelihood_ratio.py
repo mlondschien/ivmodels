@@ -135,7 +135,7 @@ def likelihood_ratio_test(Z, X, y, beta, W=None, C=None, D=None, fit_intercept=T
         )
         statistic *= n - k - mc - md - fit_intercept
 
-    p_value = 1 - scipy.stats.chi2.cdf(statistic, df=mx + md)
+    p_value = scipy.stats.chi2.sf(statistic, df=mx + md)
 
     return statistic, p_value
 

@@ -15,7 +15,7 @@ def test_bounded_inverse_anderson_rubin_p_value(n, mx, k, u, fit_intercept):
 
     statistic = rank_test(Z, X, fit_intercept=fit_intercept)[0]
     # different degrees of freedom than used in the rank test
-    p_value = 1 - scipy.stats.chi2.cdf(statistic, df=k)
+    p_value = scipy.stats.chi2.sf(statistic, df=k)
     assert 0.999 > p_value > 1e-12
 
     quad_below = inverse_anderson_rubin_test(

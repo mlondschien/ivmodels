@@ -78,6 +78,6 @@ def rank_test(Z, X, C=None, fit_intercept=True):
             a=X.T @ X_proj, b=X.T @ (X - X_proj), subset_by_index=[0, 0]
         )[0]
     )
-    cdf = scipy.stats.chi2.cdf(statistic, df=(k - m + 1))
+    p_value = scipy.stats.chi2.sf(statistic, df=(k - m + 1))
 
-    return statistic, 1 - cdf
+    return statistic, p_value
