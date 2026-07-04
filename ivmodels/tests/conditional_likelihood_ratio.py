@@ -198,8 +198,8 @@ def _newton_minimal_root(q_sum, q, lambdas, tol, num_iter):
     m = len(lambdas)
 
     # Initial guess. Exact if lambdas are all equal.
-    mu = lambdas[0] - q_sum
-    mu = mu - np.sqrt(mu**2 + 4 * lambdas[0] * np.sum(q))
+    mu = lambdas[0] + q_sum
+    mu = mu - np.sqrt((lambdas[0] - q_sum) ** 2 + 4 * lambdas[0] * np.sum(q))
     mu /= 2
 
     for _ in range(num_iter):
