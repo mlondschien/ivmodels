@@ -199,16 +199,16 @@ def anderson_rubin_test(
     statistic = ar * dfd / dfn
 
     if critical_values == "chi2":
-        p_value = 1 - scipy.stats.chi2.cdf(statistic * dfn, df=dfn)
+        p_value = scipy.stats.chi2.sf(statistic * dfn, df=dfn)
     elif critical_values == "f":
-        p_value = 1 - scipy.stats.f.cdf(statistic, dfn=dfn, dfd=dfd)
+        p_value = scipy.stats.f.sf(statistic, dfn=dfn, dfd=dfd)
     elif (
         critical_values.lower().startswith("guggenberger")
         or "gkm" in critical_values.lower()
     ):
         if mw == 0:
             # For mw == 0, the GKM critical values are just the chi2 critical values.
-            p_value = 1 - scipy.stats.chi2.cdf(statistic * dfn, df=dfn)
+            p_value = scipy.stats.chi2.sf(statistic * dfn, df=dfn)
         else:
             kappa_max = (n - k - mc - md) * KClass._spectrum(X=W, y=y - X @ beta, Z=Z)[
                 -1

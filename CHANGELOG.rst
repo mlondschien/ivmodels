@@ -15,6 +15,11 @@ Changelog
 - Fixed :func:`~ivmodels.tests.pulse.pulse_test` and
   :func:`~ivmodels.tests.pulse.inverse_pulse_test` when passing ``D``.
 
+**Other changes:**
+
+- Replaced calls to ``1 - scipy.stats.*.cdf`` with the more numerically stable
+  ``scipy.stats.*.sf``.
+
 0.10.0 - 2025-03-19
 -------------------
 

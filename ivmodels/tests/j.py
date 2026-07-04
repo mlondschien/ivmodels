@@ -56,6 +56,6 @@ def j_test(Z, X, y, C=None, fit_intercept=True, estimator="liml"):
     statistic = residuals_proj.T @ residuals_proj
     statistic /= residuals_orth.T @ residuals_orth / (n - k - mc - fit_intercept)
 
-    p_value = 1 - scipy.stats.chi2.cdf(statistic, df=k - mx)
+    p_value = scipy.stats.chi2.sf(statistic, df=k - mx)
 
     return statistic, p_value

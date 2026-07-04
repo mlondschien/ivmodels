@@ -54,8 +54,11 @@ def test_compare_wald_tests_with_linearmodels(
         rtol=1e-6,
     )
 
+    # linearmodels computes p-values as 1 - cdf, which saturates to 0 below ~1e-16,
+    # while ivmodels uses the survival function.
     np.testing.assert_allclose(
         lm_wald_result.pval,
         ivmodels_wald_result[1],
         rtol=1e-6,
+        atol=1e-16,
     )

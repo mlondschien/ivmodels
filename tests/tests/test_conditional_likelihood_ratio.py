@@ -61,7 +61,7 @@ def test_conditional_likelihood_ratio_critical_value_function_equal_to_chi2(
     p, q, critical_values
 ):
     for z in np.linspace(0, 2 * (p + q), 10):
-        pval = 1 - scipy.stats.chi2(p + q).cdf(z)
+        pval = scipy.stats.chi2(p + q).sf(z)
         assert np.isclose(
             conditional_likelihood_ratio_critical_value_function(
                 k=q + p,

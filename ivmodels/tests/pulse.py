@@ -88,7 +88,7 @@ def pulse_test(Z, X, y, beta, W=None, C=None, D=None, fit_intercept=True):
     statistic = np.square(proj_residuals).sum() / np.square(residuals).sum()
     statistic *= n - k - C.shape[1]
 
-    p_value = 1 - scipy.stats.chi2.cdf(statistic, df=k)
+    p_value = scipy.stats.chi2.sf(statistic, df=k)
     return statistic, p_value
 
 

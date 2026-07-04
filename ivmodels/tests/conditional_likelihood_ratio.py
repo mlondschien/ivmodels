@@ -110,14 +110,14 @@ def conditional_likelihood_ratio_critical_value_function(
     if k < mx:
         raise ValueError("k must be greater than or equal to mx.")
     if k == mx:
-        return 1 - scipy.stats.chi2(k + md).cdf(z)
+        return scipy.stats.chi2(k + md).sf(z)
 
     lambdas = np.sort(lambdas)
 
     if critical_values == "londschien2025exact" and lambdas[-1] <= 0:
-        return 1 - scipy.stats.chi2(k + md).cdf(z)
+        return scipy.stats.chi2(k + md).sf(z)
     elif critical_values != "londschien2025exact" and lambdas[0] <= 0:
-        return 1 - scipy.stats.chi2(k + md).cdf(z)
+        return scipy.stats.chi2(k + md).sf(z)
 
     if critical_values == "londschien2025exact" and mx + md > 1:
         if not len(lambdas) == mx + md:
@@ -133,24 +133,26 @@ def conditional_likelihood_ratio_critical_value_function(
         beta = p / 2.0
         a = lambdas[0] / (z + lambdas[0])
 
-        # We wish to integrate
+        # We wish to compute the p-value
         # beta = beta(alpha, beta); chi2 = chi2(q)
-        # int_0^1 chi2.cdf(z / (1 - a * x)) * beta.pdf(x, (q - p) / 2, p / 2) dx
+        #  = int_0^1 chi2.sf(z / (1 - a * x)) * beta.pdf(x, (q - p) / 2, p / 2) dx,
         #
         # use
         #  beta(alpha, beta).pdf = 1/B(alpha, beta) * x^{alpha - 1} * (1 - x)^{beta - 1}
         # and
-        #  chi2(q).cdf(x) = 1/Gamma(k/2) * gamma(k/2, x/2)
-        #                 = scipy.special.gammainc(k/2, x/2).
+        #  chi2(q).sf(x) = Gamma(q/2, x/2) / Gamma(q/2)
+        #               = scipy.special.gammaincc(q/2, x/2),
+        # where Gamma(s, x) = int_x^inf t^(s-1) e^(-t) dt is the upper incomplete
+        # gamma function and Gamma(s) = Gamma(s, 0) the complete one.
         # substitute y <- 1 - a * x and use the QUADPACK routine qawse
-        # (see scipy.special.gammainc)
+        # (see scipy.special.gammaincc)
         k = q / 2.0
         z_over_2 = z / 2.0
 
         const = np.power(a, -alpha - beta + 1) / scipy.special.beta(alpha, beta)
 
         def integrand(y):
-            return const * scipy.special.gammainc(k, z_over_2 / y)
+            return const * scipy.special.gammaincc(k, z_over_2 / y)
 
         res = scipy.integrate.quad(
             integrand,
@@ -160,7 +162,7 @@ def conditional_likelihood_ratio_critical_value_function(
             wvar=(beta - 1, alpha - 1),
             epsabs=tol,
         )
-        return np.max([np.finfo(np.float64).eps, 1 - res[0]])
+        return res[0]
 
 
 @njit

@@ -408,7 +408,7 @@ def lagrange_multiplier_test(
         lm = _LM(X=X, y=y, W=W, Z=Z, dof=dof, **kwargs)
         statistic = lm.lm(beta)
 
-        p_value = 1 - scipy.stats.chi2.cdf(statistic, df=mx + md)
+        p_value = scipy.stats.chi2.sf(statistic, df=mx + md)
 
     else:
         residuals = y - X @ beta
@@ -426,7 +426,7 @@ def lagrange_multiplier_test(
         # (y - X beta) P_{P_Z X_tilde} (y - X beta) / (y - X_beta) M_Z (y - X beta)
         statistic = dof * np.square(X_tilde_proj_residuals).sum() / sigma_hat
 
-        p_value = 1 - scipy.stats.chi2.cdf(statistic, df=mx + md)
+        p_value = scipy.stats.chi2.sf(statistic, df=mx + md)
 
     return statistic, p_value
 
