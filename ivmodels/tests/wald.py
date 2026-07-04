@@ -143,7 +143,7 @@ def wald_test(
 
     statistic = (beta_hat - beta).T @ cov_hat_inv @ (beta_hat - beta)
 
-    p_value = 1 - scipy.stats.chi2.cdf(statistic, df=mx + md)
+    p_value = scipy.stats.chi2.sf(statistic, df=mx + md)
 
     return statistic, p_value
 
