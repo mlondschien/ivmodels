@@ -63,6 +63,8 @@ class AnchorRegression(AnchorMixin, GeneralizedLinearRegressor):
         Ratio of L1 to L2 regularization for elastic net regularization. For
         ``l1_ratio=0`` the penalty is an L2 penalty. For ``l1_ratio=1`` it is an L1
         penalty.
+    fit_intercept: bool, optional, default=True
+        Whether to fit an intercept.
 
     Attributes
     ----------

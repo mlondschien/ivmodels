@@ -41,6 +41,9 @@ class PULSEMixin:
             The instrument (anchor) values. If ``instrument_names`` or
             ``instrument_regex`` are specified, ``Z`` must be ``None``. If ``Z`` is
             specified, ``instrument_names`` and ``instrument_regex`` must be ``None``.
+        C: array-like, shape (n_samples, n_exogenous), optional
+            Exogenous included variables. Must be ``None`` or have zero columns, as
+            PULSE does not support exogenous included variables.
         """
         (_, Z_, C_), _ = self._X_Z_C(X, Z, C)
 
