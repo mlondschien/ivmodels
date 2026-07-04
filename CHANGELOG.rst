@@ -1,6 +1,20 @@
 Changelog
 =========
 
+0.11.0 - unreleased
+-------------------
+
+**Breaking changes:**
+
+- Removed the ``SpaceIV`` estimator.
+- Reordered keyword arguments of :func:`~ivmodels.tests.pulse.pulse_test` and
+  :func:`~ivmodels.tests.pulse.inverse_pulse_test` to match other tests.
+
+**Bug fixes:**
+
+- Fixed :func:`~ivmodels.tests.pulse.pulse_test` and
+  :func:`~ivmodels.tests.pulse.inverse_pulse_test` when passing ``D``.
+
 0.10.0 - 2025-03-19
 -------------------
 

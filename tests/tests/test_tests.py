@@ -270,7 +270,7 @@ def test_test_size_weak_ivs(test, n, mx, k, u, mc):
     "test, inverse_test",
     [
         # All tests that have an analytic solution for the inverse.
-        # (pulse_test, inverse_pulse_test),
+        (pulse_test, inverse_pulse_test),
         (anderson_rubin_test, inverse_anderson_rubin_test),
         (f_anderson_rubin_test, inverse_f_anderson_rubin_test),
         # (gkm_anderson_rubin_test, gkm_inverse_anderson_rubin_test),
@@ -324,8 +324,8 @@ def test_test_round_trip_quadrics(test, inverse_test, data, p_value):
             include_intercept=fit_intercept,
         )
 
-    if D.shape[1] > 0 and test in [pulse_test]:
-        pytest.skip("Pulse test does not support incl. exog. variables.")
+    if W.shape[1] > 0 and test in [pulse_test]:
+        pytest.skip("The pulse test does not have a subvector variant.")
 
     kwargs = {
         "Z": Z,
@@ -580,6 +580,7 @@ def test_test_output_type(n, mx, mw, u, mc, test):
         (wald_test, inverse_wald_test),
         (anderson_rubin_test, inverse_anderson_rubin_test),
         (lagrange_multiplier_test, inverse_lagrange_multiplier_test),  # type: ignore
+        (pulse_test, inverse_pulse_test),
     ],
 )
 @pytest.mark.parametrize(
@@ -593,10 +594,13 @@ def test_test_output_type(n, mx, mw, u, mc, test):
 )
 def test_d_and_z_same_result(n, mx, mw, mc, md, fit_intercept, test, inverse_test):
     """
-    For the AR, LM, and Wald(tsls) test, passing D or including D into Z, W is the same.
+    For the AR, LM, Wald(tsls), and pulse test, passing D or including D into Z, W isthe same.
 
     For Wald LIML, computation of kappa fails.
     """
+    if test == pulse_test and mw > 0:
+        pytest.skip("The pulse test does not have a subvector variant.")
+
     Z, X, y, C, W, D = simulate_gaussian_iv(n=n, mx=mx, k=mx + mw, mw=mw, mc=mc, md=md)
 
     if test != lagrange_multiplier_test:
