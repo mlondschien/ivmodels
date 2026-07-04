@@ -50,14 +50,10 @@ class Quadric:
         self.center = np.linalg.solve(A, -b / 2.0)
         self.c_standardized = c - self.center.T @ A @ self.center
 
-        eigenvalues, eigenvectors = np.linalg.eig(A)
-        argsort = np.argsort(-eigenvalues)
-        eigenvalues = eigenvalues[argsort]
-        eigenvectors = eigenvectors[:, argsort]
-        assert np.allclose(A, eigenvectors @ np.diag(eigenvalues) @ eigenvectors.T)
+        eigenvalues, eigenvectors = np.linalg.eigh(A)  # eigenvalues are ascending
 
-        self.D = eigenvalues
-        self.V = eigenvectors
+        self.D = eigenvalues[::-1]
+        self.V = eigenvectors[:, ::-1]
 
     def dim(self):
         """Return the dimension of the quadric."""
