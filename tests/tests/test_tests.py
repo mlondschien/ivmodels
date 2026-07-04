@@ -375,6 +375,7 @@ def test_test_round_trip_quadrics(test, inverse_test, data, p_value):
         (100, 1, 5, 0, 0, 0, False),
         (100, 0, 3, 2, 1, 1, False),
         (100, 1, 3, 2, 1, 0, True),
+        (100, 1, 3, 2, 1, 0, False),
         "guggenberger12",
         "guggenberger12 (md=1)",
         "guggenberger12 (md=0, h12=4)",
