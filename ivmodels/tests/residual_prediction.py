@@ -146,7 +146,7 @@ def residual_prediction_test(
         raise ValueError("train_fraction must be in (0, 1).")
 
     if nonlinear_model is None:
-        nonlinear_model = RandomForestRegressor(random_state=0)
+        nonlinear_model = RandomForestRegressor(random_state=seed)
     elif not hasattr(nonlinear_model, "fit") or not hasattr(nonlinear_model, "predict"):
         raise ValueError(
             "nonlinear_model must have a `fit` and `predict` method. If you want to "
@@ -593,6 +593,10 @@ def inverse_weak_residual_prediction_test(
     )
 
     roots = sorted(roots)
-    assert len(roots) % 2 == 0
+    if len(roots) % 2 != 0:
+        raise RuntimeError(
+            f"Found an odd number of roots ({len(roots)}: {roots}). The root finding "
+            "algorithm possibly missed a sign change. Consider decreasing `tol`."
+        )
     boundaries = [(left, right) for left, right in zip(roots[::2], roots[1::2])]
     return ConfidenceSet(boundaries=boundaries)

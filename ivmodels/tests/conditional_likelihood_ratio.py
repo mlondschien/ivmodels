@@ -234,7 +234,7 @@ def _clr_critical_value_function_monte_carlo(
     z: float,
     tol=1e-6,
     num_iter=100,
-    num_samples=10_000,
+    num_samples=100_000,
 ):
     """
     Compute the CLR's exact critical value function using Monte Carlo simulation.
@@ -295,7 +295,7 @@ def conditional_likelihood_ratio_test(
     fit_intercept=True,
     critical_values="londschien2025exact",
     tol=1e-6,
-    num_samples=10_000,
+    num_samples=100_000,
 ):
     """
     Perform the conditional likelihood ratio test for ``beta``.
@@ -400,7 +400,7 @@ def conditional_likelihood_ratio_test(
         the upper bound conditional on the smallest eigenvalue via numerical integration.
     tol: float, default=1e-6
         Tolerance for the approximation of the CDF and thus the p-value.
-    num_samples: int, default=10000
+    num_samples: int, default=100_000
         Number of Monte Carlo samples when using ``"londschien2025exact"``.
 
     Returns
@@ -688,6 +688,10 @@ def inverse_conditional_likelihood_ratio_test(
 
     roots = sorted(roots)
 
-    assert len(roots) % 2 == 0
+    if len(roots) % 2 != 0:
+        raise RuntimeError(
+            f"Found an odd number of roots ({len(roots)}: {roots}). The root finding "
+            "algorithm possibly missed a sign change. Consider decreasing `tol`."
+        )
     boundaries = [(left, right) for left, right in zip(roots[::2], roots[1::2])]
     return ConfidenceSet(boundaries=boundaries)

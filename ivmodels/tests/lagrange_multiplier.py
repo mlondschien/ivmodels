@@ -525,6 +525,10 @@ def inverse_lagrange_multiplier_test(
     )
 
     roots = sorted(roots)
-    assert len(roots) % 2 == 0
+    if len(roots) % 2 != 0:
+        raise RuntimeError(
+            f"Found an odd number of roots ({len(roots)}: {roots}). The root finding "
+            "algorithm possibly missed a sign change. Consider decreasing `tol`."
+        )
     boundaries = [(left, right) for left, right in zip(roots[::2], roots[1::2])]
     return ConfidenceSet(boundaries=boundaries)

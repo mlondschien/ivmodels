@@ -236,7 +236,7 @@ class Quadric:
         if len(np.unique(coordinates)) != len(coordinates):
             raise ValueError("Coordinates must be unique.")
 
-        if any([c < 0 or c >= self.A.shape[0] for c in coordinates]):
+        if any(c < 0 or c >= self.A.shape[0] for c in coordinates):
             raise ValueError("Coordinates must be between 0 and p - 1.")
 
         mask = np.array([x in coordinates for x in range(self.A.shape[0])])
@@ -249,11 +249,11 @@ class Quadric:
             < 0
         ):
             return Quadric(
-                -np.diag(np.ones(len(coordinates))), self.center[mask], -1
+                -np.eye(len(coordinates)), self.center[mask], -1
             )  # whole space
 
         else:
-            B = np.diag(np.ones(self.A.shape[0]))[:, mask]
+            B = np.eye(self.A.shape[0])[:, mask]
             A_inv = np.linalg.inv(self.A)
             A_new = np.linalg.inv(B.T @ A_inv @ B)
             b_new = A_new @ B.T @ A_inv @ self.b
