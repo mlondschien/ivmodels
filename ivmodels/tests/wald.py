@@ -126,7 +126,6 @@ def wald_test(
         cov_hat = scipy.linalg.inv(XW_kappa.T @ XW)  # (X^T (P_Z - kappa M_Z) X)^-1
         XW_proj_res = residuals.reshape(-1, 1) * XW_proj
 
-        # X^T P_Z diag(res^2) P_Z X, why the * n factor??
         sigma_hat = XW_proj_res.T @ XW_proj_res * n / dof
         cov_hat = cov_hat @ sigma_hat @ cov_hat  # sandwich
         cov_hat_inv = scipy.linalg.inv(cov_hat[: (mx + md), : (mx + md)])

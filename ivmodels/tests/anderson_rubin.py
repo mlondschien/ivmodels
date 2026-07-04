@@ -202,7 +202,10 @@ def anderson_rubin_test(
         p_value = 1 - scipy.stats.chi2.cdf(statistic * dfn, df=dfn)
     elif critical_values == "f":
         p_value = 1 - scipy.stats.f.cdf(statistic, dfn=dfn, dfd=dfd)
-    elif critical_values.startswith("guggenberger") or "gkm" in critical_values.lower():
+    elif (
+        critical_values.lower().startswith("guggenberger")
+        or "gkm" in critical_values.lower()
+    ):
         if mw == 0:
             # For mw == 0, the GKM critical values are just the chi2 critical values.
             p_value = 1 - scipy.stats.chi2.cdf(statistic * dfn, df=dfn)
@@ -304,7 +307,10 @@ def inverse_anderson_rubin_test(
     n, k = Z.shape
     mx, mw, mc, md = X.shape[1], W.shape[1], C.shape[1], D.shape[1]
 
-    if critical_values.startswith("guggenberger") or "gkm" in critical_values.lower():
+    if (
+        critical_values.lower().startswith("guggenberger")
+        or "gkm" in critical_values.lower()
+    ):
         # For mw == 0, the GKM critical values are just the chi2 critical values.
         if mw == 0:
             critical_values = "chi2"
