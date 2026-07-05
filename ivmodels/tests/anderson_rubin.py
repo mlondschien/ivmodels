@@ -226,9 +226,7 @@ def anderson_rubin_test(
             # For mw == 0, the GKM critical values are just the chi2 critical values.
             p_value = scipy.stats.chi2.sf(statistic * dfn, df=dfn)
         else:
-            kappa_max = (n - k - mc - md) * KClass._spectrum(X=W, y=y - X @ beta, Z=Z)[
-                -1
-            ]
+            kappa_max = dfd * KClass._spectrum(X=W, y=y - X @ beta, Z=Z)[-1]
 
             p_value = more_powerful_subvector_anderson_rubin_critical_value_function(
                 statistic * dfn, kappa_max, k=k + md, mw=mw
