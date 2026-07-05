@@ -77,7 +77,9 @@ def conditional_likelihood_ratio_critical_value_function(
     md: int
         Number of included exogenous variables.
     lambdas: array_like
-        Eigenvalues of the concentration matrix.
+        The finite eigenvalues of the concentration matrix. If ``md > 0``, the
+        ``md`` infinite eigenvalues corresponding to the exogenous regressors of
+        interest are not included.
     z: float
         Test statistic.
     critical_values: {"londschien2025exact", "kleibergen2007generalizing", "moreira2003conditional"}, default="londschien2025exact"
@@ -114,14 +116,17 @@ def conditional_likelihood_ratio_critical_value_function(
 
     lambdas = np.sort(lambdas)
 
+    if len(lambdas) == 0:
+        return scipy.stats.chi2(md).sf(z)
+
     if critical_values == "londschien2025exact" and lambdas[-1] <= 0:
         return scipy.stats.chi2(k + md).sf(z)
     elif critical_values != "londschien2025exact" and lambdas[0] <= 0:
         return scipy.stats.chi2(k + md).sf(z)
 
     if critical_values == "londschien2025exact" and mx + md > 1:
-        if not len(lambdas) == mx + md:
-            raise ValueError("lambdas must be of length mx + md.")
+        if not len(lambdas) == mx:
+            raise ValueError("lambdas must be of length mx.")
         return _clr_critical_value_function_monte_carlo(
             mx=mx, md=md, k=k, lambdas=lambdas, z=z, tol=tol, num_samples=num_samples
         )
