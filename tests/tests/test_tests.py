@@ -57,7 +57,13 @@ gkm_inverse_anderson_rubin_test = partial(
 )
 @pytest.mark.parametrize(
     "n, mx, mw, k, md, mc",
-    [(100, 1, 1, 2, 1, 3), (100, 1, 2, 5, 0, 0), (300, 2, 5, 10, 2, 2)],
+    [
+        (100, 1, 1, 2, 1, 3),
+        (100, 1, 2, 5, 0, 0),
+        (300, 2, 5, 10, 2, 2),
+        (100, 1, 0, 2, 1, 3),
+        (300, 2, 0, 5, 2, 2),
+    ],
 )
 @pytest.mark.parametrize("fit_intercept", [True, False])
 def test_subvector_test_size(test, n, mx, mw, k, md, mc, fit_intercept):
@@ -376,6 +382,7 @@ def test_test_round_trip_quadrics(test, inverse_test, data, p_value):
         (100, 0, 3, 2, 1, 1, False),
         (100, 1, 3, 2, 1, 0, True),
         (100, 1, 3, 2, 1, 0, False),
+        (30, 1, 5, 1, 2, 0, True),
         "guggenberger12",
         "guggenberger12 (md=1)",
         "guggenberger12 (md=0, h12=4)",
