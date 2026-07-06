@@ -14,11 +14,30 @@ Changelog
 
 - Fixed :func:`~ivmodels.tests.pulse.pulse_test` and
   :func:`~ivmodels.tests.pulse.inverse_pulse_test` when passing ``D``.
+- Fixed the scaling of the conditioning statistic in
+  :func:`~ivmodels.tests.anderson_rubin.anderson_rubin_test` with
+  ``critical_values="gkm"`` and ``fit_intercept=True``.
+- Fixed
+  :func:`~ivmodels.tests.conditional_likelihood_ratio.conditional_likelihood_ratio_test`
+  raising a ``ValueError`` when passing exogenous regressors of interest ``D``
+  without endogenous regressors not of interest ``W`` and using the default exact
+  critical values.
+- :func:`~ivmodels.tests.lagrange_multiplier.inverse_lagrange_multiplier_test` now
+  correctly passes ``fit_intercept`` through to
+  :func:`~ivmodels.tests.anderson_rubin.inverse_anderson_rubin_test` if the model is
+  just-identified.
 
 **Other changes:**
 
 - Replaced calls to ``1 - scipy.stats.*.cdf`` with the more numerically stable
   ``scipy.stats.*.sf``.
+- Improved the numerical stability of
+  :func:`~ivmodels.tests.anderson_rubin.more_powerful_subvector_anderson_rubin_critical_value_function`
+  for many instruments.
+- Improved the initial guess of the Newton root finding in the exact critical value
+  function of the
+  :func:`~ivmodels.tests.conditional_likelihood_ratio.conditional_likelihood_ratio_test`
+  leading to slightly faster convergence.
 
 0.10.0 - 2025-03-19
 -------------------
