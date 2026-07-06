@@ -63,6 +63,7 @@ gkm_inverse_anderson_rubin_test = partial(
         (300, 2, 5, 10, 2, 2),
         (100, 1, 0, 2, 1, 3),
         (300, 2, 0, 5, 2, 2),
+        (100, 0, 0, 3, 2, 2),
     ],
 )
 @pytest.mark.parametrize("fit_intercept", [True, False])
