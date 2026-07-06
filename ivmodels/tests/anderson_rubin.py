@@ -58,6 +58,11 @@ def more_powerful_subvector_anderson_rubin_critical_value_function(
     if z > kappa_1_hat:
         raise ValueError("z must be smaller than kappa_1_hat")
 
+    # z is a smallest eigenvalue, nonnegative in exact arithmetic, but possibly of
+    # the order -eps due to floating point errors.
+    if z <= 0:
+        return 1.0
+
     # Page 494, footnote 3: "For general mW, discussed in the next subsection, the role
     # of k − 1 is played by k − mW"
     # Thus, k - 1 <- k - mW or k <- k - mW + 1
@@ -87,7 +92,18 @@ def more_powerful_subvector_anderson_rubin_critical_value_function(
             np.exp(-x / 2) * np.power(x, k_prime / 2 - 1.5) * np.sqrt(kappa_1_hat - x)
         )
 
-    return 1 - scipy.integrate.quad(f, 0, z, limit=50)[0] * const
+    # Due to the exp(-x / 2) factor, the density's mass beyond k_prime + 700 is
+    # negligible. For larger z, quadrature nodes on [0, z] would all miss the
+    # density's mass, so truncate the integral. As `const` normalizes the density,
+    # the truncated integral times `const` is ~1 and the p-value ~0.
+    upper = min(z, k_prime + 700.0)
+
+    # epsabs=0: For small kappa_1_hat, the integral's magnitude can lie below quad's
+    # default absolute tolerance of 1.49e-8, resulting in early stopping and low
+    # relative accuracy. Use the relative criterion only.
+    p_value = 1 - scipy.integrate.quad(f, 0, upper, epsabs=0, limit=50)[0] * const
+
+    return min(max(p_value, 0.0), 1.0)
 
 
 def anderson_rubin_test(
@@ -210,9 +226,7 @@ def anderson_rubin_test(
             # For mw == 0, the GKM critical values are just the chi2 critical values.
             p_value = scipy.stats.chi2.sf(statistic * dfn, df=dfn)
         else:
-            kappa_max = (n - k - mc - md) * KClass._spectrum(X=W, y=y - X @ beta, Z=Z)[
-                -1
-            ]
+            kappa_max = dfd * KClass._spectrum(X=W, y=y - X @ beta, Z=Z)[-1]
 
             p_value = more_powerful_subvector_anderson_rubin_critical_value_function(
                 statistic * dfn, kappa_max, k=k + md, mw=mw

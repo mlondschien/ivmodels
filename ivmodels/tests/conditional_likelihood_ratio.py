@@ -77,7 +77,9 @@ def conditional_likelihood_ratio_critical_value_function(
     md: int
         Number of included exogenous variables.
     lambdas: array_like
-        Eigenvalues of the concentration matrix.
+        The finite eigenvalues of the concentration matrix. If ``md > 0``, the
+        ``md`` infinite eigenvalues corresponding to the exogenous regressors of
+        interest are not included.
     z: float
         Test statistic.
     critical_values: {"londschien2025exact", "kleibergen2007generalizing", "moreira2003conditional"}, default="londschien2025exact"
@@ -114,14 +116,17 @@ def conditional_likelihood_ratio_critical_value_function(
 
     lambdas = np.sort(lambdas)
 
+    if len(lambdas) == 0:
+        return scipy.stats.chi2(md).sf(z)
+
     if critical_values == "londschien2025exact" and lambdas[-1] <= 0:
         return scipy.stats.chi2(k + md).sf(z)
     elif critical_values != "londschien2025exact" and lambdas[0] <= 0:
         return scipy.stats.chi2(k + md).sf(z)
 
     if critical_values == "londschien2025exact" and mx + md > 1:
-        if not len(lambdas) == mx + md:
-            raise ValueError("lambdas must be of length mx + md.")
+        if not len(lambdas) == mx:
+            raise ValueError("lambdas must be of length mx.")
         return _clr_critical_value_function_monte_carlo(
             mx=mx, md=md, k=k, lambdas=lambdas, z=z, tol=tol, num_samples=num_samples
         )
@@ -198,8 +203,8 @@ def _newton_minimal_root(q_sum, q, lambdas, tol, num_iter):
     m = len(lambdas)
 
     # Initial guess. Exact if lambdas are all equal.
-    mu = lambdas[0] - q_sum
-    mu = mu - np.sqrt(mu**2 + 4 * lambdas[0] * np.sum(q))
+    mu = lambdas[0] + q_sum
+    mu = mu - np.sqrt((lambdas[0] - q_sum) ** 2 + 4 * lambdas[0] * np.sum(q))
     mu /= 2
 
     for _ in range(num_iter):
@@ -471,9 +476,16 @@ def conditional_likelihood_ratio_test(
         Xy = np.concatenate([X, y.reshape(-1, 1)], axis=1)
         Xy_proj = np.hstack([X_proj, y_proj.reshape(-1, 1)])
 
-        lambdas = np.sort(
-            np.real(_characteristic_roots(a=Xt_proj.T @ Xt_proj, b=Xt_orth.T @ Xt_orth))
-        ) * (n - k - mc - md - fit_intercept)
+        if mx == 0:
+            # The D-columns of Xt_orth are zero, so all characteristic roots of the
+            # pencil are infinite. These are not included in lambdas.
+            lambdas = np.zeros(0)
+        else:
+            lambdas = np.sort(
+                np.real(
+                    _characteristic_roots(a=Xt_proj.T @ Xt_proj, b=Xt_orth.T @ Xt_orth)
+                )
+            ) * (n - k - mc - md - fit_intercept)
 
         Xy_orth = Xy - Xy_proj
 

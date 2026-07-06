@@ -489,7 +489,9 @@ def inverse_lagrange_multiplier_test(
         raise ValueError("mx + md must be 1.")
 
     if k == mx + mw:
-        return inverse_anderson_rubin_test(Z=Z, X=X, W=W, y=y, C=C, D=D, alpha=alpha)
+        return inverse_anderson_rubin_test(
+            Z=Z, X=X, W=W, y=y, C=C, D=D, fit_intercept=fit_intercept, alpha=alpha
+        )
 
     if fit_intercept:
         C = np.hstack([np.ones((n, 1)), C])
