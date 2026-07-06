@@ -232,6 +232,27 @@ def _newton_minimal_root(q_sum, q, lambdas, tol, num_iter):
     return mu
 
 
+@njit(parallel=True)
+def _clr_monte_carlo_loop(
+    qx_samples, qd_samples, q0_samples, lambdas, z, tol, num_iter
+):
+    """Count the samples whose CLR statistic exceeds ``z``."""
+    num_samples = qx_samples.shape[0]
+    count = 0
+
+    for i in prange(num_samples):
+        qx = qx_samples[i, :]
+        qd = qd_samples[i]
+        q0 = q0_samples[i]
+        q_sum = np.sum(qx) + q0
+
+        mu_min = _newton_minimal_root(q_sum, qx, lambdas, tol=tol, num_iter=num_iter)
+        if qd + q_sum - mu_min > z:
+            count += 1
+
+    return count
+
+
 @njit
 def _clr_critical_value_function_monte_carlo(
     mx: int,
@@ -270,23 +291,15 @@ def _clr_critical_value_function_monte_carlo(
         The number of Monte Carlo samples.
 
     """
-    count = 0
-
     np.random.seed(0)
 
     qx_samples = np.random.standard_normal((num_samples, mx)) ** 2
     qd_samples = np.sum(np.random.standard_normal((num_samples, md)) ** 2, axis=1)
     q0_samples = np.sum(np.random.standard_normal((num_samples, k - mx)) ** 2, axis=1)
 
-    for i in prange(num_samples):
-        qx = qx_samples[i, :]
-        qd = qd_samples[i]
-        q0 = q0_samples[i]
-        q_sum = np.sum(qx) + q0
-
-        mu_min = _newton_minimal_root(q_sum, qx, lambdas, tol=tol, num_iter=num_iter)
-        if qd + q_sum - mu_min > z:
-            count += 1
+    count = _clr_monte_carlo_loop(
+        qx_samples, qd_samples, q0_samples, lambdas, z, tol, num_iter
+    )
 
     return count / num_samples
 
