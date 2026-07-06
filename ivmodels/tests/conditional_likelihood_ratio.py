@@ -476,9 +476,16 @@ def conditional_likelihood_ratio_test(
         Xy = np.concatenate([X, y.reshape(-1, 1)], axis=1)
         Xy_proj = np.hstack([X_proj, y_proj.reshape(-1, 1)])
 
-        lambdas = np.sort(
-            np.real(_characteristic_roots(a=Xt_proj.T @ Xt_proj, b=Xt_orth.T @ Xt_orth))
-        ) * (n - k - mc - md - fit_intercept)
+        if mx == 0:
+            # The D-columns of Xt_orth are zero, so all characteristic roots of the
+            # pencil are infinite. These are not included in lambdas.
+            lambdas = np.zeros(0)
+        else:
+            lambdas = np.sort(
+                np.real(
+                    _characteristic_roots(a=Xt_proj.T @ Xt_proj, b=Xt_orth.T @ Xt_orth)
+                )
+            ) * (n - k - mc - md - fit_intercept)
 
         Xy_orth = Xy - Xy_proj
 
